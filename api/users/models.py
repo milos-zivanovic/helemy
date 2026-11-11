@@ -1,0 +1,114 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.utils.translation import gettext_lazy as _
+
+
+class Household(models.Model):
+    """
+    A household represents a group of users who share data.
+    """
+    name = models.CharField(_('name'), max_length=100)
+    owner = models.ForeignKey(
+        'User',
+        on_delete=models.PROTECT,
+        related_name='owned_households',
+        verbose_name=_('owner'),
+    )
+    members = models.ManyToManyField(
+        'User',
+        related_name='households',
+        verbose_name=_('members'),
+    )
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('household')
+        verbose_name_plural = _('households')
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    @property
+    def member_count(self):
+        return self.members.count()
+    
+    def add_member(self, user):
+        """Add a user as member of this household."""
+        self.members.add(user)
+    
+    def remove_member(self, user):
+        """Remove a user from this household."""
+        if user == self.owner:
+            raise ValueError('Cannot remove the household owner.')
+        self.members.remove(user)
+
+
+class User(AbstractUser):
+    """
+    Custom user model with household support.
+    """
+    email = models.EmailField(_('email address'), unique=True)
+    
+    # Preferences
+    timezone = models.CharField(_('timezone'), max_length=50, default='Europe/Belgrade')
+    language = models.CharField(_('language'), max_length=10, default='en')
+    currency = models.CharField(_('currency'), max_length=3, default='RSD')
+    
+    # Onboarding
+    onboarding_completed = models.BooleanField(_('onboarding completed'), default=False)
+    onboarding_step = models.PositiveSmallIntegerField(_('onboarding step'), default=0)
+    
+    # Timestamps
+    last_activity = models.DateTimeField(_('last activity'), null=True, blank=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+    
+    class Meta:
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
+        ordering = ['-date_joined']
+    
+    def __str__(self):
+        return self.email
+    
+    def get_full_name(self):
+        return f'{self.first_name} {self.last_name}'.strip() or self.username
+    
+    def get_short_name(self):
+        return self.first_name or self.username
+    
+    def get_active_household(self):
+        """Get the user's active household (first household they belong to)."""
+        return self.households.first()
+    
+    def is_household_owner(self, household):
+        return household.owner == self
+    
+    def is_household_member(self, household):
+        return household.members.filter(id=self.id).exists()
+    
+    def can_manage_household_members(self, household):
+        return self.is_household_owner(household)
+    
+    def get_households(self):
+        """Get all households the user is a member of."""
+        return self.households.all()
+
+
+@receiver(post_save, sender=User)
+def create_user_household(sender, instance, created, **kwargs):
+    """
+    Automatically create a personal household for new users.
+    This enables solo users to use the app without manually creating a household.
+    """
+    if created and not instance.owned_households.exists():
+        household = Household.objects.create(
+            name=f"{instance.username}'s Household",
+            owner=instance,
+        )
+        household.members.add(instance)
