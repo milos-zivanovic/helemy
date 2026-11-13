@@ -1,63 +1,76 @@
-version: '3.8'
+# Life Tracker services. Run from this folder, always with a profile:
+#   docker compose --profile dev up -d --build      API (SQLite)      -> http://localhost:8000
+#   docker compose --profile dev-pg up -d --build   API (PostgreSQL)  -> http://localhost:8001
+#   docker compose --profile prod up -d --build     API (gunicorn)    -> http://localhost:8002, needs infrastructure/.env
+# See infrastructure/README.md.
+
+x-api-build: &api-build
+  context: ../api
+
+x-api-healthcheck: &api-healthcheck
+  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/admin/login/', timeout=3)"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 20s
+
+x-api-dev-env: &api-dev-env
+  DEBUG: "1"
+  SECRET_KEY: dev-secret-key-change-in-production
+  ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,api-dev,api-dev-pg
+  CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081
+  DJANGO_MIGRATE: "1"   # entrypoint runs `migrate` on every start
 
 services:
   # Development with SQLite (default)
   api-dev:
-    build:
-      context: ..
-      dockerfile: api/Dockerfile
-#    command: python manage.py runserver 0.0.0.0:8000
+    build: *api-build
+    image: life-tracker-api:dev
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ../api:/app
-      - ./data:/app/data
+      - ../api:/app          # live code reload
+      - ./data:/app/data     # SQLite file lives in infrastructure/data/
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=1
-      - DATABASE_URL=sqlite:///data/db.sqlite3
-      - DJANGO_SETTINGS_MODULE=life_tracker.settings
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081
+      <<: *api-dev-env
+      DATABASE_URL: sqlite:///data/db.sqlite3
+    healthcheck: *api-healthcheck
     profiles:
       - dev
 
   # Development with PostgreSQL
   api-dev-pg:
-    build:
-      context: ..
-      dockerfile: api/Dockerfile
+    build: *api-build
+    image: life-tracker-api:dev
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ../api:/app
     ports:
       - "8001:8000"
     environment:
-      - DEBUG=1
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/life_tracker
-      - DJANGO_SETTINGS_MODULE=life_tracker.settings
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081
+      <<: *api-dev-env
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/life_tracker
     depends_on:
       db:
         condition: service_healthy
+    healthcheck: *api-healthcheck
     profiles:
       - dev-pg
 
-  # PostgreSQL database
+  # PostgreSQL database (dev-pg and prod)
   db:
     image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=life_tracker
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      POSTGRES_DB: life_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d life_tracker"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -65,23 +78,33 @@ services:
       - dev-pg
       - prod
 
-  # Production API
+  # Production-like API: code baked into the image, gunicorn, DEBUG off.
+  # Required variables come from infrastructure/.env (see infrastructure/README.md).
   api-prod:
-    build:
-      context: ..
-      dockerfile: api/Dockerfile
-    command: gunicorn life_tracker.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    build: *api-build
+    image: life-tracker-api:prod
     volumes:
-      - ../api:/app
       - media_files:/app/media
       - static_files:/app/staticfiles
+    ports:
+      - "8002:8000"
     environment:
-      - DEBUG=0
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/life_tracker
-      - DJANGO_SETTINGS_MODULE=life_tracker.settings
+      DEBUG: "0"
+      # Empty SECRET_KEY makes Django refuse to start (":?" can't be used: Compose checks it for every profile)
+      SECRET_KEY: ${SECRET_KEY:-}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      EMAIL_URL: ${EMAIL_URL:-consolemail://}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Life Tracker <noreply@localhost>}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:3000/reset-password?uid={uid}&token={token}}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/life_tracker
+      DJANGO_MIGRATE: "1"
+      DJANGO_COLLECTSTATIC: "1"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck: *api-healthcheck
+    restart: unless-stopped
     profiles:
       - prod
 

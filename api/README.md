@@ -1,0 +1,167 @@
+# api — Life Tracker REST API
+
+Django REST Framework backend for personal finances, fitness and nutrition. It is the single source of
+data for the future web (`../web`) and mobile (`../mobile`) clients, which talk to it only over HTTP/JSON.
+
+## Stack
+
+- Django 5.2 LTS, Django REST Framework, django-filter
+- SimpleJWT (access + refresh tokens, rotation, blacklist)
+- drf-spectacular (OpenAPI 3 schema, Swagger UI, ReDoc)
+- django-cors-headers, django-environ, Pillow
+- SQLite for local development, PostgreSQL 16 for `dev-pg` / `prod`
+
+Dependencies and tool config (ruff, coverage) are in [`pyproject.toml`](pyproject.toml) in this folder
+(there is no `requirements.txt`).
+
+## Folder layout
+
+```
+api/
+├── life_tracker/   # Django project: settings.py, urls.py, wsgi/asgi
+├── users/          # Custom User (login by email), Household, membership endpoints
+├── finances/       # Category groups, categories, transactions, budgets
+├── fitness/        # Muscle groups (global), exercises, trainings, items, sets
+├── nutrition/      # Foods, consumptions, weekly summary
+├── common/         # Household mixins, permissions, pagination, scoped FK field, test helpers
+├── data/           # SQLite for `runserver` on the host; create it with `mkdir data` before `migrate`, gitignored (Docker uses ../infrastructure/data/)
+├── .env            # Your local settings for `runserver` on the host (gitignored, create it yourself)
+├── .dockerignore   # Keeps .env, local data and caches out of the Docker image
+├── Dockerfile      # Image used by ../infrastructure/docker-compose.yml (build context: this folder)
+├── pyproject.toml  # Dependencies, ruff and coverage config
+└── manage.py
+```
+
+## Running with Docker (recommended)
+
+Docker Compose lives in [`../infrastructure`](../infrastructure/README.md). From the repo root:
+
+```bash
+cd infrastructure
+docker compose --profile dev up -d --build                    # start API (SQLite) on :8000, migrates automatically
+docker compose --profile dev exec api-dev python manage.py createsuperuser
+```
+
+The `api/` folder is mounted into the container, so code changes reload automatically (`runserver`).
+Migrations are applied on every container start by `docker-entrypoint.sh`.
+Use `--profile dev-pg` and the service name `api-dev-pg` to run against PostgreSQL (API on :8001).
+
+Useful commands (from `infrastructure/`):
+
+```bash
+docker compose logs -f api-dev
+docker compose --profile dev exec api-dev python manage.py makemigrations
+docker compose --profile dev exec api-dev python manage.py test
+docker compose --profile dev exec api-dev python manage.py shell
+docker compose --profile dev down
+```
+
+## Running on the host (without Docker)
+
+Needs Python 3.12+. The virtualenv lives in the repo root (`.venv`), dependencies come from `api/pyproject.toml`.
+From the repo root:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
+cd api
+pip install ".[dev]"
+# create api/.env with at least: DEBUG=1 and SECRET_KEY=<any string> (all variables: Configuration below)
+mkdir -p data
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+## Configuration
+
+Settings are in `life_tracker/settings.py` and read from environment variables. In Docker they come from
+`environment:` in `docker-compose.yml`; on the host from `api/.env` (variables below). Real environment
+variables win over `.env`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DEBUG` | `False` | Debug mode (`1`/`0`) |
+| `SECRET_KEY` | empty (required) | Django secret key |
+| `DATABASE_URL` | `sqlite:///api/data/db.sqlite3` | Database connection string |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated hosts |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,...` | Origins allowed to call the API (web/mobile dev servers) |
+| `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` | `15` | Access token lifetime |
+| `JWT_REFRESH_TOKEN_LIFETIME_DAYS` | `7` | Refresh token lifetime |
+| `EMAIL_URL` | `consolemail://` | How emails are sent; the default prints them to the server log. SMTP: `smtp+tls://user:password@host:587` |
+| `DEFAULT_FROM_EMAIL` | `Life Tracker <noreply@localhost>` | Sender of outgoing emails |
+| `PASSWORD_RESET_URL` | `http://localhost:3000/reset-password?uid={uid}&token={token}` | Link in the reset email (a client app page); `{uid}` and `{token}` are filled in |
+
+## Using the API
+
+- Swagger UI: http://localhost:8000/api/docs/ (button "Authorize" → paste the access token)
+- ReDoc: http://localhost:8000/api/redoc/
+- OpenAPI schema: http://localhost:8000/api/schema/ (import this URL into Postman to get a ready collection)
+- Django admin: http://localhost:8000/admin/
+
+Authentication flow:
+
+1. Sign up: `POST /api/v1/auth/register/` with `{"email", "password", "first_name"?, "last_name"?}` →
+   `user` + `access` + `refresh` (the personal household is created automatically)
+2. Log in: `POST /api/v1/auth/token/` with `{"email": "...", "password": "..."}` → `access` + `refresh`
+3. Send `Authorization: Bearer <access>` on every request
+4. `POST /api/v1/auth/token/refresh/` with `{"refresh": "..."}` when the access token expires
+5. Log out: `POST /api/v1/auth/logout/` with `{"refresh": "..."}` → 204; the refresh token is blacklisted,
+   the access token stays valid until it expires, so the client drops both
+6. Change password (logged in): `POST /api/v1/auth/password/change/` with `{"old_password", "new_password"}`
+   → a new `access` + `refresh`; all other sessions are logged out (their refresh tokens are blacklisted)
+7. Forgotten password:
+   - `POST /api/v1/auth/password/reset/` with `{"email"}` → always 204 (doesn't reveal whether the account
+     exists); emails a `PASSWORD_RESET_URL` link with `uid` and `token`, valid 1 hour, limited to 5 requests/hour
+   - the client page from that link posts `{"uid", "token", "new_password"}` to
+     `POST /api/v1/auth/password/reset/confirm/` → 204; the link is single-use and all sessions are logged out
+
+Users have no `username`: `email` is the login field, stored lowercased and matched case-insensitively.
+New passwords go through Django's `AUTH_PASSWORD_VALIDATORS` (length, common, numeric, similar to email).
+Django admin has users (with their household memberships), households and muscle groups.
+
+Endpoint groups:
+
+| Prefix | Content |
+|---|---|
+| `/api/v1/auth/` | `register/`, `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/`, `households/` (members, invite, remove member) |
+| `/api/v1/finances/` | `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
+| `/api/v1/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
+| `/api/v1/nutrition/` | `foods/`, `consumptions/` (`?date=`, `?start_date=`, `?end_date=`, `?food=`, `?user=`), `consumptions/weekly-summary/` |
+
+## Finance rules worth knowing
+
+- **Active categories** (`Category.objects.active(on_date)`): `is_active` is on, the day is inside the optional
+  one-off range `start_date`..`end_date`, and inside the optional yearly window `start_month/start_day`..
+  `end_month/end_day` (a window may wrap the new year, e.g. 12/01..02/28). A group is active when it has an
+  active category. Lists accept `?active=true|false` and `?active_on=YYYY-MM-DD`.
+- A transaction's category must be active on the transaction's `date`. This is checked only when the category
+  or date changes, so old transactions in archived categories stay editable.
+- `transactions/breakdown/` and `transactions/balance-history/` accept the same filters as the list
+  (`start_date`, `end_date`, `category`, `category_group`, `transaction_type`, `is_fixed`, `search`).
+- `budgets/` returns the budgets active today with `total_amount`, `total_spent` and `percentage`;
+  `budgets/all/?year=2026` pages through everything.
+
+## Data isolation (important)
+
+Every user belongs to a household (one is created automatically at sign-up). All domain data is scoped to
+the user's active household:
+
+- ViewSets extend `common.mixins.HouseholdModelViewSet`, which filters querysets by household and sets it on
+  create. `HouseholdMixin` must stay first in the class bases, otherwise the isolation silently stops working.
+- Writable foreign keys use `common.fields.HouseholdPrimaryKeyRelatedField`, so IDs from another household
+  are rejected with 400.
+- Objects from another household return 404.
+
+## Tests
+
+Tests live in `<app>/tests/test_*.py` and share `common.testing.HouseholdAPITestCase` (two users in two
+households). Every new endpoint should get a test proving it does not leak other households' data.
+
+```bash
+python manage.py test                                     # from api/, on the host
+python -m coverage run manage.py test && python -m coverage report   # with coverage (dev extras)
+```
+
+Tests use Django's runner via `common.test_runner.FastPasswordTestRunner` (`TEST_RUNNER` in settings), which
+swaps in a fast password hasher. Without it the default 1M-iteration PBKDF2 makes the suite take minutes.

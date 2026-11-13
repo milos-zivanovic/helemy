@@ -1,25 +1,24 @@
 """
 URL configuration for life_tracker project.
 """
-from django.contrib import admin
-from django.urls import path, include
+
 from django.conf import settings
 from django.conf.urls.static import static
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    
+    path("admin/", admin.site.urls),
     # API Schema
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # API v1
-    path('api/v1/auth/', include('users.urls')),
-    path('api/v1/finances/', include('finances.urls')),
-    path('api/v1/fitness/', include('fitness.urls')),
-    path('api/v1/nutrition/', include('nutrition.urls')),
+    path("api/v1/auth/", include("users.urls")),
+    path("api/v1/finances/", include("finances.urls")),
+    path("api/v1/fitness/", include("fitness.urls")),
+    path("api/v1/nutrition/", include("nutrition.urls")),
 ]
 
 if settings.DEBUG:

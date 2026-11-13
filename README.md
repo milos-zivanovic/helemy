@@ -1,123 +1,101 @@
 # Life Tracker
 
-Personal finance, fitness, and nutrition tracking API built with Django REST Framework.
+Personal finance, fitness and nutrition tracker. One REST API serves a web client and a mobile app.
 
-## Stack
+| Part | Folder | Status | Details |
+|---|---|---|---|
+| REST API (Django + DRF) | [`api/`](api/) | Working | [api/README.md](api/README.md) |
+| Docker Compose | [`infrastructure/`](infrastructure/) | Working for development | [infrastructure/README.md](infrastructure/README.md) |
+| Web client (React + TypeScript, Vite) | [`web/`](web/) | Planned | [web/README.md](web/README.md) |
+| Mobile app (Expo / React Native) | [`mobile/`](mobile/) | Planned | [mobile/README.md](mobile/README.md) |
 
-- **Backend**: Django 5.0 + DRF + SimpleJWT
-- **Database**: PostgreSQL 16 (production profile) / SQLite (dev profile)
-- **API Docs**: drf-spectacular (OpenAPI 3.0 / Swagger UI)
-- **Containerization**: Docker + Docker Compose
-- **Code Quality**: Black + Ruff
-
-## Project Structure
+## Project structure
 
 ```
 life_tracker/
-├── api/                    # Django REST API
-│   ├── life_tracker/       # Project settings
-│   ├── users/              # Users, households, memberships
-│   ├── finances/           # Transactions, categories, budgets
-│   ├── fitness/            # Exercises, trainings, sets
-│   ├── nutrition/          # Foods, consumptions, goals
-│   ├── common/             # Shared permissions, mixins, pagination
-│   ├── manage.py
-│   └── Dockerfile
-├── web/                    # Future: HTMX/React web client
-├── mobile/                 # Future: React Native (Expo) mobile app
-├── infrastructure/         # Docker Compose, Caddy, scripts
-└── docs/                   # Documentation
+├── api/                    # Django REST API (users, finances, fitness, nutrition); has its own pyproject.toml
+├── infrastructure/         # docker-compose.yml with dev / dev-pg / prod profiles
+├── web/                    # Future React + TypeScript web client
+├── mobile/                 # Future Expo mobile app
+├── .gitattributes          # Forces LF line endings for files that run inside Linux containers
+└── CLAUDE.md               # Instructions for Claude Code
 ```
 
 ## Prerequisites
 
-- Docker & Docker Compose (Docker Desktop on Windows/macOS)
+- **Docker Desktop** (Windows/macOS) or Docker Engine + Compose v2: enough to run the API
+- **Node.js LTS**: only for web and mobile development, once they exist
+- **Python 3.12+**: optional, for running tests and tools on the host
 
-Python does **not** need to be installed on the host — it runs inside the container (`python:3.12-slim`).
+## Starting the services with Docker
 
-> **Windows note:** Docker Desktop ships Compose v2, invoked as `docker compose` (space).
+All Compose commands run from `infrastructure/`. Docker Desktop must be running.
 
-## Quick Start (Docker)
-
-All commands run from `infrastructure/`:
+### API
 
 ```bash
 cd infrastructure
-
-# Start development environment with SQLite (API on port 8000)
-docker compose --profile dev up -d
-
-# Or with PostgreSQL 16 (API on port 8001, db on 5432)
-docker compose --profile dev-pg up -d
-
-# Run migrations
-docker compose --profile dev exec api-dev python manage.py migrate
-
-# Create admin user
+docker compose --profile dev up -d --build                    # API on http://localhost:8000, migrates automatically
 docker compose --profile dev exec api-dev python manage.py createsuperuser
-
-# View logs
-docker compose logs -f
-
-# Stop containers
-docker compose down
 ```
 
-### Access
+Then open http://localhost:8000/api/docs/. To use PostgreSQL instead of SQLite, use `--profile dev-pg` and
+the service `api-dev-pg` (API on port 8001); `--profile prod` runs a production-like build on port 8002.
+Profiles, the prod setup, data reset and troubleshooting:
+[infrastructure/README.md](infrastructure/README.md).
 
-- API: http://localhost:8000 (port 8001 with the `dev-pg` profile)
-- Swagger UI: http://localhost:8000/api/docs/
-- ReDoc: http://localhost:8000/api/redoc/
-- OpenAPI Schema: http://localhost:8000/api/schema/
-- Admin: http://localhost:8000/admin/
+### Web (once `web/` exists)
 
-The browsable API is also available at each endpoint when accessed via browser.
-
-Main endpoint groups:
-
-- **Authentication** — `/api/v1/auth/`
-- **Users & Households** — `/api/v1/auth/households/`, `/api/v1/auth/me/`
-- **Finances** — `/api/v1/finances/`
-- **Fitness** — `/api/v1/fitness/`
-- **Nutrition** — `/api/v1/nutrition/`
-
-## Docker Compose Profiles
-
-| Profile  | Services               | Description                    |
-|----------|------------------------|--------------------------------|
-| `dev`    | `api-dev`              | SQLite, port 8000              |
-| `dev-pg` | `api-dev-pg`, `db`     | PostgreSQL 16, port 8001       |
-| `prod`   | `api-prod`, `db`       | Gunicorn + PostgreSQL          |
-
-All Django management commands run inside the container, e.g.:
+The plan is a `web-dev` service in the same `dev` profile, so one command starts API and web together:
 
 ```bash
-docker compose --profile dev exec api-dev python manage.py shell
-docker compose --profile dev exec api-dev python manage.py makemigrations
-docker compose --profile dev exec api-dev python manage.py spectacular --file schema.yml
+cd infrastructure
+docker compose --profile dev up -d --build    # API on :8000, web on :3000
 ```
 
-## Environment Variables
+Until that service is added, run the web dev server on the host as described in
+[web/README.md](web/README.md).
 
-Development defaults are set in `infrastructure/docker-compose.yml` (`DEBUG=1`, SQLite/Postgres `DATABASE_URL`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`). Override them by editing the compose file or by creating `api/.env` (read automatically by django-environ).
+### Mobile (once `mobile/` exists)
 
-Key variables:
-
-- `DEBUG` — Enable debug mode (1/0)
-- `SECRET_KEY` — Django secret key
-- `DATABASE_URL` — Database connection string
-- `ALLOWED_HOSTS` — Comma-separated allowed hosts
-- `CORS_ALLOWED_ORIGINS` — Comma-separated CORS origins
-- `JWT_ACCESS_TOKEN_LIFETIME_MINUTES`, `JWT_REFRESH_TOKEN_LIFETIME_DAYS` — JWT settings
-
-## Code Quality (optional, runs on host)
-
-These are not required to run the app in Docker; they need a local Python 3.12+ environment (run from `api/`):
+The mobile app is **not** meant to run in Docker: the phone or emulator must reach the Expo dev server
+directly, which is simplest from the host. Start the API with Docker as above, then on the host:
 
 ```bash
-ruff check .
-black .
+cd mobile
+npx expo start
 ```
+
+Reasons and configuration: [mobile/README.md](mobile/README.md).
+
+### Stopping
+
+```bash
+cd infrastructure
+docker compose --profile dev down
+```
+
+## API at a glance
+
+| URL | What |
+|---|---|
+| http://localhost:8000/api/docs/ | Swagger UI (try requests in the browser) |
+| http://localhost:8000/api/schema/ | OpenAPI schema (import into Postman) |
+| http://localhost:8000/admin/ | Django admin |
+| `/api/v1/auth/register/` | Sign up, returns the user and JWT tokens |
+| `/api/v1/auth/token/` | Login with `email` + `password`, returns JWT tokens |
+| `/api/v1/finances/`, `/api/v1/fitness/`, `/api/v1/nutrition/` | Domain endpoints |
+
+All data is isolated per household; see [api/README.md](api/README.md#data-isolation-important).
+
+## Tests
+
+```bash
+cd infrastructure
+docker compose --profile dev exec api-dev python manage.py test
+```
+
+Or on the host: `cd api && python manage.py test` (needs `pip install ".[dev]"` from `api/` in a Python 3.12+ venv).
 
 ## License
 

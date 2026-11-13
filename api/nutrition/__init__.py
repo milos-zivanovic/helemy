@@ -1,2 +1,2 @@
 # Nutrition app
-default_app_config = 'nutrition.apps.NutritionConfig'
+default_app_config = "nutrition.apps.NutritionConfig"

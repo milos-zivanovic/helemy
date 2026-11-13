@@ -1,148 +1,133 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db.models import Sum, Q
-from django.utils import timezone
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from common.mixins import HouseholdModelViewSet
-from common.permissions import IsHouseholdMember
 from common.pagination import StandardResultsSetPagination
-from nutrition.models import Food, Consumption
+from common.permissions import IsHouseholdMember
+from nutrition.filters import ConsumptionFilter
+from nutrition.models import Consumption, Food
 from nutrition.serializers import (
-    FoodSerializer, FoodCreateSerializer,
-    ConsumptionSerializer, ConsumptionCreateSerializer,
+    ConsumptionCreateSerializer,
+    ConsumptionSerializer,
+    FoodCreateSerializer,
+    FoodSerializer,
     WeeklyNutritionSummarySerializer,
 )
 
+MACROS = ("calories", "protein", "carbs", "fat")
+
 
 @extend_schema_view(
-    list=extend_schema(tags=['Nutrition - Foods']),
-    create=extend_schema(tags=['Nutrition - Foods']),
-    partial_update=extend_schema(tags=['Nutrition - Foods']),
-    destroy=extend_schema(tags=['Nutrition - Foods']),
+    list=extend_schema(tags=["Nutrition - Foods"]),
+    create=extend_schema(tags=["Nutrition - Foods"]),
+    partial_update=extend_schema(tags=["Nutrition - Foods"]),
+    destroy=extend_schema(tags=["Nutrition - Foods"]),
 )
 class FoodViewSet(HouseholdModelViewSet):
     queryset = Food.objects.all()
     serializer_class = FoodSerializer
     permission_classes = [IsHouseholdMember]
     pagination_class = StandardResultsSetPagination
-    ordering = ['name']
-    ordering_fields = ['name', 'calories', 'created_at']
-    search_fields = ['name', 'description']
+    ordering = ["name"]
+    ordering_fields = ["name", "calories", "created_at"]
+    search_fields = ["name", "description"]
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action == "create":
             return FoodCreateSerializer
         return FoodSerializer
 
 
 @extend_schema_view(
-    list=extend_schema(tags=['Nutrition - Consumptions']),
-    create=extend_schema(tags=['Nutrition - Consumptions']),
-    partial_update=extend_schema(tags=['Nutrition - Consumptions']),
-    destroy=extend_schema(tags=['Nutrition - Consumptions']),
+    list=extend_schema(tags=["Nutrition - Consumptions"]),
+    create=extend_schema(tags=["Nutrition - Consumptions"]),
+    partial_update=extend_schema(tags=["Nutrition - Consumptions"]),
+    destroy=extend_schema(tags=["Nutrition - Consumptions"]),
 )
 class ConsumptionViewSet(HouseholdModelViewSet):
-    queryset = Consumption.objects.select_related('food', 'user').all()
+    queryset = Consumption.objects.select_related("food", "user").all()
     serializer_class = ConsumptionSerializer
     permission_classes = [IsHouseholdMember]
     pagination_class = StandardResultsSetPagination
-    ordering = ['-date', '-created_at']
-    ordering_fields = ['date', 'created_at']
-    search_fields = ['food__name']
+    ordering = ["-date", "-created_at"]
+    ordering_fields = ["date", "created_at"]
+    filterset_class = ConsumptionFilter
+    search_fields = ["food__name"]
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action == "create":
             return ConsumptionCreateSerializer
         return ConsumptionSerializer
 
-    @action(detail=False, methods=['get'], url_path='weekly-summary')
+    @extend_schema(
+        tags=["Nutrition - Consumptions"],
+        parameters=[
+            OpenApiParameter(
+                "date",
+                OpenApiTypes.DATE,
+                description="Any day of the wanted week (YYYY-MM-DD). Defaults to today.",
+            ),
+        ],
+        responses={200: WeeklyNutritionSummarySerializer(many=True)},
+    )
+    @action(detail=False, methods=["get"], url_path="weekly-summary", filter_backends=[])
     def weekly_summary(self, request):
         """
-        Summarize weekly intake of calories, carbs, proteins and fats for the last 7 days.
-        Calculated for each user in the logged in user's household, including the owner.
+        Calories and macros per day for the calendar week (Monday to Sunday) containing `date`.
+        Always 7 days. Each day has household totals and a `by_user` breakdown that lists
+        every household member, with zeros for members who logged nothing that day.
         """
-        today = timezone.now().date()
-        start_date = today - timedelta(days=6)
+        raw_date = request.query_params.get("date")
+        # localdate, not now().date(): the latter is the UTC date and lags behind after midnight.
+        day = parse_date(raw_date) if raw_date else timezone.localdate()
+        if day is None:
+            raise ValidationError({"date": "Use the YYYY-MM-DD format."})
+        week_start = day - timedelta(days=day.weekday())
+        week_days = [week_start + timedelta(days=i) for i in range(7)]
 
-        household = request.user.households.first()
-        if not household:
-            return Response([])
+        household = request.user.get_active_household()
+        members = {user.id: user for user in household.members.all()} if household else {}
+        if household:
+            members.setdefault(household.owner_id, household.owner)
 
-        users = list(household.members.all())
-        if household.owner not in users:
-            users.append(household.owner)
+        consumptions = list(self.get_queryset().filter(date__range=(week_days[0], week_days[-1])))
+        for consumption in consumptions:  # e.g. entries by someone who has left the household
+            members.setdefault(consumption.user_id, consumption.user)
+        users = sorted(members.values(), key=lambda u: u.id)
 
-        consumptions = self.get_queryset().filter(
-            date__gte=start_date,
-            date__lte=today,
-        )
-
-        summaries = {}
+        summary = {
+            week_day: {
+                "date": week_day,
+                **dict.fromkeys(MACROS, 0),
+                "by_user": {
+                    user.id: {
+                        "user_id": user.id,
+                        "full_name": user.get_full_name(),
+                        "email": user.email,
+                        **dict.fromkeys(MACROS, 0),
+                    }
+                    for user in users
+                },
+            }
+            for week_day in week_days
+        }
         for consumption in consumptions:
-            date_key = consumption.date.isoformat()
-            user_key = consumption.user.id
-            if date_key not in summaries:
-                summaries[date_key] = {
-                    'date': consumption.date,
-                    'calories': 0,
-                    'protein': 0,
-                    'carbs': 0,
-                    'fat': 0,
-                    'by_user': {},
-                }
-            if user_key not in summaries[date_key]['by_user']:
-                summaries[date_key]['by_user'][user_key] = {
-                    'user_id': consumption.user.id,
-                    'username': consumption.user.username,
-                    'email': consumption.user.email,
-                    'calories': 0,
-                    'protein': 0,
-                    'carbs': 0,
-                    'fat': 0,
-                }
+            day_summary = summary[consumption.date]
+            user_summary = day_summary["by_user"][consumption.user_id]
+            for macro in MACROS:
+                value = getattr(consumption, macro)
+                day_summary[macro] += value
+                user_summary[macro] += value
 
-            summaries[date_key]['calories'] += consumption.calories
-            summaries[date_key]['protein'] += consumption.protein
-            summaries[date_key]['carbs'] += consumption.carbs
-            summaries[date_key]['fat'] += consumption.fat
-
-            user_summary = summaries[date_key]['by_user'][user_key]
-            user_summary['calories'] += consumption.calories
-            user_summary['protein'] += consumption.protein
-            user_summary['carbs'] += consumption.carbs
-            user_summary['fat'] += consumption.fat
-
-        result = []
-        for i in range(5):
-            day = start_date + timedelta(days=i)
-            day_key = day.isoformat()
-            if day_key in summaries:
-                summaries[day_key]['by_user'] = list(summaries[day_key]['by_user'].values())
-                result.append(summaries[day_key])
-            else:
-                result.append({
-                    'date': day,
-                    'calories': 0,
-                    'protein': 0,
-                    'carbs': 0,
-                    'fat': 0,
-                    'by_user': [
-                        {
-                            'user_id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'calories': 0,
-                            'protein': 0,
-                            'carbs': 0,
-                            'fat': 0,
-                        }
-                        for user in users
-                    ],
-                })
-
-        serializer = WeeklyNutritionSummarySerializer(result, many=True)
-        return Response(serializer.data)
+        result = [
+            {**day_summary, "by_user": list(day_summary["by_user"].values())}
+            for day_summary in summary.values()
+        ]
+        return Response(WeeklyNutritionSummarySerializer(result, many=True).data)

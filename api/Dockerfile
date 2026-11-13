@@ -1,42 +1,43 @@
-# Build stage
+# Life Tracker API image.
+# Build context is api/ (this folder), see infrastructure/docker-compose.yml.
+
+# ---- Build stage: install dependencies into an isolated virtualenv ----
 FROM python:3.12-slim AS builder
 
-WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
 
-# Install Python dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir --user .
+WORKDIR /build
+COPY pyproject.toml README.md ./
+RUN pip install .
 
-# Runtime stage
+# ---- Runtime stage ----
 FROM python:3.12-slim
 
+ENV PATH=/opt/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=life_tracker.settings
+
+# Non-root user that owns the app and its writable folders
+RUN useradd --create-home --shell /bin/bash app
+
+COPY --from=builder /opt/venv /opt/venv
+
 WORKDIR /app
+COPY --chown=app:app . .
+COPY --chown=app:app --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+# Writable dirs; named volumes mounted here inherit this ownership on first use
+RUN mkdir -p /app/data /app/media /app/staticfiles \
+    && chown -R app:app /app/data /app/media /app/staticfiles
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
-
-# Copy application code
-COPY . .
-
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
 USER app
 
-# Expose port
 EXPOSE 8000
 
-# Default command (overridden in docker-compose)
-CMD ["gunicorn", "life_tracker.wsgi:application", "--bind", "0.0.0.0:8000"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["gunicorn", "life_tracker.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

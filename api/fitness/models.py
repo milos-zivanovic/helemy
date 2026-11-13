@@ -1,17 +1,17 @@
-from django.db import models
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
+from django.db import models
 from django.db.models import Max
+from django.utils.translation import gettext_lazy as _
 
 
 class MuscleGroup(models.Model):
-    name = models.CharField(_('name'), max_length=50, unique=True)
-    order = models.PositiveIntegerField(_('order'), default=0)
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    name = models.CharField(_("name"), max_length=50, unique=True)
+    order = models.PositiveIntegerField(_("order"), default=0)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
-        ordering = ['order', 'name']
+        ordering = ["order", "name"]
 
     def __str__(self):
         return self.name
@@ -19,31 +19,31 @@ class MuscleGroup(models.Model):
 
 class Exercise(models.Model):
     household = models.ForeignKey(
-        'users.Household',
+        "users.Household",
         on_delete=models.CASCADE,
-        related_name='exercises',
+        related_name="exercises",
     )
     muscle_group = models.ForeignKey(
         MuscleGroup,
         on_delete=models.PROTECT,
-        related_name='exercises',
+        related_name="exercises",
         null=True,
         blank=True,
         db_index=True,
     )
-    name = models.CharField(_('name'), max_length=100)
-    description = models.TextField(_('description'), blank=True)
+    name = models.CharField(_("name"), max_length=100)
+    description = models.TextField(_("description"), blank=True)
     image = models.ImageField(
-        _('image'),
-        upload_to='exercises/',
+        _("image"),
+        upload_to="exercises/",
         blank=True,
         null=True,
     )
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
-        ordering = ['muscle_group__order', 'name']
+        ordering = ["muscle_group__order", "name"]
 
     def __str__(self):
         return self.name
@@ -56,34 +56,36 @@ class Exercise(models.Model):
 
 class Training(models.Model):
     household = models.ForeignKey(
-        'users.Household',
+        "users.Household",
         on_delete=models.CASCADE,
-        related_name='trainings',
+        related_name="trainings",
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='fitness_trainings',
+        related_name="fitness_trainings",
     )
     muscle_groups = models.ManyToManyField(
         MuscleGroup,
-        related_name='trainings',
+        related_name="trainings",
         blank=True,
     )
-    name = models.CharField(_('name'), max_length=100, blank=True)
-    date = models.DateField(_('date'))
-    notes = models.TextField(_('notes'), blank=True)
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    name = models.CharField(_("name"), max_length=100, blank=True)
+    date = models.DateField(_("date"))
+    notes = models.TextField(_("notes"), blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
-        ordering = ['-date', '-created_at']
+        ordering = ["-date", "-created_at"]
         constraints = [
-            models.UniqueConstraint(fields=['household', 'user', 'date'], name='unique_training_per_user_per_day'),
+            models.UniqueConstraint(
+                fields=["household", "user", "date"], name="unique_training_per_user_per_day"
+            ),
         ]
 
     def __str__(self):
-        return self.name or f'Training {self.date}'
+        return self.name or f"Training {self.date}"
 
     @property
     def total_volume(self):
@@ -98,12 +100,12 @@ class Training(models.Model):
             training=self,
             exercise=exercise,
             defaults={
-                'order': (self.items.aggregate(order_max=Max('order'))['order_max'] or 0) + 1,
-            }
+                "order": (self.items.aggregate(order_max=Max("order"))["order_max"] or 0) + 1,
+            },
         )
 
         # Get next set number
-        last_set = training_item.sets.aggregate(max_set=Max('set_number'))['max_set']
+        last_set = training_item.sets.aggregate(max_set=Max("set_number"))["max_set"]
         next_set_number = (last_set or 0) + 1
 
         training_set = TrainingSet.objects.create(
@@ -120,32 +122,33 @@ class TrainingItem(models.Model):
     training = models.ForeignKey(
         Training,
         on_delete=models.CASCADE,
-        related_name='items',
+        related_name="items",
     )
     exercise = models.ForeignKey(
         Exercise,
         on_delete=models.CASCADE,
-        related_name='training_items',
+        related_name="training_items",
         db_index=True,
     )
-    order = models.PositiveSmallIntegerField(_('order'), default=1)
-    notes = models.TextField(_('notes'), blank=True)
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    order = models.PositiveSmallIntegerField(_("order"), default=1)
+    notes = models.TextField(_("notes"), blank=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
-        ordering = ['order', 'exercise__name']
-        unique_together = ['training', 'exercise']
+        ordering = ["order", "exercise__name"]
+        unique_together = ["training", "exercise"]
 
     def __str__(self):
-        return f'{self.training} - {self.exercise}'
-    
+        return f"{self.training} - {self.exercise}"
+
     def clean(self):
         from django.core.exceptions import ValidationError
+
         if self.training_id and self.exercise_id:
             if self.training.household_id != self.exercise.household_id:
                 raise ValidationError("Exercise must belong to the same household as the training.")
-    
+
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
@@ -159,31 +162,38 @@ class TrainingSet(models.Model):
     training_item = models.ForeignKey(
         TrainingItem,
         on_delete=models.CASCADE,
-        related_name='sets',
+        related_name="sets",
     )
-    set_number = models.PositiveSmallIntegerField(_('set number'))
+    set_number = models.PositiveSmallIntegerField(_("set number"))
     weight = models.DecimalField(
-        _('weight (kg)'),
+        _("weight (kg)"),
         max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
     )
-    reps = models.PositiveSmallIntegerField(_('reps'))
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    reps = models.PositiveSmallIntegerField(_("reps"))
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
-        ordering = ['set_number']
-        unique_together = ['training_item', 'set_number']
+        ordering = ["set_number"]
+        unique_together = ["training_item", "set_number"]
         constraints = [
-            models.CheckConstraint(check=models.Q(reps__gt=0), name='training_set_reps_positive'),
-            models.CheckConstraint(check=models.Q(weight__gte=0) | models.Q(weight__isnull=True), name='training_set_weight_non_negative'),
+            models.CheckConstraint(
+                condition=models.Q(reps__gt=0), name="training_set_reps_positive"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(weight__gte=0) | models.Q(weight__isnull=True),
+                name="training_set_weight_non_negative",
+            ),
         ]
 
     def __str__(self):
-        weight_str = f'{self.weight}kg ' if self.weight else ''
-        return f'{self.training_item.exercise} - Set {self.set_number}: {weight_str}{self.reps} reps'
+        weight_str = f"{self.weight}kg " if self.weight else ""
+        return (
+            f"{self.training_item.exercise} - Set {self.set_number}: {weight_str}{self.reps} reps"
+        )
 
     @property
     def volume(self):

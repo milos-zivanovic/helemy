@@ -60,5 +60,3 @@ venv/
 # Docker dev SQLite data
 infrastructure/data/
 
-# Kilo agent config (local, not for sharing)
-.kilo/

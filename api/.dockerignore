@@ -1,0 +1,16 @@
+# Build context is api/. Keep it small and keep secrets and local data out of the image.
+.venv
+venv
+**/__pycache__
+**/*.pyc
+*.egg-info
+build
+.ruff_cache
+.coverage
+htmlcov
+
+# Local config and data (the container gets its config from compose `environment:`)
+.env
+data
+media
+staticfiles
