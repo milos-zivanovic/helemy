@@ -1,55 +1,96 @@
-# web — Life Tracker web client (planned)
+# web — Life Tracker web client
 
-> **Status:** not started. This folder is empty apart from this README.
+> **Status:** phase 0 (project skeleton). The page only checks the connection to the API; login comes next.
 
-Browser client for Life Tracker. It will use only the REST API in [`../api`](../api/README.md) and will
-not access the database directly.
+Browser client for Life Tracker. It uses only the REST API in [`../api`](../api/README.md) and never touches
+the database directly.
 
-## Planned stack
+## Stack
 
-| Tool | Role |
-|---|---|
-| React + TypeScript | UI and language |
-| Vite | Dev server and production build |
-| React Router | Client-side routes |
-| TanStack Query | Calling the API, caching, loading/error states |
-| React Hook Form + Zod | Forms and validation |
-| Tailwind CSS | Styling |
-| Recharts | Charts (spending by category, balance over time) |
+| Tool                               | Role                                                            |
+| ---------------------------------- | --------------------------------------------------------------- |
+| React + TypeScript                 | UI and language                                                 |
+| Vite                               | Dev server and production build                                 |
+| TanStack Query                     | Calling the API, caching, loading/error states                  |
+| openapi-fetch + openapi-typescript | Typed API client; types generated from the API's OpenAPI schema |
+| i18next + react-i18next            | Translations (Serbian Latin `sr`, English `en`)                 |
+| Tailwind CSS                       | Styling                                                         |
+| oxlint, Prettier                   | Linting and formatting                                          |
 
-API types will be generated from the OpenAPI schema (`/api/schema/`) so the client always matches the
-backend. Code shared with the mobile app (API client, types, query hooks) will move to a shared package
-once both clients exist.
+Planned for the next phases: React Router (routes), React Hook Form + Zod (forms and validation),
+Recharts (charts). Code shared with the mobile app (API client, types, query hooks) will move to a shared
+package once both clients exist.
 
-## Planned way to run
+## Requirements
 
-Development server on **http://localhost:3000**. The API already allows this origin through
-`CORS_ALLOWED_ORIGINS`.
+Node.js LTS (installed here with [fnm](https://github.com/Schniz/fnm)). On Windows PowerShell, if `npm`
+fails with "running scripts is disabled on this system", allow local scripts once:
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
-On the host (fastest feedback while developing):
+## Running
+
+The API must be running on http://localhost:8000 (see the [root README](../README.md)).
 
 ```bash
 cd web
 npm install
-npm run dev -- --port 3000
+npm run dev        # http://localhost:3000
 ```
 
-Through Docker, once a `web-dev` service is added to `../infrastructure/docker-compose.yml`:
+Port 3000 is fixed (`strictPort`) because the API allows exactly this origin through `CORS_ALLOWED_ORIGINS`.
 
-```bash
-cd infrastructure
-docker compose --profile dev up -d --build    # API + web together
+## Scripts
+
+| Command                           | What it does                                                            |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev`                     | Dev server with hot reload on port 3000                                 |
+| `npm run build`                   | Type check, then production build into `dist/`                          |
+| `npm run preview`                 | Serve the `dist/` build locally                                         |
+| `npm run typecheck`               | TypeScript only (`tsc -b`)                                              |
+| `npm run lint`                    | oxlint                                                                  |
+| `npm run format` / `format:check` | Prettier (also sorts Tailwind classes)                                  |
+| `npm run gen:api`                 | Regenerate `src/api/schema.d.ts` from http://localhost:8000/api/schema/ |
+
+Run `typecheck`, `lint`, `format:check` and `build` before finishing a change.
+
+### API types
+
+`src/api/schema.d.ts` is generated, never edited by hand, and committed so a build doesn't need a running API.
+After any change to the API (endpoint, serializer field, filter), start the API and run `npm run gen:api`;
+TypeScript then reports every place in the web code that no longer matches. The generator runs through
+`npx` with a pinned version because it needs TypeScript 5 while the project uses TypeScript 7.
+
+## Configuration
+
+Optional; put it in `web/.env.local` (gitignored). Only variables starting with `VITE_` reach the browser code.
+
+| Variable       | Default                 | Meaning                                                                    |
+| -------------- | ----------------------- | -------------------------------------------------------------------------- |
+| `VITE_API_URL` | `http://localhost:8000` | Origin of the API, without `/api` (the generated paths start with `/api/`) |
+
+## Structure
+
+```
+web/src/
+├── main.tsx               # Entry point: i18n, React Query provider, <App />
+├── App.tsx                # Current page (phase 0: header + API status)
+├── config.ts              # Values from the environment (API_URL)
+├── api/
+│   ├── client.ts          # Typed fetch client (openapi-fetch)
+│   ├── queryClient.ts     # TanStack Query cache settings
+│   └── schema.d.ts        # Generated by `npm run gen:api`
+├── i18n/
+│   ├── index.ts           # i18next setup: sr (default) + en, choice remembered in localStorage
+│   ├── i18next.d.ts       # Makes translation keys type-checked against sr.json
+│   └── locales/           # sr.json, en.json: every key must exist in both
+└── components/            # Reusable UI pieces
 ```
 
-## Configuration (planned)
+## Next phases
 
-| Variable | Example | Meaning |
-|---|---|---|
-| `VITE_API_URL` | `http://localhost:8000/api` | Base URL of the API |
-
-## First steps when starting
-
-1. `npm create vite@latest web -- --template react-ts` from the repo root
-2. Login screen: `POST /api/auth/token/`, keep the tokens, refresh on 401
-3. Transactions: list with filters, create/edit form, totals
-4. Budgets and charts
+1. Auth: login and sign up pages, access token in memory and refresh token in `localStorage`, automatic
+   refresh on 401, protected routes, logout
+2. App shell and household: navigation, members, invitations (accept/decline), leaving a household
+3. Finances: transactions (filters, form, suggestions), categories, budgets, charts
+4. Fitness and nutrition
+5. Docker: `web-dev` service in the `dev` profile, production build served as static files

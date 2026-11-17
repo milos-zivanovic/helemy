@@ -1,0 +1,15 @@
+{
+  "app": {
+    "title": "Life Tracker"
+  },
+  "language": {
+    "label": "Jezik"
+  },
+  "apiStatus": {
+    "title": "Veza sa API-jem",
+    "checking": "Proveravam…",
+    "ok": "API radi i traži prijavu (401), kako i treba.",
+    "unexpected": "API je odgovorio statusom {{status}}.",
+    "unreachable": "API nije dostupan na {{url}}. Da li je pokrenut?"
+  }
+}

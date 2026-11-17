@@ -1,0 +1,15 @@
+{
+  "app": {
+    "title": "Life Tracker"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "apiStatus": {
+    "title": "API connection",
+    "checking": "Checking…",
+    "ok": "The API is up and asks for a login (401), as expected.",
+    "unexpected": "The API answered with status {{status}}.",
+    "unreachable": "The API isn't reachable at {{url}}. Is it running?"
+  }
+}

@@ -44,7 +44,7 @@ The usual setup is: start the API with Docker (`../infrastructure`), run `npx ex
 
 | Variable | Example | Meaning |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | `http://192.168.1.10:8000/api` | API base URL |
+| `EXPO_PUBLIC_API_URL` | `http://192.168.1.10:8000` | API origin, without `/api` (generated API paths start with `/api/`) |
 
 On a physical phone `localhost` means the phone itself, so use your computer's LAN IP address, and add it
 to the API's `ALLOWED_HOSTS`.

@@ -1,8 +1,8 @@
 # life_tracker — instructions for Claude Code
 
-Monorepo: Django REST API (`api/`), Docker Compose (`infrastructure/`), planned React web (`web/`) and Expo
-mobile (`mobile/`) clients. What the project is, how to run it, endpoints and env variables are in the
-READMEs (root, `api/`, `infrastructure/`); read them instead of duplicating their content here.
+Monorepo: Django REST API (`api/`), Docker Compose (`infrastructure/`), React web client (`web/`, in progress)
+and a planned Expo mobile app (`mobile/`). What the project is, how to run it, endpoints and env variables are
+in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of duplicating their content here.
 
 ## Working agreement
 - Communicate in Serbian (Latin script); code, identifiers and commit messages stay in English.
@@ -13,8 +13,10 @@ READMEs (root, `api/`, `infrastructure/`); read them instead of duplicating thei
   4. **Predlozi**: optional, only when genuinely useful
 - Never commit, push or create a PR/MR: the user does all git writes (read-only git is fine). An explicit
   request to do one is a one-time approval for that action only; afterwards go back to this rule.
-- Work only on `api/` (and its Docker setup) until the user says otherwise; web/mobile work and the data
-  import from the old `wallet` app need the user's explicit approval.
+- Work on `api/` and `web/` (and their Docker setup); mobile work and the data import from the old `wallet`
+  app need the user's explicit approval.
+- The user is a backend engineer learning frontend: for web work, write the code and explain each new
+  concept (with Django analogies where they help), not just hand it over.
 - The user runs Docker commands themselves; don't build or start containers unless asked.
 
 ## Checks (host, from `api/`; run before finishing any change)
@@ -23,6 +25,14 @@ The repo root `.venv` has the deps from `api/pyproject.toml` (Python 3.14 here, 
 - `../.venv/Scripts/python.exe manage.py test` (Django's runner, not pytest)
 - `../.venv/Scripts/python.exe manage.py spectacular --file /dev/null --validate` (keep it warning-free)
 - `../.venv/Scripts/python.exe manage.py makemigrations --check --dry-run`
+
+## Checks (host, from `web/`)
+Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
+`/c/Users/zmilo/AppData/Roaming/fnm/node-versions/v26.13.1/installation` (Bash) before `npm`.
+- `npm run format`, `npm run typecheck`, `npm run lint`, `npm run build`
+- After an API change: start the API and `npm run gen:api` (or generate from `manage.py spectacular --file`
+  with `npx --yes openapi-typescript@7.13.0 <file> -o src/api/schema.d.ts`), then typecheck.
+- UI text only through i18n keys present in both `src/i18n/locales/sr.json` and `en.json`.
 - `api/data/` (host SQLite) doesn't exist; for a live `runserver` smoke test point `DATABASE_URL` at a
   scratchpad SQLite file instead of creating it.
 

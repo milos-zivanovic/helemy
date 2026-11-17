@@ -6,7 +6,7 @@ Personal finance, fitness and nutrition tracker. One REST API serves a web clien
 |---|---|---|---|
 | REST API (Django + DRF) | [`api/`](api/) | Working | [api/README.md](api/README.md) |
 | Docker Compose | [`infrastructure/`](infrastructure/) | Working for development | [infrastructure/README.md](infrastructure/README.md) |
-| Web client (React + TypeScript, Vite) | [`web/`](web/) | Planned | [web/README.md](web/README.md) |
+| Web client (React + TypeScript, Vite) | [`web/`](web/) | In progress (phase 0) | [web/README.md](web/README.md) |
 | Mobile app (Expo / React Native) | [`mobile/`](mobile/) | Planned | [mobile/README.md](mobile/README.md) |
 
 ## Project structure
@@ -15,7 +15,7 @@ Personal finance, fitness and nutrition tracker. One REST API serves a web clien
 life_tracker/
 ├── api/                    # Django REST API (users, finances, fitness, nutrition); has its own pyproject.toml
 ├── infrastructure/         # docker-compose.yml with dev / dev-pg / prod profiles
-├── web/                    # Future React + TypeScript web client
+├── web/                    # React + TypeScript web client (Vite)
 ├── mobile/                 # Future Expo mobile app
 ├── .gitattributes          # Forces LF line endings for files that run inside Linux containers
 └── CLAUDE.md               # Instructions for Claude Code
@@ -24,7 +24,7 @@ life_tracker/
 ## Prerequisites
 
 - **Docker Desktop** (Windows/macOS) or Docker Engine + Compose v2: enough to run the API
-- **Node.js LTS**: only for web and mobile development, once they exist
+- **Node.js LTS**: only for web and mobile development
 - **Python 3.12+**: optional, for running tests and tools on the host
 
 ## Starting the services with Docker
