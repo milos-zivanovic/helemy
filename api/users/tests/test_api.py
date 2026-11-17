@@ -5,12 +5,12 @@ from common.testing import HouseholdAPITestCase
 
 User = get_user_model()
 
-HOUSEHOLDS_URL = "/api/v1/auth/households/"
-REGISTER_URL = "/api/v1/auth/register/"
-TOKEN_URL = "/api/v1/auth/token/"
-REFRESH_URL = "/api/v1/auth/token/refresh/"
-LOGOUT_URL = "/api/v1/auth/logout/"
-ME_URL = "/api/v1/auth/me/"
+HOUSEHOLDS_URL = "/api/auth/households/"
+REGISTER_URL = "/api/auth/register/"
+TOKEN_URL = "/api/auth/token/"
+REFRESH_URL = "/api/auth/token/refresh/"
+LOGOUT_URL = "/api/auth/logout/"
+ME_URL = "/api/auth/me/"
 PASSWORD = "Str0ng-pass-word"
 
 
@@ -43,8 +43,14 @@ class HouseholdAPITests(HouseholdAPITestCase):
         base = f"{HOUSEHOLDS_URL}{self.alice_household.id}"
         response = self.client.post(f"{base}/invite/", {"email": "bob@example.com"}, format="json")
         self.assertEqual(response.status_code, 201, response.data)
+        self.assertFalse(self.alice_household.members.filter(id=self.bob.id).exists())
+
+        self.client.force_authenticate(self.bob)
+        response = self.client.post(f"/api/auth/invitations/{response.data['id']}/accept/")
+        self.assertEqual(response.status_code, 200, response.data)
         self.assertTrue(self.alice_household.members.filter(id=self.bob.id).exists())
 
+        self.client.force_authenticate(self.alice)
         response = self.client.delete(f"{base}/members/{self.bob.id}/")
         self.assertEqual(response.status_code, 204)
         self.assertFalse(self.alice_household.members.filter(id=self.bob.id).exists())

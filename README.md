@@ -82,9 +82,9 @@ docker compose --profile dev down
 | http://localhost:8000/api/docs/ | Swagger UI (try requests in the browser) |
 | http://localhost:8000/api/schema/ | OpenAPI schema (import into Postman) |
 | http://localhost:8000/admin/ | Django admin |
-| `/api/v1/auth/register/` | Sign up, returns the user and JWT tokens |
-| `/api/v1/auth/token/` | Login with `email` + `password`, returns JWT tokens |
-| `/api/v1/finances/`, `/api/v1/fitness/`, `/api/v1/nutrition/` | Domain endpoints |
+| `/api/auth/register/` | Sign up, returns the user and JWT tokens |
+| `/api/auth/token/` | Login with `email` + `password`, returns JWT tokens |
+| `/api/finances/`, `/api/fitness/`, `/api/nutrition/` | Domain endpoints |
 
 All data is isolated per household; see [api/README.md](api/README.md#data-isolation-important).
 

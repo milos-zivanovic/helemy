@@ -8,11 +8,11 @@ from rest_framework.test import APITestCase
 
 User = get_user_model()
 
-TOKEN_URL = "/api/v1/auth/token/"
-REFRESH_URL = "/api/v1/auth/token/refresh/"
-CHANGE_URL = "/api/v1/auth/password/change/"
-RESET_URL = "/api/v1/auth/password/reset/"
-CONFIRM_URL = "/api/v1/auth/password/reset/confirm/"
+TOKEN_URL = "/api/auth/token/"
+REFRESH_URL = "/api/auth/token/refresh/"
+CHANGE_URL = "/api/auth/password/change/"
+RESET_URL = "/api/auth/password/reset/"
+CONFIRM_URL = "/api/auth/password/reset/confirm/"
 OLD = "Old-pass-word-1"
 NEW = "New-pass-word-2"
 RESET_LINK = "http://app.test/reset?uid={uid}&token={token}"

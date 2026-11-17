@@ -5,9 +5,9 @@ from django.utils import timezone
 from common.testing import HouseholdAPITestCase
 from fitness.models import Exercise, MuscleGroup, Training
 
-EXERCISES_URL = "/api/v1/fitness/exercises/"
-MUSCLE_GROUPS_URL = "/api/v1/fitness/muscle-groups/"
-TRAININGS_URL = "/api/v1/fitness/trainings/"
+EXERCISES_URL = "/api/fitness/exercises/"
+MUSCLE_GROUPS_URL = "/api/fitness/muscle-groups/"
+TRAININGS_URL = "/api/fitness/trainings/"
 
 
 class FitnessAPITests(HouseholdAPITestCase):

@@ -8,9 +8,9 @@ from django.utils import timezone
 from common.testing import HouseholdAPITestCase
 from finances.models import Budget, Category, CategoryGroup, Transaction
 
-TRANSACTIONS_URL = "/api/v1/finances/transactions/"
-CATEGORIES_URL = "/api/v1/finances/categories/"
-BUDGETS_URL = "/api/v1/finances/budgets/"
+TRANSACTIONS_URL = "/api/finances/transactions/"
+CATEGORIES_URL = "/api/finances/categories/"
+BUDGETS_URL = "/api/finances/budgets/"
 
 
 class FinancesAPITests(HouseholdAPITestCase):

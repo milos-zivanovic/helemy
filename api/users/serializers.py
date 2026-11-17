@@ -2,12 +2,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from users.models import Household
+from finances.services import create_default_categories
+from users.models import Household, HouseholdInvitation
 
 User = get_user_model()
 
@@ -30,8 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
             "timezone",
             "language",
             "currency",
-            "onboarding_completed",
-            "onboarding_step",
             "date_joined",
             "last_activity",
             "role",
@@ -85,8 +85,9 @@ class HouseholdCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user = self.context["request"].user
-        if user.owned_households.exists():
-            raise serializers.ValidationError("You can only create one household.")
+        # Every user is in exactly one household (the personal one is created at sign up).
+        if user.households.exists():
+            raise serializers.ValidationError("You already belong to a household.")
         return attrs
 
     def create(self, validated_data):
@@ -106,18 +107,46 @@ class InviteMemberSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
-        # Check if user exists
         try:
-            user = User.objects.get(email=value)
+            user = User.objects.get(email__iexact=User.objects.normalize_email(value))
         except User.DoesNotExist:
             raise serializers.ValidationError("User with this email does not exist.") from None
 
-        # Check if already a member
         household = self.context["household"]
-        if household.members.filter(id=user.id).exists():
+        if household.members.filter(pk=user.pk).exists():
             raise serializers.ValidationError("User is already a member of this household.")
+        if household.invitations.filter(
+            invited_user=user, status=HouseholdInvitation.PENDING
+        ).exists():
+            raise serializers.ValidationError("User already has a pending invitation.")
 
-        return value
+        self.context["user"] = user
+        return user.email
+
+
+class InvitationUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source="get_full_name", read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "email", "full_name"]
+
+
+class InvitationHouseholdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Household
+        fields = ["id", "name"]
+
+
+class HouseholdInvitationSerializer(serializers.ModelSerializer):
+    household = InvitationHouseholdSerializer(read_only=True)
+    invited_user = InvitationUserSerializer(read_only=True)
+    invited_by = InvitationUserSerializer(read_only=True)
+
+    class Meta:
+        model = HouseholdInvitation
+        fields = ["id", "household", "invited_user", "invited_by", "status", "created_at"]
+        read_only_fields = fields
 
 
 def check_password_strength(password, user, field):
@@ -151,9 +180,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         check_password_strength(attrs["password"], user, field="password")
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
-        # The post_save signal creates the user's personal household.
-        return User.objects.create_user(**validated_data)
+        # The post_save signal creates the user's personal household; sign up also seeds it.
+        user = User.objects.create_user(**validated_data)
+        create_default_categories(user.get_active_household())
+        return user
 
 
 class RegisterResponseSerializer(serializers.Serializer):

@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm
 from django.utils.translation import gettext_lazy as _
 
-from users.models import Household, User
+from users.models import Household, HouseholdInvitation, User
 
 # Django's user forms and admin are built around `username`; these variants use `email` instead.
 # The email is lowercased by User.clean() (it calls UserManager.normalize_email), which forms run.
@@ -51,7 +51,6 @@ class UserAdmin(BaseUserAdmin):
         (None, {"fields": ("email", "password")}),
         (_("Personal info"), {"fields": ("first_name", "last_name")}),
         (_("Preferences"), {"fields": ("timezone", "language", "currency")}),
-        (_("Onboarding"), {"fields": ("onboarding_completed", "onboarding_step")}),
         (
             _("Permissions"),
             {
@@ -91,3 +90,12 @@ class HouseholdAdmin(admin.ModelAdmin):
     @admin.display(description=_("members"))
     def member_count(self, obj):
         return len(obj.members.all())  # uses the prefetch, no query per row
+
+
+@admin.register(HouseholdInvitation)
+class HouseholdInvitationAdmin(admin.ModelAdmin):
+    list_display = ("household", "invited_user", "invited_by", "status", "created_at")
+    list_filter = ("status",)
+    search_fields = ("household__name", "invited_user__email", "invited_by__email")
+    autocomplete_fields = ("household", "invited_user", "invited_by")
+    readonly_fields = ("created_at", "responded_at")

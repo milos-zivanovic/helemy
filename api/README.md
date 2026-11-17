@@ -101,33 +101,66 @@ variables win over `.env`.
 
 Authentication flow:
 
-1. Sign up: `POST /api/v1/auth/register/` with `{"email", "password", "first_name"?, "last_name"?}` →
+1. Sign up: `POST /api/auth/register/` with `{"email", "password", "first_name"?, "last_name"?}` →
    `user` + `access` + `refresh` (the personal household is created automatically)
-2. Log in: `POST /api/v1/auth/token/` with `{"email": "...", "password": "..."}` → `access` + `refresh`
+2. Log in: `POST /api/auth/token/` with `{"email": "...", "password": "..."}` → `access` + `refresh`
 3. Send `Authorization: Bearer <access>` on every request
-4. `POST /api/v1/auth/token/refresh/` with `{"refresh": "..."}` when the access token expires
-5. Log out: `POST /api/v1/auth/logout/` with `{"refresh": "..."}` → 204; the refresh token is blacklisted,
+4. `POST /api/auth/token/refresh/` with `{"refresh": "..."}` when the access token expires
+5. Log out: `POST /api/auth/logout/` with `{"refresh": "..."}` → 204; the refresh token is blacklisted,
    the access token stays valid until it expires, so the client drops both
-6. Change password (logged in): `POST /api/v1/auth/password/change/` with `{"old_password", "new_password"}`
+6. Change password (logged in): `POST /api/auth/password/change/` with `{"old_password", "new_password"}`
    → a new `access` + `refresh`; all other sessions are logged out (their refresh tokens are blacklisted)
 7. Forgotten password:
-   - `POST /api/v1/auth/password/reset/` with `{"email"}` → always 204 (doesn't reveal whether the account
+   - `POST /api/auth/password/reset/` with `{"email"}` → always 204 (doesn't reveal whether the account
      exists); emails a `PASSWORD_RESET_URL` link with `uid` and `token`, valid 1 hour, limited to 5 requests/hour
    - the client page from that link posts `{"uid", "token", "new_password"}` to
-     `POST /api/v1/auth/password/reset/confirm/` → 204; the link is single-use and all sessions are logged out
+     `POST /api/auth/password/reset/confirm/` → 204; the link is single-use and all sessions are logged out
 
 Users have no `username`: `email` is the login field, stored lowercased and matched case-insensitively.
 New passwords go through Django's `AUTH_PASSWORD_VALIDATORS` (length, common, numeric, similar to email).
 Django admin has users (with their household memberships), households and muscle groups.
 
+Onboarding a new user (what a client does after sign up):
+
+1. `POST /api/auth/register/` → `user` + `access` + `refresh`, so the user is logged in right away. A personal
+   household ("<first name or email>'s Household") is created with the user as owner and only member, and
+   seeded with default finance category groups and categories (`finances.services.DEFAULT_CATEGORIES`).
+   A user always belongs to exactly one household, and all domain data is stored there.
+2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`
+   default `en`; users can't change these yet), `role` (`owner`/`member`) and `households`.
+3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
+   starts empty. Muscle groups are global and already exist:
+   - finances: `POST /api/finances/category-groups/` (`name`) and `POST /api/finances/categories/`
+     (`name`, `category_group_id`) for own categories. Transactions need an active category. Budgets are
+     optional (`POST /api/finances/budgets/` with `category_id`, `amount`, `start_date`, `end_date`)
+   - fitness: `GET /api/fitness/muscle-groups/`, then `POST /api/fitness/exercises/` (`name`, optional
+     `muscle_group_id`)
+   - nutrition: `POST /api/nutrition/foods/` (`name`, `calories`, `protein`, `carbs`, `fat` per 100 g)
+4. Optional, sharing data with another person (they need their own account first):
+   - the owner invites: `POST /api/auth/households/{id}/invite/` with `{"email"}` → 201, a pending
+     invitation (one pending invitation per user and household). Nothing is emailed; the client shows it
+   - `GET /api/auth/invitations/` → pending invitations the user received or sent (as an owner)
+   - the invited user answers: `POST /api/auth/invitations/{id}/accept/` → 200 with the joined household, or
+     `POST /api/auth/invitations/{id}/decline/` → 204. The owner cancels with `DELETE /api/auth/invitations/{id}/`
+   - accepting moves the user into the household. Their personal household is kept with all its data but
+     becomes inactive (no members). Accepting fails with 400 while the user's own household has other members
+     or while they are a member of another household
+   - `GET /api/auth/households/{id}/members/` lists the members. `DELETE .../members/{user_id}/` (owner only;
+     the owner can't be removed) removes a member: their personal household becomes active again, and the
+     records they created stay in the shared household
+   - a member leaves on their own with `POST /api/auth/households/{id}/leave/` → 200 with their personal
+     household, which is active again (same rules as being removed; the owner can't leave)
+   - `POST /api/auth/households/` returns 400, since every user already has a household. Households can't be
+     deleted (no DELETE)
+
 Endpoint groups:
 
 | Prefix | Content |
 |---|---|
-| `/api/v1/auth/` | `register/`, `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/`, `households/` (members, invite, remove member) |
-| `/api/v1/finances/` | `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
-| `/api/v1/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
-| `/api/v1/nutrition/` | `foods/`, `consumptions/` (`?date=`, `?start_date=`, `?end_date=`, `?food=`, `?user=`), `consumptions/weekly-summary/` |
+| `/api/auth/` | `register/`, `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/`, `households/` (members, invite, remove member, leave), `invitations/` (+ `accept/`, `decline/`) |
+| `/api/finances/` | `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
+| `/api/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
+| `/api/nutrition/` | `foods/`, `consumptions/` (`?date=`, `?start_date=`, `?end_date=`, `?food=`, `?user=`), `consumptions/weekly-summary/` |
 
 ## Finance rules worth knowing
 

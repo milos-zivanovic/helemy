@@ -14,11 +14,11 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    # API v1
-    path("api/v1/auth/", include("users.urls")),
-    path("api/v1/finances/", include("finances.urls")),
-    path("api/v1/fitness/", include("fitness.urls")),
-    path("api/v1/nutrition/", include("nutrition.urls")),
+    # API
+    path("api/auth/", include("users.urls")),
+    path("api/finances/", include("finances.urls")),
+    path("api/fitness/", include("fitness.urls")),
+    path("api/nutrition/", include("nutrition.urls")),
 ]
 
 if settings.DEBUG:

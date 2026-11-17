@@ -4,9 +4,9 @@ from decimal import Decimal
 from common.testing import HouseholdAPITestCase
 from finances.models import Category, CategoryGroup, Transaction
 
-TRANSACTIONS_URL = "/api/v1/finances/transactions/"
-CATEGORIES_URL = "/api/v1/finances/categories/"
-CATEGORY_GROUPS_URL = "/api/v1/finances/category-groups/"
+TRANSACTIONS_URL = "/api/finances/transactions/"
+CATEGORIES_URL = "/api/finances/categories/"
+CATEGORY_GROUPS_URL = "/api/finances/category-groups/"
 
 
 class ActiveCategoryTests(HouseholdAPITestCase):

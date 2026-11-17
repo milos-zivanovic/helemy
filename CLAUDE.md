@@ -36,12 +36,17 @@ The repo root `.venv` has the deps from `api/pyproject.toml` (Python 3.14 here, 
   households). Tests live in `<app>/tests/test_*.py`.
 - Users have no `username`: login is `email`, stored lowercased, matched case-insensitively
   (`users.models.UserManager`). Auth helpers (tokens, blacklisting, reset email) are in `users/services.py`.
+- A user is a member of exactly one household (`get_active_household()` relies on it). Their personal
+  (owned) household is never deleted: it has no members while they're in another household and becomes active
+  again when they leave or are removed. Membership changes go through `users.services` (`accept_invitation`,
+  `remove_from_household`), never `household.members.add/remove` directly; households have no DELETE.
+  Sign up seeds `finances.services.DEFAULT_CATEGORIES`.
 - `fitness.MuscleGroup` is global reference data (no household), read-only via the API; defaults seeded by
   `fitness/migrations/0003_seed_muscle_groups.py`, edited in the admin.
 - `finances.Transaction.date` is the day it happened (filters/budgets use it); `created_at` is audit only.
   DELETE on transactions is a soft delete (`is_deleted=True`).
 - Pagination: `common.pagination.StandardResultsSetPagination` (50) by default, `SmallResultsSetPagination` (20).
-  Permissions: `IsHouseholdMember` on all domain endpoints. URLs under `/api/v1/`.
+  Permissions: `IsHouseholdMember` on all domain endpoints. URLs under `/api/`.
 - TIME_ZONE `Europe/Belgrade`, `USE_TZ = True`: use `timezone.localdate()`, not `now().date()`.
 
 ## Repo rules

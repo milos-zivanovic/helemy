@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, mixins, status, viewsets
@@ -10,9 +11,10 @@ from rest_framework_simplejwt.views import TokenBlacklistView
 
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsHouseholdOwner
-from users.models import Household
+from users.models import Household, HouseholdInvitation
 from users.serializers import (
     HouseholdCreateSerializer,
+    HouseholdInvitationSerializer,
     HouseholdSerializer,
     HouseholdUpdateSerializer,
     InviteMemberSerializer,
@@ -25,7 +27,15 @@ from users.serializers import (
     UserDetailSerializer,
     UserSerializer,
 )
-from users.services import blacklist_user_tokens, send_password_reset_email, tokens_for_user
+from users.services import (
+    HouseholdError,
+    accept_invitation,
+    blacklist_user_tokens,
+    decline_invitation,
+    remove_from_household,
+    send_password_reset_email,
+    tokens_for_user,
+)
 
 User = get_user_model()
 
@@ -148,9 +158,16 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     create=extend_schema(tags=["Households"]),
     retrieve=extend_schema(tags=["Households"]),
     partial_update=extend_schema(tags=["Households"]),
-    destroy=extend_schema(tags=["Households"]),
 )
-class HouseholdViewSet(viewsets.ModelViewSet):
+class HouseholdViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    # No destroy: a household is never deleted (a personal one waits, inactive, for its owner to return).
+    # DELETE stays in http_method_names for the members/{user_id}/ action.
     # Not a HouseholdModelViewSet: a Household *is* the tenant, it has no `household` FK.
     # Isolation comes from get_queryset (only households the user belongs to).
     queryset = Household.objects.none()  # for schema generation only; see get_queryset
@@ -160,7 +177,7 @@ class HouseholdViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
-        if self.action in ["partial_update", "update", "destroy"]:
+        if self.action in ["partial_update", "update"]:
             return [IsAuthenticated(), IsHouseholdOwner()]
         return super().get_permissions()
 
@@ -195,13 +212,26 @@ class HouseholdViewSet(viewsets.ModelViewSet):
         serializer = InviteMemberSerializer(data=request.data, context={"household": household})
         serializer.is_valid(raise_exception=True)
 
-        user = User.objects.get(email=serializer.validated_data["email"])
-
-        household.add_member(user)
-
-        return Response(
-            UserSerializer(user, context={"request": request}).data, status=status.HTTP_201_CREATED
+        invitation = HouseholdInvitation.objects.create(
+            household=household, invited_user=serializer.context["user"], invited_by=request.user
         )
+        return Response(
+            HouseholdInvitationSerializer(invitation).data, status=status.HTTP_201_CREATED
+        )
+
+    @extend_schema(tags=["Households"], request=None, responses={200: HouseholdSerializer})
+    @action(detail=True, methods=["post"])
+    def leave(self, request, pk=None):
+        """Leave a household you were invited to; your personal household becomes active again."""
+        household = self.get_object()
+        if household.owner_id == request.user.pk:
+            return Response(
+                {"detail": "The owner can't leave their own household."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        remove_from_household(request.user, household)
+        active = request.user.get_active_household()
+        return Response(HouseholdSerializer(active, context={"request": request}).data)
 
     @action(detail=True, methods=["delete"], url_path=r"members/(?P<user_id>\d+)")
     def remove_member(self, request, pk=None, user_id=None):
@@ -228,6 +258,82 @@ class HouseholdViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        household.remove_member(user)
+        remove_from_household(user, household)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Households"]),
+    retrieve=extend_schema(tags=["Households"]),
+    destroy=extend_schema(tags=["Households"]),
+)
+class HouseholdInvitationViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Pending invitations the user received or sent (as the household owner).
+    The invited user accepts or declines; the owner cancels with DELETE.
+    """
+
+    queryset = HouseholdInvitation.objects.none()  # for schema generation only; see get_queryset
+    serializer_class = HouseholdInvitationSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            HouseholdInvitation.objects.filter(
+                Q(invited_user=user) | Q(household__owner=user),
+                status=HouseholdInvitation.PENDING,
+            )
+            .select_related("household", "invited_user", "invited_by")
+            .order_by("-created_at")
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        invitation = self.get_object()
+        if invitation.household.owner_id != request.user.pk:
+            return Response(
+                {"detail": "Only the household owner can cancel an invitation."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        invitation.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _respond(self, request, handler):
+        """Run `handler(invitation)` for the invited user only; HouseholdError becomes a 400."""
+        invitation = self.get_object()
+        if invitation.invited_user_id != request.user.pk:
+            return Response(
+                {"detail": "Only the invited user can respond to an invitation."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            return handler(invitation)
+        except HouseholdError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(tags=["Households"], request=None, responses={200: HouseholdSerializer})
+    @action(detail=True, methods=["post"])
+    def accept(self, request, pk=None):
+        """Join the household; your personal household keeps its data, inactive until you are removed."""
+
+        def handler(invitation):
+            household = accept_invitation(invitation)
+            return Response(HouseholdSerializer(household, context={"request": request}).data)
+
+        return self._respond(request, handler)
+
+    @extend_schema(tags=["Households"], request=None, responses={204: None})
+    @action(detail=True, methods=["post"])
+    def decline(self, request, pk=None):
+        def handler(invitation):
+            decline_invitation(invitation)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return self._respond(request, handler)

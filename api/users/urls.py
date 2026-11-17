@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from users.views import (
+    HouseholdInvitationViewSet,
     HouseholdViewSet,
     LogoutView,
     PasswordChangeView,
@@ -14,6 +15,7 @@ from users.views import (
 
 router = DefaultRouter()
 router.register(r"households", HouseholdViewSet, basename="household")
+router.register(r"invitations", HouseholdInvitationViewSet, basename="household-invitation")
 
 urlpatterns = [
     # Auth endpoints

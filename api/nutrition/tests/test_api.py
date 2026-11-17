@@ -8,8 +8,8 @@ from nutrition.models import Consumption, Food
 
 User = get_user_model()
 
-CONSUMPTIONS_URL = "/api/v1/nutrition/consumptions/"
-FOODS_URL = "/api/v1/nutrition/foods/"
+CONSUMPTIONS_URL = "/api/nutrition/consumptions/"
+FOODS_URL = "/api/nutrition/foods/"
 
 
 class NutritionAPITests(HouseholdAPITestCase):

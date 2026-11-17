@@ -203,7 +203,7 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     # users.serializers.ROLE_FIELD is used by both User.role and Household.user_role
     "ENUM_NAME_OVERRIDES": {"HouseholdRoleEnum": ["owner", "member"]},
-    "SCHEMA_PATH_PREFIX": "/api/v1",
+    "SCHEMA_PATH_PREFIX": "/api",
     "TAGS": [
         {"name": "Authentication", "description": "User authentication and authorization"},
         {"name": "Users", "description": "User management and households"},
@@ -257,6 +257,6 @@ vars().update(env.email_url("EMAIL_URL"))
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
 # Password reset: the email links to the client (web/mobile) app, which posts uid + token +
-# new_password to /api/v1/auth/password/reset/confirm/. {uid} and {token} are filled in.
+# new_password to /api/auth/password/reset/confirm/. {uid} and {token} are filled in.
 PASSWORD_RESET_URL = env("PASSWORD_RESET_URL")
 PASSWORD_RESET_TIMEOUT = 60 * 60  # seconds a reset link stays valid (Django's default is 3 days)

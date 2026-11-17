@@ -45,11 +45,11 @@ docker compose --profile dev up -d --build    # API + web together
 
 | Variable | Example | Meaning |
 |---|---|---|
-| `VITE_API_URL` | `http://localhost:8000/api/v1` | Base URL of the API |
+| `VITE_API_URL` | `http://localhost:8000/api` | Base URL of the API |
 
 ## First steps when starting
 
 1. `npm create vite@latest web -- --template react-ts` from the repo root
-2. Login screen: `POST /api/v1/auth/token/`, keep the tokens, refresh on 401
+2. Login screen: `POST /api/auth/token/`, keep the tokens, refresh on 401
 3. Transactions: list with filters, create/edit form, totals
 4. Budgets and charts

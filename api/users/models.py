@@ -37,6 +37,13 @@ class Household(models.Model):
     def member_count(self):
         return self.members.count()
 
+    @classmethod
+    def create_personal(cls, user):
+        """A new household owned by `user`, with `user` as its only member."""
+        household = cls.objects.create(name=f"{user.get_short_name()}'s Household", owner=user)
+        household.members.add(user)
+        return household
+
     def add_member(self, user):
         """Add a user as member of this household."""
         self.members.add(user)
@@ -46,6 +53,59 @@ class Household(models.Model):
         if user == self.owner:
             raise ValueError("Cannot remove the household owner.")
         self.members.remove(user)
+
+
+class HouseholdInvitation(models.Model):
+    """
+    An invitation for an existing user to join a household. Accepting it moves the user into the
+    household; their personal household stays (with its data) and is active again if they are removed.
+    """
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    STATUS_CHOICES = [
+        (PENDING, _("pending")),
+        (ACCEPTED, _("accepted")),
+        (DECLINED, _("declined")),
+    ]
+
+    household = models.ForeignKey(
+        Household,
+        on_delete=models.CASCADE,
+        related_name="invitations",
+        verbose_name=_("household"),
+    )
+    invited_user = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE,
+        related_name="household_invitations",
+        verbose_name=_("invited user"),
+    )
+    invited_by = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE,
+        related_name="sent_household_invitations",
+        verbose_name=_("invited by"),
+    )
+    status = models.CharField(_("status"), max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    responded_at = models.DateTimeField(_("responded at"), null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("household invitation")
+        verbose_name_plural = _("household invitations")
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "invited_user"],
+                condition=models.Q(status="pending"),
+                name="unique_pending_household_invitation",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.invited_user} -> {self.household} ({self.status})"
 
 
 class UserManager(BaseUserManager):
@@ -97,10 +157,6 @@ class User(AbstractUser):
     language = models.CharField(_("language"), max_length=10, default="en")
     currency = models.CharField(_("currency"), max_length=3, default="RSD")
 
-    # Onboarding
-    onboarding_completed = models.BooleanField(_("onboarding completed"), default=False)
-    onboarding_step = models.PositiveSmallIntegerField(_("onboarding step"), default=0)
-
     # Timestamps
     last_activity = models.DateTimeField(_("last activity"), null=True, blank=True)
 
@@ -148,8 +204,4 @@ def create_user_household(sender, instance, created, **kwargs):
     This enables solo users to use the app without manually creating a household.
     """
     if created and not instance.owned_households.exists():
-        household = Household.objects.create(
-            name=f"{instance.get_short_name()}'s Household",
-            owner=instance,
-        )
-        household.members.add(instance)
+        Household.create_personal(instance)
