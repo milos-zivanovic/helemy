@@ -103,6 +103,24 @@ docker compose --profile dev exec api-dev python manage.py test
 
 Or on the host: `cd api && python manage.py test` (needs `pip install ".[dev]"` from `api/` in a Python 3.12+ venv).
 
+Web unit tests and the end-to-end smoke test: see [web/README.md](web/README.md#tests).
+
+## CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `master` and every pull
+request (GitHub Actions, results in the repository's **Actions** tab). Four jobs run in parallel:
+
+| Job      | What it checks                                                                              |
+| -------- | ------------------------------------------------------------------------------------------- |
+| `api`    | Ruff format and lint, no missing migrations, OpenAPI schema valid and warning-free, tests on PostgreSQL 16 (as in production) |
+| `web`    | Prettier, TypeScript, oxlint, Vitest unit tests, production build                           |
+| `e2e`    | `web/src/api/schema.d.ts` matches the API (`npm run gen:api` was not forgotten), Playwright smoke test |
+| `docker` | The API image and the web `prod` image build                                                |
+
+On an e2e failure the run's page has a `playwright-results` artifact with the screenshot and the trace
+(`npx playwright show-trace trace.zip`). The workflow has read-only access to the repository and needs
+no secrets.
+
 ## License
 
 MIT

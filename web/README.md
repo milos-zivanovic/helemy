@@ -19,6 +19,8 @@ the database directly.
 | Tailwind CSS                       | Styling                                                         |
 | Recharts                           | Charts (only the reports page; loaded on demand)                |
 | oxlint, Prettier                   | Linting and formatting                                          |
+| Vitest (+ jsdom)                   | Unit tests                                                      |
+| Playwright                         | End-to-end smoke test in a real browser                         |
 
 Code shared with the mobile app (API client, types,
 query hooks) will move to a shared package once both clients exist.
@@ -59,17 +61,52 @@ URLs (`/api/...`). Unknown paths get `index.html`, so a reload on `/finances/rep
 
 ## Scripts
 
-| Command                           | What it does                                                            |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `npm run dev`                     | Dev server with hot reload on port 3000                                 |
-| `npm run build`                   | Type check, then production build into `dist/`                          |
-| `npm run preview`                 | Serve the `dist/` build locally                                         |
-| `npm run typecheck`               | TypeScript only (`tsc -b`)                                              |
-| `npm run lint`                    | oxlint                                                                  |
-| `npm run format` / `format:check` | Prettier (also sorts Tailwind classes)                                  |
-| `npm run gen:api`                 | Regenerate `src/api/schema.d.ts` from http://localhost:8000/api/schema/ |
+| Command                           | What it does                                                             |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                     | Dev server with hot reload on port 3000                                  |
+| `npm run build`                   | Type check, then production build into `dist/`                           |
+| `npm run preview`                 | Serve the `dist/` build locally                                          |
+| `npm run typecheck`               | TypeScript only (`tsc -b`)                                               |
+| `npm run lint`                    | oxlint                                                                   |
+| `npm run format` / `format:check` | Prettier (also sorts Tailwind classes)                                   |
+| `npm run test` / `test:watch`     | Vitest: run the unit tests once / re-run them on every change            |
+| `npm run test:e2e`                | Playwright smoke test in a real browser (starts its own API and web app) |
+| `npm run gen:api`                 | Regenerate `src/api/schema.d.ts` from http://localhost:8000/api/schema/  |
 
-Run `typecheck`, `lint`, `format:check` and `build` before finishing a change.
+Run `typecheck`, `lint`, `format:check`, `test` and `build` before finishing a change.
+
+### Tests
+
+Unit tests sit next to the code they test (`dates.ts` → `dates.test.ts`). They cover logic that can break
+silently, not the UI:
+
+| Test file                      | What it checks                                                                                                                                                       |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/api/client.test.ts`       | Token handling against a fake API: refresh on 401, one shared refresh for parallel requests, token rotated by another tab, logout when the refresh token is rejected |
+| `src/finances/schemas.test.ts` | Form validation and the transform to the API payload (amount parsing, date ranges, yearly category windows, transfers)                                               |
+| `src/lib/dates.test.ts`        | Local-time date helpers (month ranges, month/day shifts, URL date validation)                                                                                        |
+| `src/api/errors.test.ts`       | DRF error bodies → messages and form field errors                                                                                                                    |
+| `src/i18n/locales.test.ts`     | `sr.json` and `en.json` have the same keys and `{{placeholders}}`                                                                                                    |
+
+Tests run in Node; a file that needs browser APIs (`window`, `localStorage`) starts with
+`// @vitest-environment jsdom`.
+
+### End-to-end smoke test
+
+`npm run test:e2e` runs `e2e/smoke.e2e.ts` in Chromium against the real app: sign up, create a savings
+account, add an income and an expense, transfer to the savings account, check the totals and balances on
+the transaction list, the accounts page and the home page, then log out and back in. Playwright starts
+both servers itself (`webServer` in `playwright.config.ts`) and stops them afterwards:
+
+- the API on http://127.0.0.1:8010 via `e2e/api-server.mjs`: the repo's `.venv` (or `E2E_PYTHON`), a
+  fresh SQLite database in the system temp folder every run (never `api/data/`), migrations, `runserver`
+- the web dev server on http://127.0.0.1:3010, pointed at that API
+
+Other ports than the dev setup, so a running `npm run dev` or Docker stack doesn't get in the way. First
+time only: `npx playwright install chromium` downloads the browser. The test finds elements by the text
+the user sees, taken from `sr.json` (`e2e/i18n.ts`), so it survives layout changes and reworded labels;
+it needs an update only when the flow itself changes. On a failure, `test-results/` has a screenshot and
+a trace: `npx playwright show-trace test-results/<test>/trace.zip` replays every step.
 
 ### API types
 

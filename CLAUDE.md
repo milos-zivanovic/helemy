@@ -29,7 +29,9 @@ The repo root `.venv` has the deps from `api/pyproject.toml` (Python 3.14 here, 
 ## Checks (host, from `web/`)
 Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
 `/c/Users/zmilo/AppData/Roaming/fnm/node-versions/v26.13.1/installation` (Bash) before `npm`.
-- `npm run format`, `npm run typecheck`, `npm run lint`, `npm run build`
+- `npm run format`, `npm run typecheck`, `npm run lint`, `npm run test` (Vitest), `npm run build`
+- `npm run test:e2e` (Playwright, ~30 s, starts its own API on :8010 and web on :3010) after a change to
+  sign up/login, accounts, transactions, transfers or the balances; update `e2e/smoke.e2e.ts` when that flow changes.
 - After an API change: start the API and `npm run gen:api` (or generate from `manage.py spectacular --file`
   with `npx --yes openapi-typescript@7.13.0 <file> -o src/api/schema.d.ts`), then typecheck.
 - UI text only through i18n keys present in both `src/i18n/locales/sr.json` and `en.json`.
@@ -68,3 +70,5 @@ Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
   containers with CRLF).
 - Dependencies only in `api/pyproject.toml` (hatchling, runtime deps pinned exactly); no requirements.txt.
 - When something documented changes (endpoints, env variables, commands), update the README that owns it.
+- `.github/workflows/ci.yml` runs the Checks above (API tests on PostgreSQL 16) plus the e2e test, a
+  `schema.d.ts` drift check and the Docker builds: a new check or a Python/Node version bump goes there too.

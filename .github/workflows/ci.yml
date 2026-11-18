@@ -1,0 +1,155 @@
+# The checks from CLAUDE.md / the READMEs, on every push to master and every pull request.
+# Four jobs run in parallel; each one starts on a clean Ubuntu machine.
+#   api     lint, migrations, OpenAPI schema and tests (on PostgreSQL, like production)
+#   web     format, types, lint, unit tests and the production build
+#   e2e     generated API types up to date, then the Playwright smoke test (real API + browser)
+#   docker  the production images still build
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A new push to the same branch / PR cancels the run that is still going for the old commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The workflow only reads the code; it can't push, comment or touch releases.
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12' # api/Dockerfile
+  NODE_VERSION: '26.13.1' # web/Dockerfile
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    # A PostgreSQL container next to the job, the same major version as in docker-compose.yml.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: life_tracker
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SECRET_KEY: ci-only-not-a-secret
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/life_tracker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: api/pyproject.toml
+      - name: Install dependencies
+        run: pip install ".[dev]"
+      - name: Ruff format
+        run: python -m ruff format --check .
+      - name: Ruff lint
+        run: python -m ruff check .
+      - name: No missing migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: OpenAPI schema is valid and warning-free
+        run: python manage.py spectacular --file /dev/null --validate --fail-on-warn
+      - name: Tests
+        run: python manage.py test
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Prettier
+        run: npm run format:check
+      - name: TypeScript
+        run: npm run typecheck
+      - name: oxlint
+        run: npm run lint
+      - name: Unit tests (Vitest)
+        run: npm run test
+      - name: Production build
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SECRET_KEY: ci-only-not-a-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: api/pyproject.toml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install API dependencies
+        working-directory: api
+        run: pip install .
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      # web/src/api/schema.d.ts is generated from the API and committed. If an API change was made
+      # without `npm run gen:api`, the web app's types no longer match the API: fail here.
+      - name: Generated API types are up to date
+        run: |
+          (cd api && python manage.py spectacular --file "$RUNNER_TEMP/schema.yml")
+          (cd web && npx --yes openapi-typescript@7.13.0 "$RUNNER_TEMP/schema.yml" -o src/api/schema.d.ts)
+          git diff --exit-code -- web/src/api/schema.d.ts \
+            || { echo "::error::web/src/api/schema.d.ts is out of date: run 'npm run gen:api' and commit it"; exit 1; }
+
+      # --with-deps also installs the Linux libraries Chromium needs.
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test (Playwright)
+        working-directory: web
+        env:
+          E2E_PYTHON: python # setup-python's interpreter instead of the repo's .venv
+        run: npm run test:e2e
+      # On a failure: screenshot and trace, downloadable from the run's page (Artifacts).
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: web/test-results/
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the API image
+        run: docker build --tag life-tracker-api:ci api
+      - name: Build the web image (prod target)
+        run: docker build --target prod --tag life-tracker-web:ci web

@@ -52,10 +52,13 @@ export function shiftDay(day: string, delta: number): string {
   return toDateString(date)
 }
 
-/** "YYYY-MM-DD" check for values from the URL. */
+/**
+ * "YYYY-MM-DD" check for values from the URL. The round trip rejects days that don't exist:
+ * new Date(2026, 1, 30) silently rolls over to 2 March, so "2026-02-30" would otherwise pass.
+ */
 export function isDay(value: string | null): value is string {
   return (
-    value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(parseDate(value).getTime())
+    value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value) && toDateString(parseDate(value)) === value
   )
 }
 
