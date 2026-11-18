@@ -1,3 +1,4 @@
+from django.utils.translation import gettext as _
 from rest_framework import mixins, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -36,7 +37,7 @@ class HouseholdMixin:
     def perform_create(self, serializer):
         household = self.get_household()
         if household is None:
-            raise PermissionDenied("You do not belong to any household.")
+            raise PermissionDenied(_("You do not belong to any household."))
         serializer.save(household=household)
 
 

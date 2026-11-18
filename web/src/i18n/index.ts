@@ -2,11 +2,25 @@ import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 
+import type { components } from '../api/schema'
 import en from './locales/en.json'
 import sr from './locales/sr.json'
 
 export const LANGUAGES = { sr: 'Srpski', en: 'English' } as const
 export type Language = keyof typeof LANGUAGES
+
+type ApiLanguage = components['schemas']['LanguageEnum']
+
+/**
+ * The app's languages as the API knows them (Django's settings.LANGUAGES): sent in
+ * Accept-Language and stored as User.language. Plain "sr" would be Cyrillic to Django.
+ */
+export const API_LANGUAGES: Record<Language, ApiLanguage> = { sr: 'sr-latn', en: 'en' }
+
+/** An API language code ("sr-latn") → the app's ("sr"); undefined for one the app doesn't have. */
+export function fromApiLanguage(code: string | undefined): Language | undefined {
+  return (Object.keys(API_LANGUAGES) as Language[]).find((key) => API_LANGUAGES[key] === code)
+}
 
 void i18n
   .use(LanguageDetector)

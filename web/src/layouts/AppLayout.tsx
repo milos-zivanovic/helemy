@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router'
 
-import { useIsLoggedIn, useLogout, useMe } from '../auth/useAuth'
+import { useIsLoggedIn, useLogout, useMe, useSyncLanguage } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Brand } from '../components/Brand'
 import { Button } from '../components/Button'
@@ -17,6 +17,7 @@ export function AppLayout() {
   const isLoggedIn = useIsLoggedIn()
   const location = useLocation()
   const me = useMe()
+  useSyncLanguage() // hooks run on every render, before any early return (rules of hooks)
 
   if (!isLoggedIn) {
     // Remember where the user was going (like Django's ?next=), AuthLayout sends them back after login.

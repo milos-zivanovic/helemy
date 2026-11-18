@@ -12,7 +12,7 @@ import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { TextField } from '../components/TextField'
-import { type Language, LANGUAGES } from '../i18n'
+import { fromApiLanguage, LANGUAGES } from '../i18n'
 import { useFormatters } from '../i18n/format'
 
 // /profile: account data (read-only: the API doesn't let users change it yet) and password change.
@@ -21,6 +21,7 @@ export function ProfilePage() {
   const { data: me } = useMe()
   const { formatDate } = useFormatters()
   if (!me) return null // AppLayout renders pages only after the profile has loaded
+  const language = fromApiLanguage(me.language)
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,7 +37,7 @@ export function ProfilePage() {
           <dt className="text-slate-500">{t('profile.timezone')}</dt>
           <dd>{me.timezone}</dd>
           <dt className="text-slate-500">{t('profile.language')}</dt>
-          <dd>{LANGUAGES[me.language as Language] ?? me.language ?? '—'}</dd>
+          <dd>{language ? LANGUAGES[language] : me.language || '—'}</dd>
           <dt className="text-slate-500">{t('profile.memberSince')}</dt>
           <dd>{formatDate(me.date_joined)}</dd>
         </dl>

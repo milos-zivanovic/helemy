@@ -182,15 +182,47 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     await expect(statTile(page, 'finances.totals.expense')).toHaveText(await money(page, 2500.5))
   })
 
-  await test.step('log out and back in: the data is still there', async () => {
+  await test.step('log out, a Serbian API error, back in: the data is still there', async () => {
     await page.getByRole('button', { name: tr('auth.logout') }).click()
     await expect(page).toHaveURL('/login')
 
+    // On the way: signing up again with the same email. The error comes from the API, in the
+    // app's language (Accept-Language → Django's LocaleMiddleware → api/locale/sr_Latn).
+    await page.goto('/register')
+    await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
+    await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
+    await page.getByLabel(tr('auth.fields.passwordConfirm'), { exact: true }).fill(PASSWORD)
+    await page.getByRole('button', { name: tr('auth.register.submit') }).click()
+    await expect(page.getByText('Korisnik sa ovom email adresom već postoji.')).toBeVisible()
+
+    await page.goto('/login')
     await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
     await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
     await page.getByRole('button', { name: tr('auth.login.submit') }).click()
 
     await expect(page).toHaveURL('/')
     await expect(totalBalance(page)).toHaveText(total)
+  })
+
+  await test.step('the chosen language is saved on the account', async () => {
+    // Signed up in Serbian: the API stored the language of that request.
+    await navLink(page, 'nav.profile').click()
+    const savedLanguage = (language: 'sr' | 'en') =>
+      page
+        .locator('dt')
+        .getByText(tr('profile.language', {}, language), { exact: true })
+        .locator('xpath=following-sibling::dd[1]')
+    await expect(savedLanguage('sr')).toHaveText('Srpski')
+
+    // Switching the app to English saves it on the account too (PATCH /api/auth/me/).
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/auth/me/') && response.request().method() === 'PATCH',
+    )
+    await page.getByLabel(tr('language.label')).selectOption('en')
+    const response = await saved
+    expect(response.status()).toBe(200)
+    expect((await response.json()).language).toBe('en')
+    await expect(savedLanguage('en')).toHaveText('English') // the page is in English now, too
   })
 })

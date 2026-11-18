@@ -127,6 +127,10 @@ TypeScript then reports every place in the web code that no longer matches. The 
   sign up, logout, password reset), so a wrong password never triggers a refresh.
 - **Routes**: `AuthLayout` frames the public pages and sends a logged-in user into the app (back to the page
   they first asked for); `AppLayout` sends a logged-out user to `/login` and loads `GET /api/auth/me/`.
+- **Language**: every request carries the app's language in `Accept-Language` (`sr-latn` / `en`, see
+  `API_LANGUAGES` in `src/i18n/index.ts`), so API errors come translated. `useSyncLanguage` (in `AppLayout`)
+  saves it on the account with `PATCH /api/auth/me/` after login and after every switch; the device used
+  last wins.
 - **Logout** drops both tokens and the whole query cache, then blacklists the refresh token on the API.
 - **Password change** (`/profile`): the API logs out every session and returns a new token pair, which
   replaces the stored one; other tabs of the same browser keep working because they share `localStorage`.

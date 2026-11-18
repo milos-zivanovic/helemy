@@ -216,7 +216,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Change your own preferences (the language); answers with the whole profile, like GET. */
+        patch: operations["auth_me_partial_update"];
         trace?: never;
     };
     "/api/auth/password/change/": {
@@ -1527,6 +1528,12 @@ export interface components {
             /** Format: email */
             email: string;
         };
+        /**
+         * @description * `en` - English
+         *     * `sr-latn` - Srpski
+         * @enum {string}
+         */
+        LanguageEnum: "en" | "sr-latn";
         /** @description One member's totals for a day of the weekly summary. */
         MemberMacros: {
             user_id: number;
@@ -1964,6 +1971,10 @@ export interface components {
             /** Format: date */
             date?: string;
             description?: string;
+        };
+        /** @description What users change about themselves with PATCH /api/auth/me/ (for now only the language). */
+        PatchedUserPreferencesRequest: {
+            language?: components["schemas"]["LanguageEnum"];
         };
         RegisterRequest: {
             /**
@@ -2632,6 +2643,31 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDetail"];
+                };
+            };
+        };
+    };
+    auth_me_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedUserPreferencesRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedUserPreferencesRequest"];
+                "multipart/form-data": components["schemas"]["PatchedUserPreferencesRequest"];
+            };
+        };
         responses: {
             200: {
                 headers: {

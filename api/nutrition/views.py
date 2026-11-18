@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import action
@@ -47,7 +48,7 @@ class FoodViewSet(HouseholdModelViewSet):
     def perform_destroy(self, instance):
         # The database protects foods that were eaten (PROTECT); answer with a 400, not a 500.
         if instance.consumptions.exists():
-            raise ValidationError({"detail": "This food is in the diary and can't be deleted."})
+            raise ValidationError({"detail": _("This food is in the diary and can't be deleted.")})
         instance.delete()
 
 
@@ -100,7 +101,7 @@ class ConsumptionViewSet(HouseholdModelViewSet):
         # localdate, not now().date(): the latter is the UTC date and lags behind after midnight.
         day = parse_date(raw_date) if raw_date else timezone.localdate()
         if day is None:
-            raise ValidationError({"date": "Use the YYYY-MM-DD format."})
+            raise ValidationError({"date": _("Use the YYYY-MM-DD format.")})
         week_start = day - timedelta(days=day.weekday())
         week_days = [week_start + timedelta(days=i) for i in range(7)]
 

@@ -1,0 +1,699 @@
+# Serbian (Latin script) translations of the Life Tracker API.
+#
+# Our own messages plus DRF / SimpleJWT ones (see common/third_party_messages.py).
+# Update with: python manage.py makemessages -l sr_Latn, then compilemessages.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: life_tracker\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-19 12:00+0100\n"
+"PO-Revision-Date: 2026-11-19 12:00+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: sr_Latn\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: common/mixins.py:40
+msgid "You do not belong to any household."
+msgstr "Ne pripadate nijednom domaćinstvu."
+
+#: common/third_party_messages.py:17
+msgid "This field may not be blank."
+msgstr "Ovo polje ne sme biti prazno."
+
+#: common/third_party_messages.py:18
+msgid "This field may not be null."
+msgstr "Ovo polje mora imati vrednost."
+
+#: common/third_party_messages.py:19
+msgid "Not a valid string."
+msgstr "Vrednost nije ispravan tekst."
+
+#: common/third_party_messages.py:20
+#, python-brace-format
+msgid "Ensure this field has no more than {max_length} characters."
+msgstr "Ovo polje može imati najviše {max_length} karaktera."
+
+#: common/third_party_messages.py:21
+#, python-brace-format
+msgid "Ensure this field has at least {min_length} characters."
+msgstr "Ovo polje mora imati najmanje {min_length} karaktera."
+
+#: common/third_party_messages.py:22
+msgid "A valid integer is required."
+msgstr "Unesite ceo broj."
+
+#: common/third_party_messages.py:23
+msgid "A valid number is required."
+msgstr "Unesite ispravan broj."
+
+#: common/third_party_messages.py:24
+#, python-brace-format
+msgid "Ensure this value is less than or equal to {max_value}."
+msgstr "Vrednost mora biti manja ili jednaka {max_value}."
+
+#: common/third_party_messages.py:25
+#, python-brace-format
+msgid "Ensure this value is greater than or equal to {min_value}."
+msgstr "Vrednost mora biti veća ili jednaka {min_value}."
+
+#: common/third_party_messages.py:26
+msgid "String value too large."
+msgstr "Tekst je predugačak."
+
+#: common/third_party_messages.py:27
+#, python-brace-format
+msgid "Ensure that there are no more than {max_digits} digits in total."
+msgstr "Broj može imati najviše {max_digits} cifara ukupno."
+
+#: common/third_party_messages.py:28
+#, python-brace-format
+msgid "Ensure that there are no more than {max_decimal_places} decimal places."
+msgstr "Broj može imati najviše {max_decimal_places} decimala."
+
+#: common/third_party_messages.py:29
+#, python-brace-format
+msgid "Ensure that there are no more than {max_whole_digits} digits before the decimal point."
+msgstr "Broj može imati najviše {max_whole_digits} cifara pre decimalnog zareza."
+
+#: common/third_party_messages.py:32
+#, python-brace-format
+msgid "Date has wrong format. Use one of these formats instead: {format}."
+msgstr "Datum nije u ispravnom formatu. Koristite jedan od ovih formata: {format}."
+
+#: common/third_party_messages.py:33
+#, python-brace-format
+msgid "Datetime has wrong format. Use one of these formats instead: {format}."
+msgstr "Datum i vreme nisu u ispravnom formatu. Koristite jedan od ovih formata: {format}."
+
+#: common/third_party_messages.py:34
+msgid "Expected a date but got a datetime."
+msgstr "Očekivan je datum, a ne datum i vreme."
+
+#: common/third_party_messages.py:35
+msgid "Must be a valid boolean."
+msgstr "Vrednost mora biti tačno ili netačno."
+
+#: common/third_party_messages.py:36
+#, python-brace-format
+msgid "\"{input}\" is not a valid choice."
+msgstr "„{input}“ nije dozvoljena vrednost."
+
+#: common/third_party_messages.py:37
+#, python-brace-format
+msgid "Expected a list of items but got type \"{input_type}\"."
+msgstr "Očekivana je lista, a stigao je tip „{input_type}“."
+
+#: common/third_party_messages.py:38
+msgid "This list may not be empty."
+msgstr "Lista ne sme biti prazna."
+
+#: common/third_party_messages.py:39
+msgid "This selection may not be empty."
+msgstr "Izaberite bar jednu stavku."
+
+#: common/third_party_messages.py:40
+#, python-brace-format
+msgid "Invalid data. Expected a dictionary, but got {datatype}."
+msgstr "Neispravni podaci. Očekivan je objekat, a stigao je {datatype}."
+
+#: common/third_party_messages.py:41
+msgid "The submitted data was not a file. Check the encoding type on the form."
+msgstr "Poslati podaci nisu fajl. Proverite tip kodiranja forme."
+
+#: common/third_party_messages.py:42
+msgid "No filename could be determined."
+msgstr "Nije moguće utvrditi naziv fajla."
+
+#: common/third_party_messages.py:44
+#, python-brace-format
+msgid "Invalid pk \"{pk_value}\" - object does not exist."
+msgstr "Neispravan ID „{pk_value}“: objekat ne postoji."
+
+#: common/third_party_messages.py:45
+#, python-brace-format
+msgid "Incorrect type. Expected pk value, received {data_type}."
+msgstr "Pogrešan tip. Očekivan je ID, a stigao je {data_type}."
+
+#: common/third_party_messages.py:47
+msgid "This field must be unique."
+msgstr "Ova vrednost već postoji."
+
+#: common/third_party_messages.py:48
+#, python-brace-format
+msgid "The fields {field_names} must make a unique set."
+msgstr "Kombinacija polja {field_names} mora biti jedinstvena."
+
+#: common/third_party_messages.py:50
+msgid "A server error occurred."
+msgstr "Došlo je do greške na serveru."
+
+#: common/third_party_messages.py:51
+msgid "Invalid input."
+msgstr "Neispravan unos."
+
+#: common/third_party_messages.py:52
+msgid "Malformed request."
+msgstr "Neispravan zahtev."
+
+#: common/third_party_messages.py:53
+msgid "Incorrect authentication credentials."
+msgstr "Neispravni podaci za prijavu."
+
+#: common/third_party_messages.py:54
+msgid "Authentication credentials were not provided."
+msgstr "Niste prijavljeni."
+
+#: common/third_party_messages.py:55
+msgid "You do not have permission to perform this action."
+msgstr "Nemate dozvolu za ovu radnju."
+
+#: common/third_party_messages.py:56
+msgid "Not found."
+msgstr "Nije pronađeno."
+
+#: common/third_party_messages.py:57
+#, python-brace-format
+msgid "Method \"{method}\" not allowed."
+msgstr "Metoda „{method}“ nije dozvoljena."
+
+#: common/third_party_messages.py:58
+#, python-brace-format
+msgid "Unsupported media type \"{media_type}\" in request."
+msgstr "Tip sadržaja „{media_type}“ nije podržan."
+
+#: common/third_party_messages.py:59
+msgid "Request was throttled."
+msgstr "Previše zahteva. Pokušajte ponovo kasnije."
+
+#: common/third_party_messages.py:61
+msgid "Invalid page."
+msgstr "Neispravna stranica."
+
+#: common/third_party_messages.py:65
+msgid "No active account found with the given credentials"
+msgstr "Pogrešan email ili lozinka."
+
+#: common/third_party_messages.py:66
+msgid "Given token not valid for any token type"
+msgstr "Token nije ispravan."
+
+#: common/third_party_messages.py:67
+msgid "Token is invalid or expired"
+msgstr "Token nije ispravan ili je istekao."
+
+#: common/third_party_messages.py:68
+msgid "Token is blacklisted"
+msgstr "Token je opozvan."
+
+#: common/third_party_messages.py:69
+msgid "User not found"
+msgstr "Korisnik nije pronađen."
+
+#: common/third_party_messages.py:70
+msgid "User is inactive"
+msgstr "Korisnički nalog nije aktivan."
+
+#: common/third_party_messages.py:71
+msgid "Token contained no recognizable user identification"
+msgstr "Token ne sadrži podatke o korisniku."
+
+#: common/third_party_messages.py:72
+msgid "Authorization header must contain two space-delimited values"
+msgstr "Zaglavlje Authorization mora sadržati dve vrednosti razdvojene razmakom."
+
+#: common/third_party_messages.py:78
+#, python-format
+msgid "The password is too similar to the %(verbose_name)s."
+msgstr "Lozinka je previše slična polju „%(verbose_name)s“."
+
+#: finances/models.py:82
+#: finances/models.py:159
+#: finances/models.py:184
+#: fitness/models.py:8
+#: fitness/models.py:34
+#: fitness/models.py:73
+#: nutrition/models.py:13
+#: users/models.py:13
+msgid "name"
+msgstr "naziv"
+
+#: finances/models.py:87
+msgid "opening balance"
+msgstr "početno stanje"
+
+#: finances/models.py:89
+msgid "opening date"
+msgstr "datum otvaranja"
+
+#: finances/models.py:90
+#: finances/models.py:160
+#: finances/models.py:185
+msgid "is active"
+msgstr "aktivno"
+
+#: finances/models.py:91
+#: finances/models.py:161
+#: finances/models.py:200
+#: finances/models.py:274
+#: finances/models.py:368
+#: fitness/models.py:10
+#: fitness/models.py:42
+#: fitness/models.py:76
+#: fitness/models.py:135
+#: fitness/models.py:183
+#: nutrition/models.py:22
+#: nutrition/models.py:67
+#: users/models.py:25
+#: users/models.py:92
+msgid "created at"
+msgstr "napravljeno"
+
+#: finances/models.py:92
+#: finances/models.py:162
+#: finances/models.py:201
+#: finances/models.py:275
+#: fitness/models.py:11
+#: fitness/models.py:43
+#: fitness/models.py:77
+#: fitness/models.py:136
+#: fitness/models.py:184
+#: nutrition/models.py:23
+#: nutrition/models.py:68
+#: users/models.py:26
+msgid "updated at"
+msgstr "izmenjeno"
+
+#: finances/models.py:188
+msgid "is transfer"
+msgstr "prenos"
+
+#: finances/models.py:191
+#: finances/models.py:265
+msgid "start date"
+msgstr "datum početka"
+
+#: finances/models.py:192
+#: finances/models.py:266
+msgid "end date"
+msgstr "datum završetka"
+
+#: finances/models.py:195
+msgid "start month"
+msgstr "mesec početka"
+
+#: finances/models.py:196
+msgid "start day"
+msgstr "dan početka"
+
+#: finances/models.py:197
+msgid "end month"
+msgstr "mesec završetka"
+
+#: finances/models.py:198
+msgid "end day"
+msgstr "dan završetka"
+
+#: finances/models.py:268
+#: finances/models.py:351
+msgid "amount"
+msgstr "iznos"
+
+#: finances/models.py:273
+#: finances/models.py:349
+#: fitness/models.py:35
+#: nutrition/models.py:14
+msgid "description"
+msgstr "opis"
+
+#: finances/models.py:332
+msgid "type"
+msgstr "vrsta"
+
+#: finances/models.py:348
+msgid "title"
+msgstr "naslov"
+
+#: finances/models.py:365
+msgid "is fixed"
+msgstr "fiksno"
+
+#: finances/models.py:367
+#: fitness/models.py:74
+#: nutrition/models.py:66
+msgid "date"
+msgstr "datum"
+
+#: finances/models.py:369
+msgid "is deleted"
+msgstr "obrisano"
+
+#: finances/models.py:322
+msgid "Income"
+msgstr "Prihod"
+
+#: finances/models.py:323
+msgid "Expense"
+msgstr "Rashod"
+
+#: finances/serializers.py:216
+#: finances/serializers.py:508
+#, python-format
+msgid "Account \"%(name)s\" is archived."
+msgstr "Račun „%(name)s“ je arhiviran."
+
+#: finances/serializers.py:231
+msgid "This transaction is part of a transfer: change it through transfers/."
+msgstr "Ova transakcija je deo prenosa: menja se kroz prenos (transfers/)."
+
+#: finances/serializers.py:89
+msgid "The transfer category can't be switched off."
+msgstr "Kategorija za prenose ne može da se isključi."
+
+#: finances/serializers.py:98
+#: finances/serializers.py:374
+#: finances/views.py:350
+msgid "End date must be on or after start date."
+msgstr "Datum završetka ne može biti pre datuma početka."
+
+#: finances/serializers.py:236
+msgid "This category is for transfers: use transfers/."
+msgstr "Ova kategorija je rezervisana za prenose (transfers/)."
+
+#: finances/serializers.py:387
+msgid "This category already has a budget that overlaps the given period."
+msgstr "Ova kategorija već ima budžet koji se preklapa sa izabranim periodom."
+
+#: finances/serializers.py:514
+msgid "Choose an account other than the source account."
+msgstr "Izaberite račun različit od računa sa kog se prenosi."
+
+#: finances/serializers.py:251
+#, python-format
+msgid "Category \"%(name)s\" is not active on %(date)s."
+msgstr "Na dan %(date)s kategorija „%(name)s“ nije aktivna."
+
+#: finances/serializers.py:106
+#, python-format
+msgid "Set both %(month)s and %(day)s, or neither."
+msgstr "Unesite i %(month)s i %(day)s, ili nijedno od njih."
+
+#: finances/serializers.py:114
+#, python-format
+msgid "Month %(month)s has no day %(day)s."
+msgstr "Mesec %(month)s nema dan %(day)s."
+
+#: finances/views.py:91
+msgid "This group has categories with transactions. Switch it off instead."
+msgstr "Ova grupa ima kategorije sa transakcijama. Umesto brisanja, isključite je."
+
+#: finances/views.py:133
+msgid "This category has transactions. Switch it off instead."
+msgstr "Ova kategorija ima transakcije. Umesto brisanja, isključite je."
+
+#: finances/views.py:464
+msgid "This account has transactions. Archive it instead."
+msgstr "Ovaj račun ima transakcije. Umesto brisanja, arhivirajte ga."
+
+#: finances/views.py:354
+#, python-format
+msgid "Range is limited to %(days)s days."
+msgstr "Period može biti najviše %(days)s dana."
+
+#: fitness/models.py:9
+#: fitness/models.py:133
+msgid "order"
+msgstr "redosled"
+
+#: fitness/models.py:37
+msgid "image"
+msgstr "slika"
+
+#: fitness/models.py:75
+#: fitness/models.py:134
+msgid "notes"
+msgstr "beleške"
+
+#: fitness/models.py:174
+msgid "set number"
+msgstr "broj serije"
+
+#: fitness/models.py:176
+msgid "weight (kg)"
+msgstr "težina (kg)"
+
+#: fitness/models.py:182
+msgid "reps"
+msgstr "ponavljanja"
+
+#: fitness/models.py:156
+msgid "Exercise must belong to the same household as the training."
+msgstr "Vežba mora da pripada istom domaćinstvu kao i trening."
+
+#: fitness/serializers.py:189
+msgid "You already have a training on this date."
+msgstr "Već imate trening na ovaj datum."
+
+#: fitness/serializers.py:253
+msgid "The exercise's muscle group is not part of this training."
+msgstr "Mišićna grupa ove vežbe nije deo ovog treninga."
+
+#: fitness/views.py:78
+msgid "This exercise is used in trainings and can't be deleted."
+msgstr "Ova vežba se koristi u treninzima i ne može da se obriše."
+
+#: fitness/views.py:112
+msgid "A user id is a number."
+msgstr "ID korisnika mora biti broj."
+
+#: nutrition/models.py:17
+msgid "calories (per 100g)"
+msgstr "kalorije (na 100 g)"
+
+#: nutrition/models.py:18
+msgid "protein (g per 100g)"
+msgstr "proteini (g na 100 g)"
+
+#: nutrition/models.py:19
+msgid "carbs (g per 100g)"
+msgstr "ugljeni hidrati (g na 100 g)"
+
+#: nutrition/models.py:20
+msgid "fat (g per 100g)"
+msgstr "masti (g na 100 g)"
+
+#: nutrition/models.py:65
+msgid "quantity (grams)"
+msgstr "količina (grami)"
+
+#: nutrition/serializers.py:24
+msgid "A food with this name already exists."
+msgstr "Namirnica sa ovim nazivom već postoji."
+
+#: nutrition/views.py:51
+msgid "This food is in the diary and can't be deleted."
+msgstr "Ova namirnica je u dnevniku ishrane i ne može da se obriše."
+
+#: nutrition/views.py:104
+msgid "Use the YYYY-MM-DD format."
+msgstr "Koristite format GGGG-MM-DD."
+
+#: users/admin.py:30
+msgid "household membership"
+msgstr "članstvo u domaćinstvu"
+
+#: users/admin.py:31
+msgid "household memberships"
+msgstr "članstva u domaćinstvu"
+
+#: users/admin.py:52
+msgid "Personal info"
+msgstr "Lični podaci"
+
+#: users/admin.py:53
+msgid "Preferences"
+msgstr "Podešavanja"
+
+#: users/admin.py:55
+msgid "Permissions"
+msgstr "Dozvole"
+
+#: users/admin.py:66
+msgid "Important dates"
+msgstr "Važni datumi"
+
+#: users/admin.py:90
+#: users/models.py:23
+msgid "members"
+msgstr "članovi"
+
+#: users/models.py:29
+#: users/models.py:77
+msgid "household"
+msgstr "domaćinstvo"
+
+#: users/models.py:30
+msgid "households"
+msgstr "domaćinstva"
+
+#: users/models.py:91
+msgid "status"
+msgstr "status"
+
+#: users/models.py:93
+msgid "responded at"
+msgstr "odgovoreno"
+
+#: users/models.py:96
+msgid "household invitation"
+msgstr "poziv u domaćinstvo"
+
+#: users/models.py:97
+msgid "household invitations"
+msgstr "pozivi u domaćinstvo"
+
+#: users/models.py:153
+msgid "email address"
+msgstr "email adresa"
+
+#: users/models.py:156
+msgid "timezone"
+msgstr "vremenska zona"
+
+#: users/models.py:157
+msgid "language"
+msgstr "jezik"
+
+#: users/models.py:158
+msgid "currency"
+msgstr "valuta"
+
+#: users/models.py:161
+msgid "last activity"
+msgstr "poslednja aktivnost"
+
+#: users/models.py:169
+msgid "user"
+msgstr "korisnik"
+
+#: users/models.py:170
+msgid "users"
+msgstr "korisnici"
+
+#: users/models.py:18
+msgid "owner"
+msgstr "vlasnik"
+
+#: users/models.py:68
+msgid "pending"
+msgstr "na čekanju"
+
+#: users/models.py:69
+msgid "accepted"
+msgstr "prihvaćen"
+
+#: users/models.py:70
+msgid "declined"
+msgstr "odbijen"
+
+#: users/models.py:83
+msgid "invited user"
+msgstr "pozvani korisnik"
+
+#: users/models.py:89
+msgid "invited by"
+msgstr "pozvao"
+
+#: users/serializers.py:244
+msgid "The reset link is invalid or has expired."
+msgstr "Link za promenu lozinke nije ispravan ili je istekao."
+
+#: users/serializers.py:106
+msgid "You already belong to a household."
+msgstr "Već pripadate domaćinstvu."
+
+#: users/serializers.py:133
+msgid "User is already a member of this household."
+msgstr "Korisnik je već član ovog domaćinstva."
+
+#: users/serializers.py:137
+msgid "User already has a pending invitation."
+msgstr "Korisnik već ima poziv na čekanju."
+
+#: users/serializers.py:191
+msgid "A user with this email already exists."
+msgstr "Korisnik sa ovom email adresom već postoji."
+
+#: users/serializers.py:227
+msgid "The current password is incorrect."
+msgstr "Trenutna lozinka nije ispravna."
+
+#: users/serializers.py:129
+msgid "User with this email does not exist."
+msgstr "Korisnik sa ovom email adresom ne postoji."
+
+#: users/services.py:43
+msgid "Life Tracker: reset your password"
+msgstr "Life Tracker: promena lozinke"
+
+#: users/services.py:76
+#: users/services.py:93
+msgid "This invitation is no longer pending."
+msgstr "Ovaj poziv više nije na čekanju."
+
+#: users/services.py:44
+#, python-format
+msgid ""
+"Someone asked to reset the password for %(email)s.\n"
+"\n"
+"Open this link to choose a new password (valid for %(minutes)s minutes):\n"
+"%(link)s\n"
+"\n"
+"If it wasn't you, ignore this email; your password stays the same."
+msgstr ""
+"Zatražena je promena lozinke za %(email)s.\n"
+"\n"
+"Otvorite ovaj link da izaberete novu lozinku (važi %(minutes)s minuta):\n"
+"%(link)s\n"
+"\n"
+"Ako to niste bili vi, zanemarite ovaj email; lozinka ostaje ista."
+
+#: users/services.py:80
+msgid "You already belong to another household."
+msgstr "Već pripadate drugom domaćinstvu."
+
+#: users/services.py:82
+msgid "Remove the members of your household first."
+msgstr "Prvo uklonite članove svog domaćinstva."
+
+#: users/views.py:229
+msgid "Only the household owner can invite members."
+msgstr "Samo vlasnik domaćinstva može da poziva članove."
+
+#: users/views.py:250
+msgid "The owner can't leave their own household."
+msgstr "Vlasnik ne može da napusti svoje domaćinstvo."
+
+#: users/views.py:265
+msgid "Only the household owner can remove members."
+msgstr "Samo vlasnik domaćinstva može da uklanja članove."
+
+#: users/views.py:272
+msgid "Cannot remove the household owner."
+msgstr "Vlasnik domaćinstva ne može da se ukloni."
+
+#: users/views.py:280
+msgid "User is not a member of this household."
+msgstr "Korisnik nije član ovog domaćinstva."
+
+#: users/views.py:325
+msgid "Only the household owner can cancel an invitation."
+msgstr "Samo vlasnik domaćinstva može da otkaže poziv."
+
+#: users/views.py:336
+msgid "Only the invited user can respond to an invitation."
+msgstr "Samo pozvani korisnik može da odgovori na poziv."
