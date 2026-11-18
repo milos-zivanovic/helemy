@@ -33,7 +33,12 @@ export function NewAccountPage() {
   return (
     <Card title={t('finances.accounts.new')}>
       <AccountForm
-        defaultValues={{ name: '', opening_balance: '0', opening_date: today(), is_active: true }}
+        defaultValues={{
+          name: '',
+          opening_balance: '0',
+          opening_date: today(),
+          is_active: true,
+        }}
         onSubmit={async (values) => {
           await create.mutateAsync(values)
           void navigate(LIST)

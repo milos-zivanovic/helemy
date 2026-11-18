@@ -92,7 +92,12 @@
     "openReports": "Reports",
     "budgetsAttention": "Budgets running out",
     "openBudgets": "All budgets",
-    "openAccounts": "Accounts and transfers"
+    "openAccounts": "Accounts and transfers",
+    "openTransactions": "This month's transactions",
+    "trainingsThisMonth": "Trainings this month",
+    "lastTraining": "Last training",
+    "openTrainings": "All trainings",
+    "openDiary": "Open the diary"
   },
   "household": {
     "title": "Household",
@@ -156,11 +161,13 @@
       "categories": "Categories",
       "budgets": "Budgets",
       "reports": "Reports",
-      "accounts": "Accounts"
+      "accounts": "Accounts",
+      "settings": "Settings"
     },
     "types": {
       "expense": "Expense",
-      "income": "Income"
+      "income": "Income",
+      "transfer": "Transfer"
     },
     "fields": {
       "type": "Type",
@@ -176,12 +183,18 @@
       "allTypes": "All types",
       "allCategories": "All categories",
       "search": "Search",
-      "allAccounts": "All accounts"
+      "allAccounts": "All accounts",
+      "allTime": "All time",
+      "fixed": "Fixed costs",
+      "fixedAll": "All",
+      "fixedOnly": "Fixed only",
+      "fixedNone": "Without fixed"
     },
     "totals": {
       "income": "Income",
       "expense": "Expenses",
-      "balance": "Balance"
+      "balance": "Balance",
+      "transfers": "Transfers"
     },
     "transactions": {
       "new": "New transaction",
@@ -190,7 +203,12 @@
       "previousMonth": "Previous month",
       "nextMonth": "Next month",
       "deleteConfirm": "Delete the transaction?",
-      "backToList": "Back to the list"
+      "backToList": "Back to the list",
+      "viewList": "List",
+      "viewChart": "Chart",
+      "byCategoryHint": "Click a category to see its transactions.",
+      "loadMore": "Load more",
+      "shownOf": "Showing {{shown}} of {{total}}"
     },
     "categories": {
       "intro": "Categories are grouped. A transaction can only use a category that is active on its date.",
@@ -227,7 +245,9 @@
         "from": "from {{date}}",
         "until": "until {{date}}",
         "yearly": "{{window}}, every year"
-      }
+      },
+      "transferBadge": "For transfers",
+      "transferHint": "Transfers between accounts go here. The category can be renamed or moved to another group, but it's always on."
     },
     "budgets": {
       "new": "New budget",
@@ -272,7 +292,7 @@
       "name": "Name (e.g. Current account, Cash, Savings)",
       "openingBalance": "Opening balance",
       "openingDate": "On",
-      "openingHint": "How much the account held at the start of that day. Transactions before that date count in reports but don't change the balance (they're already in it).",
+      "openingHint": "Money the account held apart from the transactions you record in the app (e.g. when you started using it). Balance = opening balance + all transactions and transfers, including ones older than this date.",
       "isActive": "Active (switch off when you close the account; it stays in history)",
       "archived": "Archived accounts",
       "openedWith": "Opened with {{amount}} on {{date}}",
@@ -282,15 +302,15 @@
       "inUse": "The account has transactions or transfers, so it can't be deleted. Switch it off (Active) so it's no longer offered."
     },
     "transfers": {
-      "title": "Transfers between accounts",
       "new": "New transfer",
       "edit": "Edit transfer",
       "from": "From account",
       "to": "To account",
-      "hint": "Moving money between your accounts (e.g. a cash withdrawal). Neither income nor expense: it changes only the two accounts' balances.",
+      "hint": "Moving money between your accounts (e.g. a cash withdrawal). It makes two linked transactions, out and in: they change the two accounts' balances, but don't count as income or expenses.",
       "sameAccount": "Choose a different account.",
-      "empty": "No transfers yet.",
-      "deleteConfirm": "Delete the transfer?"
+      "deleteConfirm": "Delete the transfer?",
+      "toAccount": "Transfer to {{name}}",
+      "fromAccount": "Transfer from {{name}}"
     }
   },
   "fitness": {

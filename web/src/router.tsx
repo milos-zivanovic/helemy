@@ -28,7 +28,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { EditTransactionPage, NewTransactionPage } from './pages/TransactionFormPage'
 import { TransactionsPage } from './pages/TransactionsPage'
-import { EditTransferPage, NewTransferPage } from './pages/TransferFormPage'
+import { EditTransferPage } from './pages/TransferFormPage'
 
 // The app's urls.py. A route with children renders its element as a frame and the matched child inside
 // its <Outlet />, so the layouts decide who may see their pages (logged in or not).
@@ -92,7 +92,6 @@ export const router = createBrowserRouter([
           { path: 'accounts', element: <AccountsPage /> },
           { path: 'accounts/new', element: <NewAccountPage /> },
           { path: 'accounts/:id', element: <EditAccountPage /> },
-          { path: 'transfers/new', element: <NewTransferPage /> },
           { path: 'transfers/:id', element: <EditTransferPage /> },
           {
             path: 'reports',

@@ -90,6 +90,7 @@ export function EditCategoryPage() {
         </div>
       )}
       <CategoryForm
+        isTransfer={data.is_transfer}
         defaultValues={{
           name: data.name,
           category_group_id: str(data.category_group.id),
@@ -121,10 +122,13 @@ export function EditCategoryPage() {
 
 function CategoryForm({
   defaultValues,
+  isTransfer = false,
   onSubmit,
   children,
 }: {
   defaultValues: CategoryFormValues
+  /** The transfer category: it can be renamed or moved, but it's always on (no periods). */
+  isTransfer?: boolean
   onSubmit: (values: CategoryInput) => Promise<void>
   children?: ReactNode
 }) {
@@ -193,51 +197,57 @@ function CategoryForm({
           </option>
         ))}
       </SelectField>
-      <CheckboxField label={t('finances.categories.isActive')} {...register('is_active')} />
+      {isTransfer ? (
+        <p className="text-xs text-slate-500">{t('finances.categories.transferHint')}</p>
+      ) : (
+        <>
+          <CheckboxField label={t('finances.categories.isActive')} {...register('is_active')} />
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-slate-200 p-3">
-        <legend className="px-1 text-sm font-medium">{t('finances.categories.period')}</legend>
-        <p className="text-xs text-slate-500">{t('finances.categories.periodHelp')}</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextField
-            label={t('finances.categories.startDate')}
-            type="date"
-            error={errors.start_date?.message}
-            {...register('start_date')}
-          />
-          <TextField
-            label={t('finances.categories.endDate')}
-            type="date"
-            error={errors.end_date?.message}
-            {...register('end_date')}
-          />
-        </div>
-      </fieldset>
+          <fieldset className="flex flex-col gap-3 rounded-md border border-slate-200 p-3">
+            <legend className="px-1 text-sm font-medium">{t('finances.categories.period')}</legend>
+            <p className="text-xs text-slate-500">{t('finances.categories.periodHelp')}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextField
+                label={t('finances.categories.startDate')}
+                type="date"
+                error={errors.start_date?.message}
+                {...register('start_date')}
+              />
+              <TextField
+                label={t('finances.categories.endDate')}
+                type="date"
+                error={errors.end_date?.message}
+                {...register('end_date')}
+              />
+            </div>
+          </fieldset>
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-slate-200 p-3">
-        <legend className="px-1 text-sm font-medium">{t('finances.categories.yearly')}</legend>
-        <p className="text-xs text-slate-500">{t('finances.categories.yearlyHelp')}</p>
-        <div className="grid grid-cols-[1fr_5rem] gap-3">
-          <SelectField label={t('finances.categories.fromMonth')} {...register('start_month')}>
-            {monthOptions}
-          </SelectField>
-          <TextField
-            label={t('finances.categories.day')}
-            inputMode="numeric"
-            error={errors.start_day?.message}
-            {...register('start_day')}
-          />
-          <SelectField label={t('finances.categories.toMonth')} {...register('end_month')}>
-            {monthOptions}
-          </SelectField>
-          <TextField
-            label={t('finances.categories.day')}
-            inputMode="numeric"
-            error={errors.end_day?.message}
-            {...register('end_day')}
-          />
-        </div>
-      </fieldset>
+          <fieldset className="flex flex-col gap-3 rounded-md border border-slate-200 p-3">
+            <legend className="px-1 text-sm font-medium">{t('finances.categories.yearly')}</legend>
+            <p className="text-xs text-slate-500">{t('finances.categories.yearlyHelp')}</p>
+            <div className="grid grid-cols-[1fr_5rem] gap-3">
+              <SelectField label={t('finances.categories.fromMonth')} {...register('start_month')}>
+                {monthOptions}
+              </SelectField>
+              <TextField
+                label={t('finances.categories.day')}
+                inputMode="numeric"
+                error={errors.start_day?.message}
+                {...register('start_day')}
+              />
+              <SelectField label={t('finances.categories.toMonth')} {...register('end_month')}>
+                {monthOptions}
+              </SelectField>
+              <TextField
+                label={t('finances.categories.day')}
+                inputMode="numeric"
+                error={errors.end_day?.message}
+                {...register('end_day')}
+              />
+            </div>
+          </fieldset>
+        </>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button type="submit" disabled={isSubmitting}>

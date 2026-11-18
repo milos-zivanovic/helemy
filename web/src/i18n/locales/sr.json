@@ -92,7 +92,12 @@
     "openReports": "Izveštaji",
     "budgetsAttention": "Budžeti pri kraju",
     "openBudgets": "Svi budžeti",
-    "openAccounts": "Računi i prenosi"
+    "openAccounts": "Računi i prenosi",
+    "openTransactions": "Transakcije ovog meseca",
+    "trainingsThisMonth": "Treninga ovog meseca",
+    "lastTraining": "Poslednji trening",
+    "openTrainings": "Svi treninzi",
+    "openDiary": "Otvori dnevnik"
   },
   "household": {
     "title": "Domaćinstvo",
@@ -156,11 +161,13 @@
       "categories": "Kategorije",
       "budgets": "Budžeti",
       "reports": "Izveštaji",
-      "accounts": "Računi"
+      "accounts": "Računi",
+      "settings": "Podešavanja"
     },
     "types": {
       "expense": "Rashod",
-      "income": "Prihod"
+      "income": "Prihod",
+      "transfer": "Prenos"
     },
     "fields": {
       "type": "Vrsta",
@@ -176,12 +183,18 @@
       "allTypes": "Sve vrste",
       "allCategories": "Sve kategorije",
       "search": "Pretraga",
-      "allAccounts": "Svi računi"
+      "allAccounts": "Svi računi",
+      "allTime": "Sve",
+      "fixed": "Fiksni troškovi",
+      "fixedAll": "Svi",
+      "fixedOnly": "Samo fiksni",
+      "fixedNone": "Bez fiksnih"
     },
     "totals": {
       "income": "Prihodi",
       "expense": "Rashodi",
-      "balance": "Saldo"
+      "balance": "Saldo",
+      "transfers": "Prenosi"
     },
     "transactions": {
       "new": "Nova transakcija",
@@ -190,7 +203,12 @@
       "previousMonth": "Prethodni mesec",
       "nextMonth": "Sledeći mesec",
       "deleteConfirm": "Obrisati transakciju?",
-      "backToList": "Nazad na listu"
+      "backToList": "Nazad na listu",
+      "viewList": "Lista",
+      "viewChart": "Grafikon",
+      "byCategoryHint": "Kliknite na kategoriju da vidite njene transakcije.",
+      "loadMore": "Učitaj još",
+      "shownOf": "Prikazano {{shown}} od {{total}}"
     },
     "categories": {
       "intro": "Kategorije su grupisane. Transakcija može da koristi samo kategoriju koja je aktivna na njen datum.",
@@ -227,7 +245,9 @@
         "from": "od {{date}}",
         "until": "do {{date}}",
         "yearly": "{{window}}, svake godine"
-      }
+      },
+      "transferBadge": "Za prenose",
+      "transferHint": "Ovde idu prenosi između računa. Kategorija može da se preimenuje ili premesti u drugu grupu, ali je uvek uključena."
     },
     "budgets": {
       "new": "Novi budžet",
@@ -272,7 +292,7 @@
       "name": "Naziv (npr. Tekući račun, Gotovina, Štednja)",
       "openingBalance": "Početno stanje",
       "openingDate": "Na dan",
-      "openingHint": "Koliko je bilo na računu na početku tog dana. Transakcije pre tog datuma se vode u izveštajima, ali ne menjaju stanje (već su uračunate u početno).",
+      "openingHint": "Novac koji je bio na računu pre transakcija koje vodite u aplikaciji (npr. kad ste počeli da je koristite). Stanje = početno stanje + sve transakcije i prenosi, i oni stariji od ovog datuma.",
       "isActive": "Aktivan (isključite kad zatvorite račun; ostaje u istoriji)",
       "archived": "Arhivirani računi",
       "openedWith": "Početno {{amount}} na dan {{date}}",
@@ -282,15 +302,15 @@
       "inUse": "Račun ima transakcije ili prenose, pa ne može da se obriše. Isključite ga (Aktivan) da se više ne nudi."
     },
     "transfers": {
-      "title": "Prenosi između računa",
       "new": "Novi prenos",
       "edit": "Izmena prenosa",
       "from": "Sa računa",
       "to": "Na račun",
-      "hint": "Prebacivanje novca između vaših računa (npr. podizanje gotovine). Nije ni prihod ni rashod: menja samo stanja ta dva računa.",
+      "hint": "Prebacivanje novca između vaših računa (npr. podizanje gotovine). Pravi dve povezane transakcije, odlaznu i dolaznu: menjaju stanja ta dva računa, ali se ne računaju u prihode i rashode.",
       "sameAccount": "Izaberite drugi račun.",
-      "empty": "Još nema prenosa.",
-      "deleteConfirm": "Obrisati prenos?"
+      "deleteConfirm": "Obrisati prenos?",
+      "toAccount": "Prenos na {{name}}",
+      "fromAccount": "Prenos sa {{name}}"
     }
   },
   "fitness": {

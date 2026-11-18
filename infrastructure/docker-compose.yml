@@ -1,6 +1,6 @@
 # Life Tracker services. Run from this folder, always with a profile:
 #   docker compose --profile dev up -d --build      web -> http://localhost:3000, API (SQLite) -> http://localhost:8000
-#   docker compose --profile dev-pg up -d --build   API (PostgreSQL)  -> http://localhost:8001
+#   docker compose --profile dev-pg up -d --build   web -> http://localhost:3000, API (PostgreSQL) -> http://localhost:8001
 #   docker compose --profile prod up -d --build     web + API behind nginx -> http://localhost:8080, needs infrastructure/.env
 # See infrastructure/README.md.
 
@@ -40,7 +40,7 @@ services:
       - dev
 
   # Web dev server (Vite) for the dev profile; the browser calls the API on localhost:8000.
-  web-dev:
+  web-dev: &web-dev
     build:
       context: ../web
       target: dev
@@ -77,6 +77,16 @@ services:
       db:
         condition: service_healthy
     healthcheck: *api-healthcheck
+    profiles:
+      - dev-pg
+
+  # Web dev server for the dev-pg profile: same as web-dev, but the browser calls api-dev-pg
+  # (localhost:8001). Uses port 3000 too, so don't run the dev and dev-pg profiles together.
+  web-dev-pg:
+    <<: *web-dev
+    environment:
+      WATCH_POLLING: "1"
+      VITE_API_URL: http://localhost:8001
     profiles:
       - dev-pg
 

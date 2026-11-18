@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import (
+    Case,
     DecimalField,
     Exists,
     ExpressionWrapper,
@@ -13,6 +14,7 @@ from django.db.models import (
     Subquery,
     Sum,
     Value,
+    When,
 )
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -40,24 +42,27 @@ class AccountQuerySet(models.QuerySet):
         """
         Annotate `balance`: the account's balance at the end of `on_date` (default: today).
 
-        balance = opening_balance + income - expenses + transfers in - transfers out, counting only
-        what happened from `opening_date` (the opening balance already contains everything before
-        it) up to `on_date`. Soft-deleted transactions don't count. One query, four subqueries.
+        balance = opening_balance + income - expenses, counting every transaction dated up to
+        `on_date`, however old. A transfer is a pair of transactions (an expense on the source
+        account, an income on the target), so it counts here like any other. The opening balance
+        counts from `opening_date` on. Soft-deleted transactions don't count. One query, two
+        subqueries.
         """
         on_date = on_date or timezone.localdate()
-        period = {"date__gte": OuterRef("opening_date"), "date__lte": on_date}
         transactions = Transaction.objects.filter(
-            account=OuterRef("pk"), is_deleted=False, **period
+            account=OuterRef("pk"), is_deleted=False, date__lte=on_date
         )
         income = _sum_subquery(transactions.filter(transaction_type=Transaction.INCOME))
         expense = _sum_subquery(transactions.filter(transaction_type=Transaction.EXPENSE))
-        transfers_in = _sum_subquery(Transfer.objects.filter(to_account=OuterRef("pk"), **period))
-        transfers_out = _sum_subquery(
-            Transfer.objects.filter(from_account=OuterRef("pk"), **period)
-        )
         return self.annotate(
             balance=ExpressionWrapper(
-                F("opening_balance") + income - expense + transfers_in - transfers_out,
+                Case(
+                    When(opening_date__lte=on_date, then=F("opening_balance")),
+                    default=Value(Decimal("0")),
+                    output_field=MONEY,
+                )
+                + income
+                - expense,
                 output_field=MONEY,
             )
         )
@@ -66,7 +71,7 @@ class AccountQuerySet(models.QuerySet):
 class Account(models.Model):
     """
     Where money is kept: a bank account, cash, savings. Every transaction belongs to one account;
-    moving money between accounts is a Transfer, not income or expense.
+    moving money between accounts is a transfer: two linked transactions (see Transaction).
     """
 
     household = models.ForeignKey(
@@ -75,8 +80,9 @@ class Account(models.Model):
         related_name="accounts",
     )
     name = models.CharField(_("name"), max_length=100)
-    # The balance at the start of opening_date (before that day's transactions). Transactions
-    # dated earlier are history the opening balance already includes; they don't change it.
+    # Money the account held on opening_date that isn't in the recorded transactions (e.g. what
+    # was there before the user started tracking). Every transaction counts on top of it, also
+    # ones dated before opening_date.
     opening_balance = models.DecimalField(
         _("opening balance"), max_digits=12, decimal_places=2, default=Decimal("0")
     )
@@ -177,6 +183,9 @@ class Category(models.Model):
     )
     name = models.CharField(_("name"), max_length=100)
     is_active = models.BooleanField(_("is active"), default=True)
+    # The household's one category for transfer legs (finances.services.transfer_category). Found by
+    # this flag, not by its name, so the user can rename or move it. Regular transactions can't use it.
+    is_transfer = models.BooleanField(_("is transfer"), default=False)
 
     # Date range when category is active (static / one time only)
     start_date = models.DateField(_("start date"), null=True, blank=True)
@@ -195,6 +204,13 @@ class Category(models.Model):
 
     class Meta:
         ordering = ["category_group", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household"],
+                condition=Q(is_transfer=True),
+                name="one_transfer_category_per_household",
+            )
+        ]
 
     def __str__(self):
         return f"{self.category_group.name} / {self.name}"
@@ -217,6 +233,7 @@ class BudgetQuerySet(models.QuerySet):
                 household=OuterRef("household"),
                 category=OuterRef("category"),
                 transaction_type=Transaction.EXPENSE,
+                transfer_pair__isnull=True,
                 is_deleted=False,
                 date__gte=OuterRef("start_date"),
                 date__lte=OuterRef("end_date"),
@@ -273,6 +290,7 @@ class Budget(models.Model):
         total_spent = Transaction.objects.filter(
             category=self.category,
             transaction_type=Transaction.EXPENSE,
+            transfer_pair__isnull=True,
             date__gte=self.start_date,
             date__lte=self.end_date,
             household=self.household,
@@ -289,6 +307,14 @@ class Budget(models.Model):
 
 
 class Transaction(models.Model):
+    """
+    Income or expense on one account. A transfer between two accounts is a pair of transactions:
+    an expense on the source account and an income on the target, pointing at each other through
+    `transfer_pair`, in the household's transfer category. They change the accounts' balances like
+    any transaction, but are left out of income/expense totals, reports and budgets. Created, changed
+    and deleted together, only through finances.services (create_transfer, ...).
+    """
+
     INCOME = "income"
     EXPENSE = "expense"
 
@@ -323,7 +349,7 @@ class Transaction(models.Model):
     description = models.CharField(_("description"), max_length=255, blank=True)
     amount = models.DecimalField(
         _("amount"),
-        max_digits=8,
+        max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
@@ -331,6 +357,10 @@ class Transaction(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="transactions",
+    )
+    # A transfer leg: the other leg (both point at each other). Null for income and expenses.
+    transfer_pair = models.OneToOneField(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     is_fixed = models.BooleanField(_("is fixed"), default=False)
     # Day the transaction happened; can be in the past (e.g. entering yesterday's expense).
@@ -353,42 +383,3 @@ class Transaction(models.Model):
         if not self.category:
             return ""
         return str(self.category)
-
-
-class Transfer(models.Model):
-    """Money moved from one account to another (e.g. cash withdrawal). Not income or expense."""
-
-    household = models.ForeignKey(
-        "users.Household",
-        on_delete=models.CASCADE,
-        related_name="transfers",
-    )
-    from_account = models.ForeignKey(
-        Account, related_name="transfers_out", on_delete=models.PROTECT
-    )
-    to_account = models.ForeignKey(Account, related_name="transfers_in", on_delete=models.PROTECT)
-    amount = models.DecimalField(
-        _("amount"),
-        max_digits=12,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.01"))],
-    )
-    date = models.DateField(_("date"), default=timezone.localdate, db_index=True)
-    description = models.CharField(_("description"), max_length=255, blank=True)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="transfers",
-    )
-    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
-
-    class Meta:
-        ordering = ["-date", "-created_at"]
-        constraints = [
-            models.CheckConstraint(
-                condition=~Q(from_account=F("to_account")), name="transfer_between_two_accounts"
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.from_account} -> {self.to_account}: {self.amount}"

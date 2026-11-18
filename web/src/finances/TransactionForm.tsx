@@ -20,6 +20,7 @@ import {
   useCategories,
   useTransactionSuggestions,
 } from './hooks'
+import { type Carry, KindToggle } from './KindToggle'
 import { type TransactionFormValues, transactionSchema } from './schemas'
 
 type CategoryOption = components['schemas']['CategoryList']
@@ -32,6 +33,8 @@ type TransactionFormProps = {
   currentAccount?: Pick<Account, 'id' | 'name'>
   /** Title suggestions only help when entering a new transaction. */
   withSuggestions?: boolean
+  /** New entry: a third type, "transfer", that switches to the transfer form. */
+  onTransfer?: (carry: Carry) => void
   submitLabel: string
   onSubmit: (values: TransactionInput) => Promise<unknown>
   children?: ReactNode // extra actions next to the submit button (e.g. delete)
@@ -43,6 +46,7 @@ export function TransactionForm({
   currentCategory,
   currentAccount,
   withSuggestions = false,
+  onTransfer,
   submitLabel,
   onSubmit,
   children,
@@ -55,6 +59,7 @@ export function TransactionForm({
     handleSubmit,
     setError,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues })
@@ -65,10 +70,11 @@ export function TransactionForm({
   const title = useWatch({ control, name: 'title' })
   const transactionType = useWatch({ control, name: 'transaction_type' })
 
-  // Only categories active on the chosen date can be used; the API checks it too.
+  // Only categories active on the chosen date can be used; the API checks it too. The transfer
+  // category belongs to transfers only (they're made with the "transfer" type).
   const categories = useCategories(date)
   const options = useMemo(() => {
-    const list = categories.data ?? []
+    const list = (categories.data ?? []).filter((category) => !category.is_transfer)
     if (currentCategory && !list.some((category) => category.id === currentCategory.id)) {
       return [...list, currentCategory]
     }
@@ -122,26 +128,20 @@ export function TransactionForm({
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       {errors.root?.server && <Alert tone="error">{errors.root.server.message}</Alert>}
 
-      {/* Expense / income as two radio buttons styled as a toggle */}
-      <fieldset className="flex rounded-md border border-slate-300 p-1">
-        <legend className="sr-only">{t('finances.fields.type')}</legend>
-        {(['expense', 'income'] as const).map((type) => (
-          <label
-            key={type}
-            className={`flex-1 cursor-pointer rounded px-3 py-1.5 text-center text-sm font-medium ${
-              transactionType === type ? 'bg-slate-900 text-white' : 'text-slate-700'
-            }`}
-          >
-            <input
-              type="radio"
-              value={type}
-              className="sr-only"
-              {...register('transaction_type')}
-            />
-            {t(`finances.types.${type}`)}
-          </label>
-        ))}
-      </fieldset>
+      {/* The type is a form value (set from code: setValue, like the suggestions do), except
+          "transfer", which hands the entry over to the transfer form. */}
+      <KindToggle
+        value={transactionType}
+        kinds={onTransfer ? ['expense', 'income', 'transfer'] : ['expense', 'income']}
+        onChange={(kind) => {
+          if (kind !== 'transfer') {
+            setValue('transaction_type', kind)
+            return
+          }
+          const [amount, date, description] = getValues(['amount', 'date', 'description'])
+          onTransfer?.({ amount, date, description })
+        }}
+      />
 
       <div className="relative">
         <TextField

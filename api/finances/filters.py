@@ -1,7 +1,9 @@
 import django_filters
 from django.db.models import Q
 
-from finances.models import Budget, Category, CategoryGroup, Transaction, Transfer
+from finances.models import Budget, Category, CategoryGroup, Transaction
+
+TRANSFER = "transfer"
 
 
 class ActiveFilterMixin(django_filters.FilterSet):
@@ -45,6 +47,11 @@ class TransactionFilter(django_filters.FilterSet):
     category = django_filters.NumberFilter(field_name="category_id")
     category_group = django_filters.NumberFilter(field_name="category__category_group_id")
     account = django_filters.NumberFilter(field_name="account_id")
+    # income / expense: real income or expenses only; transfer: only the legs of transfers.
+    transaction_type = django_filters.ChoiceFilter(
+        choices=[*Transaction.TRANSACTION_TYPES, (TRANSFER, "Transfer")],
+        method="filter_transaction_type",
+    )
 
     class Meta:
         model = Transaction
@@ -58,8 +65,15 @@ class TransactionFilter(django_filters.FilterSet):
             "is_fixed",
         ]
 
+    def filter_transaction_type(self, queryset, name, value):
+        if value == TRANSFER:
+            return queryset.filter(transfer_pair__isnull=False)
+        return queryset.filter(transaction_type=value, transfer_pair__isnull=True)
+
 
 class TransferFilter(django_filters.FilterSet):
+    """Filters the outgoing legs (one per transfer) of the transfer list."""
+
     start_date = django_filters.DateFilter(
         field_name="date", lookup_expr="gte", label="Date on or after"
     )
@@ -69,11 +83,11 @@ class TransferFilter(django_filters.FilterSet):
     account = django_filters.NumberFilter(method="filter_account", label="From or to this account")
 
     class Meta:
-        model = Transfer
+        model = Transaction
         fields = ["start_date", "end_date", "account"]
 
     def filter_account(self, queryset, name, value):
-        return queryset.filter(Q(from_account_id=value) | Q(to_account_id=value))
+        return queryset.filter(Q(account_id=value) | Q(transfer_pair__account_id=value))
 
 
 class BudgetFilter(django_filters.FilterSet):

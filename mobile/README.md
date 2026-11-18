@@ -16,6 +16,12 @@ it uses only the REST API in [`../api`](../api/README.md).
 | expo-camera | Barcode scanning for foods (later) |
 | EAS Build | Building and publishing to app stores (later) |
 
+## Icons
+
+The app icon, Android adaptive icon and splash screen come from the master logo in
+[`../branding/`](../branding/README.md), which lists the sizes and rules (opaque 1024×1024 icon, no
+transparency).
+
 ## Planned way to run
 
 The Expo dev server runs on port **8081**. CORS only matters for Expo's web preview, and the API already

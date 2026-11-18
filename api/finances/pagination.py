@@ -1,7 +1,7 @@
 from common.pagination import StandardResultsSetPagination
 
 MONEY_SCHEMA = {"type": "string", "format": "decimal", "pattern": r"^-?\d{0,10}(?:\.\d{0,2})?$"}
-TOTAL_FIELDS = ("total_incomes", "total_expenses", "total")
+TOTAL_FIELDS = ("total_incomes", "total_expenses", "total_transfers", "total")
 
 
 class TransactionPagination(StandardResultsSetPagination):

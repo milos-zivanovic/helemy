@@ -200,3 +200,22 @@ export function useDeleteTrainingItem() {
     onSuccess: invalidate,
   })
 }
+
+/**
+ * For the start page: the newest training and how many trainings there are since `fromDate`.
+ * Two one-row pages: `count` of a paginated list is the number of all matching rows.
+ */
+export function useTrainingStats(fromDate: string) {
+  return useQuery({
+    queryKey: [FITNESS, 'trainings', 'stats', fromDate],
+    queryFn: async () => {
+      const [latest, since] = await Promise.all([
+        api.GET('/api/fitness/trainings/', { params: { query: { page_size: 1 } } }),
+        api.GET('/api/fitness/trainings/', {
+          params: { query: { from_date: fromDate, page_size: 1 } },
+        }),
+      ])
+      return { last: unwrap(latest).results[0] ?? null, countSince: unwrap(since).count }
+    },
+  })
+}

@@ -49,6 +49,7 @@ Port 3000 is fixed (`strictPort`) because the API allows exactly this origin thr
 (`web-dev`) together; see [infrastructure/README.md](../infrastructure/README.md). The source is mounted,
 so edits reload as on the host; `node_modules` is the image's own (Linux binaries). After changing
 `package.json`, rebuild with fresh volumes: `docker compose --profile dev up -d --build -V web-dev`.
+With `--profile dev-pg` the same dev server runs as `web-dev-pg` and calls the PostgreSQL API on :8001.
 
 The `prod` profile builds the app ([`Dockerfile`](Dockerfile), target `prod`) and serves it with nginx
 ([`nginx.conf`](nginx.conf)) on http://localhost:8080. nginx forwards `/api/`, `/admin/`, `/static/` and
@@ -101,17 +102,16 @@ TypeScript then reports every place in the web code that no longer matches. The 
 | `/register`                   | Sign up (logged in right away)                         |
 | `/forgot-password`            | Ask for a reset email                                  |
 | `/reset-password`             | Set a new password from the email's link               |
-| `/`                           | Start page (needs a login)                             |
+| `/`                           | Start page: summary of finances, trainings, nutrition  |
 | `/household`                  | Household: details, members, invitations               |
 | `/profile`                    | Account data and password change                       |
-| `/finances/transactions`      | Transactions of a month: filters, totals               |
-| `/finances/transactions/new`  | New transaction (title suggestions)                    |
+| `/finances/transactions`      | Main screen: period, filters, totals, list or chart    |
+| `/finances/transactions/new`  | New expense, income or transfer (`?type=transfer`)     |
 | `/finances/transactions/:id`  | Edit or delete a transaction                           |
-| `/finances/accounts`          | Total balance, accounts, transfers                     |
+| `/finances/accounts`          | Total balance and accounts                             |
 | `/finances/accounts/new`      | New account (opening balance and date)                 |
 | `/finances/accounts/:id`      | Edit, archive or delete an account                     |
-| `/finances/transfers/new`     | New transfer between two accounts                      |
-| `/finances/transfers/:id`     | Edit or delete a transfer                              |
+| `/finances/transfers/:id`     | Edit or delete a transfer (either half's id)           |
 | `/finances/categories`        | Category groups and their categories                   |
 | `/finances/categories/new`    | New category (`?group=` preselects the group)          |
 | `/finances/categories/:id`    | Edit or delete a category                              |
@@ -142,23 +142,52 @@ Received invitations show up on the same page, with a badge in the navigation; t
 minute and when the tab gets focus. Accepting an invitation or leaving switches the active household, so
 the whole query cache is refetched.
 
+## Start page
+
+`/` sums up every section, each card linking to its details: finances (total balance, each open account,
+this month's income, expenses and balance), budgets at 80 % or more (only when there are any), fitness
+(trainings this month, the last training) and nutrition (the logged-in member's calories and macros today).
+
 ## Finances
 
-- **Accounts** (`/finances/accounts`): where the money is. The page leads with the total balance, lists
-  the accounts (today's balance from the API, archived ones apart) and the transfers between them. An
-  account has an opening balance on a date; everything since changes it. Every transaction picks an
-  account (a new one defaults to the first active account); a transfer (e.g. a cash withdrawal) moves
-  money between two accounts without being income or expense.
-- **Transactions** (`/finances/transactions`): one month at a time; the filters (`month`, `type`,
-  `category`, `account`, `q`, `page`) live in the URL, so reload, bookmarks and the back button keep them. The totals
-  come from the API and cover every transaction matching the filters, not only the page.
-- **Form**: typing a title (2+ characters) suggests earlier transactions; picking one fills type, category,
-  fixed flag and the last amount. The category list shows only categories active on the chosen date (an
-  edited transaction keeps its own category even if it's archived). Amounts accept `1250,50` or `1250.50`.
+Tabs: **Budgets**, **Transactions** (the main screen, where `/finances` opens), **Reports** and
+**Settings**, which groups the pages set up once and opened rarely: Accounts and Categories
+(`src/finances/FinancesLayout.tsx`; their URLs don't change).
+
+- **Accounts** (`/finances/accounts`): where the money is. The page leads with the total balance and
+  lists the accounts (today's balance from the API, archived ones apart). An account's balance is its
+  opening balance (from its date) plus all its transactions, transfers and old ones included. Every
+  transaction picks an account (a new one defaults to the first active account).
+- **Transfers** (e.g. a cash withdrawal) move money between two accounts. The API stores one as two
+  linked transactions: out of one account, into the other, in the "Prenos" category (see the API README).
+  So a transfer is in the transaction list twice, once under each account, in neutral grey ("⇄ Transfer
+  to Savings −1,000" / "⇄ Transfer from Current +1,000"), and changes the balances without counting as
+  income or expenses. Either half opens the transfer form (`/finances/transfers/:id`), where a change or
+  a delete applies to both halves.
+- **Transactions** (`/finances/transactions`): the main screen, like the old wallet's overview. On top the
+  total balance of all accounts and a button for a new entry. The period is all transactions by
+  default, with quick choices (all, this month, last month, this year), a month stepper when the period is
+  one calendar month, and a free from–to range. Filters: type, group, category (only the chosen group's),
+  account, fixed costs, search. Everything lives in the URL (`start`, `end`, `type`, `group`, `category`,
+  `account`, `fixed`, `q`, `view`), so reload, bookmarks and the back button keep it. The totals come
+  from the API and cover every transaction matching the filters, not only the rows loaded so far. The list
+  shows 50 rows and grows with "Load more" (also by itself when the button scrolls into view:
+  `useInfiniteQuery` + an `IntersectionObserver`). The type filter has a third option, transfers. With
+  an account filter a "Transfers" tile shows the net of the transfers into and out of it, and the balance
+  includes it (without one they cancel out). `view=chart` shows the
+  same filtered transactions as ranked bars per group (expenses unless the type is income); a group's bar
+  opens its categories, a category's bar opens its transactions in the list.
+- **Form**: the toggle on top picks expense, income or transfer; a transfer swaps the form for the
+  transfer one (from, to, amount, date, description) and keeps what was typed in the shared fields.
+  Typing a title (2+ characters) suggests earlier transactions; picking one fills type, category, fixed
+  flag and the last amount. The category list shows only categories active on the chosen date (an edited
+  transaction keeps its own category even if it's archived), never the transfer category. Amounts accept
+  `1250,50` or `1250.50`.
 - **Categories** (`/finances/categories`): groups are created, renamed, switched off and deleted in place;
   a category has its own form with an optional one-off period and an optional yearly window. A category
   is usable on a day when it and its group are switched on and the day fits both ranges (`active_today`
-  in the list). Anything that still has transactions can't be deleted, only switched off.
+  in the list). Anything that still has transactions can't be deleted, only switched off. The transfer
+  category (badge "For transfers") can be renamed or moved, but has no switch and no periods.
 - **Budgets** (`/finances/budgets`): a limit for one category over a period. The page shows the budgets
   running today with an overall total, then all budgets of a year (`?year=`). Spent is the sum of the
   category's expenses in the period; the bar turns amber at 80 % and red above 100 %. A category can't
@@ -166,8 +195,7 @@ the whole query cache is refetched.
 - **Reports** (`/finances/reports?start=&end=&type=&group=&account=`): one period scopes the whole
   page: the totals, the breakdown (ranked bars per group; a group opens its categories) and the account
   balance (all accounts or one; a line chart that stops at today, with a table view). The page and Recharts are a separate chunk
-  (`lazy` route), downloaded only when the page is opened. The start page shows the total balance,
-  this month's totals and the budgets at 80 % or more.
+  (`lazy` route), downloaded only when the page is opened.
 - **Dates** are `YYYY-MM-DD` strings handled in local time (`src/lib/dates.ts`); never `toISOString()`,
   which converts to UTC and can shift the day. Money and dates are formatted with `useFormatters()`
   in the user's currency and the app's language.
@@ -241,8 +269,12 @@ web/src/
 │   ├── index.ts           # i18next setup: sr (default) + en, choice remembered in localStorage
 │   ├── i18next.d.ts       # Makes translation keys type-checked against sr.json
 │   └── locales/           # sr.json, en.json: every key must exist in both
-└── components/            # Reusable UI pieces
+├── assets/                # Images imported from code (logo.png; hashed file names in the build)
+└── components/            # Reusable UI pieces (Brand: logo + app name in both layouts)
 ```
+
+`public/` holds files served as they are, at the site root: `favicon.png` and `apple-touch-icon.png`.
+All logo sizes are made from the master logo in [`../branding/`](../branding/README.md).
 
 ## Next phases
 

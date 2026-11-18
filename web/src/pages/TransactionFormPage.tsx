@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
@@ -10,40 +11,38 @@ import {
   type TransactionInput,
   useAccounts,
   useCreateTransaction,
+  useCreateTransfer,
   useDeleteTransaction,
   useTransaction,
   useUpdateTransaction,
 } from '../finances/hooks'
+import { type Carry, type Kind } from '../finances/KindToggle'
 import { TransactionForm } from '../finances/TransactionForm'
+import { TransferForm } from '../finances/TransferForm'
+import { TRANSACTIONS_LIST, useBackToList } from '../finances/useBackToList'
 import { today } from '../lib/dates'
 
-const LIST = '/finances/transactions'
-
-// The list passes its query string (?month=...&type=...) in the link's state, so saving or
-// cancelling returns to the same filtered list; opened directly, it falls back to the item's month.
-type BackState = { back?: string } | null
-
-function useBackToList() {
-  const navigate = useNavigate()
-  const back = (useLocation().state as BackState)?.back
-  return (date?: string) => {
-    void navigate(back ?? (date ? `${LIST}?month=${date.slice(0, 7)}` : LIST))
-  }
-}
-
-/** /finances/transactions/new */
+/**
+ * /finances/transactions/new (?type=transfer opens it on the transfer).
+ *
+ * Expense, income or transfer: the type toggle swaps two forms. Which one is shown is page
+ * state (useState), and the `key` makes React build the chosen form from scratch, so its
+ * defaultValues (read only on the first render, like a Django form's `initial`) take the carried
+ * amount, date and description.
+ */
 export function NewTransactionPage() {
   const { t } = useTranslation()
-  const create = useCreateTransaction()
+  const [searchParams] = useSearchParams()
+  const createTransaction = useCreateTransaction()
+  const createTransfer = useCreateTransfer()
   const backToList = useBackToList()
-  // The form's default account (the first active one) must be known before the form is created:
-  // defaultValues are read once, on the first render, like a Django form's `initial`.
+  // The form's default account (the first active one) must be known before the form is created.
   const accounts = useAccounts()
-
-  const onSubmit = async (values: TransactionInput) => {
-    await create.mutateAsync(values)
-    backToList(values.date)
-  }
+  // A function as the initial value: computed once, on the first render.
+  const [entry, setEntry] = useState<{ kind: Kind; carry: Carry }>(() => ({
+    kind: searchParams.get('type') === 'transfer' ? 'transfer' : 'expense',
+    carry: { amount: '', date: today(), description: '' },
+  }))
 
   if (accounts.isPending) return <p className="text-sm text-slate-600">{t('common.loading')}</p>
   if (accounts.isError) return <Alert tone="error">{errorMessage(accounts.error, t)}</Alert>
@@ -57,23 +56,46 @@ export function NewTransactionPage() {
     )
   }
 
+  const switchTo = (kind: Kind, carry: Carry) => setEntry({ kind, carry })
+
   return (
-    <Card title={t('finances.transactions.new')}>
-      <TransactionForm
-        withSuggestions
-        submitLabel={t('common.save')}
-        onSubmit={onSubmit}
-        defaultValues={{
-          transaction_type: 'expense',
-          title: '',
-          amount: '',
-          date: today(),
-          category_id: '',
-          account_id: String(firstActive.id),
-          description: '',
-          is_fixed: false,
-        }}
-      />
+    <Card
+      title={t(entry.kind === 'transfer' ? 'finances.transfers.new' : 'finances.transactions.new')}
+    >
+      {entry.kind === 'transfer' ? (
+        <TransferForm
+          key="transfer"
+          onSwitch={switchTo}
+          defaultValues={{
+            from_account_id: String(firstActive.id),
+            to_account_id: '',
+            ...entry.carry,
+          }}
+          onSubmit={async (values) => {
+            await createTransfer.mutateAsync(values)
+            backToList(values.date)
+          }}
+        />
+      ) : (
+        <TransactionForm
+          key="transaction"
+          withSuggestions
+          onTransfer={(carry) => switchTo('transfer', carry)}
+          submitLabel={t('common.save')}
+          onSubmit={async (values: TransactionInput) => {
+            await createTransaction.mutateAsync(values)
+            backToList(values.date)
+          }}
+          defaultValues={{
+            transaction_type: entry.kind,
+            title: '',
+            category_id: '',
+            account_id: String(firstActive.id),
+            is_fixed: false,
+            ...entry.carry,
+          }}
+        />
+      )}
     </Card>
   )
 }
@@ -81,6 +103,7 @@ export function NewTransactionPage() {
 /** /finances/transactions/:id */
 export function EditTransactionPage() {
   const { t } = useTranslation()
+  const location = useLocation()
   // useParams: the URL's dynamic parts, like the kwargs a Django view gets from <int:id>.
   const id = Number(useParams().id)
   const transaction = useTransaction(id)
@@ -93,12 +116,18 @@ export function EditTransactionPage() {
     return (
       <Alert tone="error">
         {errorMessage(transaction.error, t)}{' '}
-        <TextLink to={LIST}>{t('finances.transactions.backToList')}</TextLink>
+        <TextLink to={TRANSACTIONS_LIST}>{t('finances.transactions.backToList')}</TextLink>
       </Alert>
     )
   }
 
   const data = transaction.data
+  // Half of a transfer: it's edited as a whole, on the transfer page (same id works there).
+  // <Navigate> is a redirect rendered as a component; `replace` keeps this URL out of history.
+  if (data.transfer) {
+    return <Navigate to={`/finances/transfers/${id}`} replace state={location.state} />
+  }
+
   const onSubmit = async (values: TransactionInput) => {
     await update.mutateAsync(values)
     backToList(values.date)

@@ -38,7 +38,7 @@ Nothing starts without `--profile`.
 | Profile | Services | URL | Database | Code | Use it for |
 |---|---|---|---|---|---|
 | `dev` | `api-dev`, `web-dev` | API http://localhost:8000, web http://localhost:3000 | SQLite in `infrastructure/data/` | mounted, auto-reload | Everyday development |
-| `dev-pg` | `api-dev-pg`, `db` | http://localhost:8001 | PostgreSQL 16 on `localhost:5432` | mounted, auto-reload | Checking against Postgres |
+| `dev-pg` | `api-dev-pg`, `web-dev-pg`, `db` | API http://localhost:8001, web http://localhost:3000 | PostgreSQL 16 on `localhost:5432` | mounted, auto-reload | Checking against Postgres |
 | `prod` | `web-prod`, `api-prod`, `db` | http://localhost:8080 (web + API through nginx); API alone on 8002 | PostgreSQL 16 | baked into the image | Production-like run (nginx, gunicorn, `DEBUG=0`) |
 
 All profiles apply migrations automatically on start. `prod` also runs `collectstatic`, and WhiteNoise
@@ -47,11 +47,12 @@ serves the static files (admin CSS/JS).
 Rebuild (`--build`) after changing `pyproject.toml`, `package.json`, a `Dockerfile` or the entrypoint.
 In `dev` / `dev-pg`, code changes (Python and web) don't need a rebuild. `web-dev` keeps its
 `node_modules` in an anonymous volume, so after a `package.json` change add `-V` (fresh volumes):
-`docker compose --profile dev up -d --build -V web-dev`.
+`docker compose --profile dev up -d --build -V web-dev` (with `dev-pg`: `--profile dev-pg ... -V web-dev-pg`).
 
 `web-dev` watches files by polling (`WATCH_POLLING=1`), because a Windows bind mount doesn't pass file
-change events into the container. It runs only in the `dev` profile; with `dev-pg` run the web on the host
-with `VITE_API_URL=http://localhost:8001`.
+change events into the container. `web-dev-pg` (profile `dev-pg`) is the same service, but with
+`VITE_API_URL=http://localhost:8001`, so the browser calls `api-dev-pg`. Both use port 3000: don't run
+the `dev` and `dev-pg` profiles at the same time.
 
 ## Starting the API
 
@@ -77,7 +78,8 @@ docker compose --profile dev exec api-dev python manage.py shell
 docker compose --profile dev down
 ```
 
-For PostgreSQL replace `--profile dev` with `--profile dev-pg` and `api-dev` with `api-dev-pg`.
+For PostgreSQL replace `--profile dev` with `--profile dev-pg`, `api-dev` with `api-dev-pg` and `web-dev`
+with `web-dev-pg`.
 
 ### prod profile
 

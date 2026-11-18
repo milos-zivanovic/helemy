@@ -155,6 +155,7 @@ function CategoryRow({ category }: { category: Category }) {
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
             {category.name}
+            {category.is_transfer && <Badge>{t('finances.categories.transferBadge')}</Badge>}
             {status && <Badge>{status}</Badge>}
           </span>
           <span className="block text-xs text-slate-500">

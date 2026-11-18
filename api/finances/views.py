@@ -18,7 +18,7 @@ from finances.filters import (
     TransactionFilter,
     TransferFilter,
 )
-from finances.models import Account, Budget, Category, CategoryGroup, Transaction, Transfer
+from finances.models import Account, Budget, Category, CategoryGroup, Transaction
 from finances.pagination import TransactionPagination
 from finances.serializers import (
     AccountSerializer,
@@ -36,7 +36,12 @@ from finances.serializers import (
     TransactionTotalsSerializer,
     TransferSerializer,
 )
-from finances.services import balance_history
+from finances.services import (
+    balance_history,
+    delete_transfer,
+    first_balance_date,
+    refresh_transfer_titles,
+)
 
 MAX_BALANCE_HISTORY_DAYS = 3660  # ~10 years of daily points
 MAX_SUGGESTIONS = 10
@@ -50,7 +55,10 @@ TRANSACTION_FILTER_PARAMETERS = [
     OpenApiParameter("category_group", OpenApiTypes.INT),
     OpenApiParameter("account", OpenApiTypes.INT),
     OpenApiParameter(
-        "transaction_type", OpenApiTypes.STR, enum=[Transaction.INCOME, Transaction.EXPENSE]
+        "transaction_type",
+        OpenApiTypes.STR,
+        enum=[Transaction.INCOME, Transaction.EXPENSE, "transfer"],
+        description="income / expense: without transfers; transfer: only transfer legs",
     ),
     OpenApiParameter("is_fixed", OpenApiTypes.BOOL),
     OpenApiParameter("search", OpenApiTypes.STR, description="Part of the title or description"),
@@ -135,7 +143,7 @@ class CategoryViewSet(HouseholdModelViewSet):
 )
 class TransactionViewSet(HouseholdModelViewSet):
     queryset = Transaction.objects.select_related(
-        "category", "category__category_group", "account", "user"
+        "category", "category__category_group", "account", "user", "transfer_pair__account"
     ).all()
     serializer_class = TransactionSerializer
     permission_classes = [IsHouseholdMember]
@@ -154,26 +162,47 @@ class TransactionViewSet(HouseholdModelViewSet):
         return super().get_queryset().filter(is_deleted=False)
 
     def perform_destroy(self, instance):
-        # Soft delete: keep the row for history, hide it from every endpoint.
+        # Soft delete: keep the row for history, hide it from every endpoint. A transfer leg takes
+        # the other leg with it.
+        if instance.transfer_pair_id:
+            delete_transfer(instance)
+            return
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        totals = queryset.aggregate(
-            total_income=Sum("amount", filter=Q(transaction_type=Transaction.INCOME)),
-            total_expense=Sum("amount", filter=Q(transaction_type=Transaction.EXPENSE)),
-        )
-        total_income = totals["total_income"] or Decimal("0")
-        total_expense = totals["total_expense"] or Decimal("0")
-        totals_data = TransactionTotalsSerializer(
+    @staticmethod
+    def _totals(queryset):
+        """
+        Totals over the whole (filtered) queryset. Income and expenses leave transfer legs out
+        (moving money isn't earning or spending it); `total_transfers` is their net: legs into
+        minus out of the listed accounts, so 0 when both legs are listed. `total` is the change of
+        the listed accounts' balance: income - expenses + transfers.
+        """
+        leg = Q(transfer_pair__isnull=False)
+        income = Q(transaction_type=Transaction.INCOME)
+        expense = Q(transaction_type=Transaction.EXPENSE)
+        totals = {
+            key: value or Decimal("0")
+            for key, value in queryset.aggregate(
+                incomes=Sum("amount", filter=income & ~leg),
+                expenses=Sum("amount", filter=expense & ~leg),
+                legs_in=Sum("amount", filter=income & leg),
+                legs_out=Sum("amount", filter=expense & leg),
+            ).items()
+        }
+        transfers = totals["legs_in"] - totals["legs_out"]
+        return TransactionTotalsSerializer(
             {
-                "total_incomes": total_income,
-                "total_expenses": total_expense,
-                "total": total_income - total_expense,
+                "total_incomes": totals["incomes"],
+                "total_expenses": totals["expenses"],
+                "total_transfers": transfers,
+                "total": totals["incomes"] - totals["expenses"] + transfers,
             }
         ).data
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        totals_data = self._totals(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -211,7 +240,8 @@ class TransactionViewSet(HouseholdModelViewSet):
 
         rows = (
             self.get_queryset()
-            .filter(title__icontains=q, category__in=Category.objects.active())
+            .filter(title__icontains=q, transfer_pair__isnull=True)
+            .filter(category__in=Category.objects.active().filter(is_transfer=False))
             .order_by("-date", "-created_at")
             .values(
                 "title",
@@ -253,9 +283,12 @@ class TransactionViewSet(HouseholdModelViewSet):
         """
         Totals per category group, or per category when `category_group` is given.
         Accepts the same filters as the transaction list. Expenses only, unless
-        `transaction_type` is passed explicitly. Sorted by total, largest first.
+        `transaction_type` is passed explicitly; transfers never count. Sorted by total, largest
+        first.
         """
-        queryset = self.filter_queryset(self.get_queryset()).order_by()
+        queryset = (
+            self.filter_queryset(self.get_queryset()).filter(transfer_pair__isnull=True).order_by()
+        )
         if "transaction_type" not in request.query_params:
             queryset = queryset.filter(transaction_type=Transaction.EXPENSE)
 
@@ -290,10 +323,11 @@ class TransactionViewSet(HouseholdModelViewSet):
     def balance_history(self, request):
         """
         The real balance per day: one account (`account`) or all the household's accounts.
-        Each account starts with its opening balance on its opening date; income, expenses and
-        transfers change it from then on (see finances.services.balance_history). Defaults:
-        `start_date` is the earliest opening date, `end_date` is today. Every day in the range is
-        returned, including days without changes.
+        Every transaction (transfer legs too) counts on its date; an account's opening balance
+        is added on its opening date (see finances.services.balance_history). Defaults:
+        `start_date` is the first day that changes the balance (an opening date or the oldest
+        transaction), `end_date` is today. Every day in the range is returned, including days
+        without changes.
         """
         params = BalanceHistoryQuerySerializer(
             data=request.query_params, context=self.get_serializer_context()
@@ -305,9 +339,7 @@ class TransactionViewSet(HouseholdModelViewSet):
             if account
             else list(Account.objects.filter(household=request.user.get_active_household()))
         )
-        start = params.validated_data.get("start_date") or min(
-            (a.opening_date for a in accounts), default=None
-        )
+        start = params.validated_data.get("start_date") or first_balance_date(accounts)
         end = params.validated_data.get("end_date") or timezone.localdate()
         if start is None:
             return Response(
@@ -413,17 +445,18 @@ class AccountViewSet(HouseholdModelViewSet):
     def get_queryset(self):
         return super().get_queryset().with_balance().order_by("-is_active", "name")
 
+    def perform_update(self, serializer):
+        old_name = serializer.instance.name
+        account = serializer.save()
+        if account.name != old_name:
+            refresh_transfer_titles(account)
+
     def perform_destroy(self, instance):
-        # Only an unused account can be deleted. Soft-deleted transactions are hidden history: they
-        # go with it (the database protects accounts that still have any transaction).
-        if (
-            instance.transactions.filter(is_deleted=False).exists()
-            or instance.transfers_in.exists()
-            or instance.transfers_out.exists()
-        ):
-            raise ValidationError(
-                {"detail": "This account has transactions or transfers. Archive it instead."}
-            )
+        # Only an unused account can be deleted (transfers are transactions too). Soft-deleted
+        # transactions are hidden history: they go with it (the database protects accounts that
+        # still have any transaction).
+        if instance.transactions.filter(is_deleted=False).exists():
+            raise ValidationError({"detail": "This account has transactions. Archive it instead."})
         instance.transactions.all().delete()
         instance.delete()
 
@@ -436,9 +469,15 @@ class AccountViewSet(HouseholdModelViewSet):
     destroy=extend_schema(tags=["Finances - Accounts"]),
 )
 class TransferViewSet(HouseholdModelViewSet):
-    """Money moved between two accounts of the household; not income or expense."""
+    """
+    Money moved between two accounts of the household: a pair of linked transactions (see
+    finances.models.Transaction), handled here as one object. The legs also appear in the
+    transaction list. `<id>` is either leg's id; the list has one row per transfer.
+    """
 
-    queryset = Transfer.objects.select_related("from_account", "to_account", "user").all()
+    queryset = Transaction.objects.filter(
+        transfer_pair__isnull=False, is_deleted=False
+    ).select_related("account", "user", "transfer_pair__account", "transfer_pair__user")
     serializer_class = TransferSerializer
     permission_classes = [IsHouseholdMember]
     pagination_class = StandardResultsSetPagination
@@ -446,3 +485,12 @@ class TransferViewSet(HouseholdModelViewSet):
     ordering = ["-date", "-created_at"]
     ordering_fields = ["amount", "date", "created_at"]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "list":
+            queryset = queryset.filter(transaction_type=Transaction.EXPENSE)  # the outgoing legs
+        return queryset
+
+    def perform_destroy(self, instance):
+        delete_transfer(instance)

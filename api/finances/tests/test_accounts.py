@@ -4,16 +4,16 @@ from decimal import Decimal
 from django.utils import timezone
 
 from common.testing import HouseholdAPITestCase
-from finances.models import Account, Category, CategoryGroup, Transaction, Transfer
+from finances.models import Account, Category, CategoryGroup, Transaction
+from finances.services import create_transfer
 
 ACCOUNTS_URL = "/api/finances/accounts/"
-TRANSFERS_URL = "/api/finances/transfers/"
 TRANSACTIONS_URL = "/api/finances/transactions/"
 BALANCE_URL = f"{TRANSACTIONS_URL}balance-history/"
 
 
 class AccountTests(HouseholdAPITestCase):
-    """Accounts, transfers and the real balance."""
+    """Accounts and the real balance (transfers in detail: test_transfers.py)."""
 
     def setUp(self):
         super().setUp()
@@ -46,7 +46,7 @@ class AccountTests(HouseholdAPITestCase):
         )
 
     def _transfer(self, amount, day, source, target):
-        return Transfer.objects.create(
+        return create_transfer(
             household=self.alice_household,
             user=self.alice,
             from_account=source,
@@ -60,15 +60,21 @@ class AccountTests(HouseholdAPITestCase):
 
     # --- balance --------------------------------------------------------------
 
-    def test_balance_counts_from_the_opening_date(self):
+    def test_balance_counts_all_transactions(self):
         self._tx("100", date(2026, 3, 2))
         self._tx("50", date(2026, 3, 2), transaction_type=Transaction.INCOME)
         self._tx("70", date(2026, 3, 2), is_deleted=True)  # soft-deleted: ignored
-        self._tx("999", date(2026, 2, 20))  # before opening: already in the opening balance
+        self._tx("300", date(2026, 2, 20), transaction_type=Transaction.INCOME)  # before opening
         self._transfer("200", date(2026, 3, 3), self.bank, self.cash)
 
         balances = self._balances(self.client.get(ACCOUNTS_URL))
-        self.assertEqual(balances, {"Bank": Decimal("750"), "Cash": Decimal("200")})
+        self.assertEqual(balances, {"Bank": Decimal("1050"), "Cash": Decimal("200")})
+
+    def test_opening_balance_counts_from_the_opening_date(self):
+        self.bank.opening_date = timezone.localdate() + timedelta(days=1)
+        self.bank.save()
+        self._tx("100", date(2026, 3, 2), transaction_type=Transaction.INCOME)
+        self.assertEqual(self._balances(self.client.get(ACCOUNTS_URL))["Bank"], Decimal("100"))
 
     def test_future_transactions_dont_change_todays_balance(self):
         tomorrow = timezone.localdate() + timedelta(days=1)
@@ -78,20 +84,28 @@ class AccountTests(HouseholdAPITestCase):
     def test_balance_history_of_all_accounts_and_of_one(self):
         self._tx("100", date(2026, 3, 2))
         self._transfer("200", date(2026, 3, 3), self.bank, self.cash)
-        self._tx("999", date(2026, 2, 20))  # before opening: ignored
+        self._tx("50", date(2026, 2, 27))  # before opening: counts too
 
         params = {"start_date": "2026-02-28", "end_date": "2026-03-03"}
         data = self.client.get(BALANCE_URL, params).data
         self.assertEqual(
             [(d["date"], Decimal(d["balance"])) for d in data["results"]],
-            # Nothing before the accounts existed; the opening balance appears on the opening
-            # date; a transfer between the two accounts doesn't change the total.
-            [("2026-02-28", 0), ("2026-03-01", 1000), ("2026-03-02", 900), ("2026-03-03", 900)],
+            # The older expense is in the starting balance; the opening balance appears on the
+            # opening date; a transfer between the two accounts doesn't change the total.
+            [("2026-02-28", -50), ("2026-03-01", 950), ("2026-03-02", 850), ("2026-03-03", 850)],
         )
 
         data = self.client.get(BALANCE_URL, {**params, "account": self.cash.id}).data
         self.assertEqual(
             [Decimal(d["balance"]) for d in data["results"]], [0, 0, 0, Decimal("200")]
+        )
+
+    def test_balance_history_starts_at_the_oldest_transaction_by_default(self):
+        self._tx("50", date(2026, 2, 27))
+        results = self.client.get(BALANCE_URL, {"end_date": "2026-03-01"}).data["results"]
+        self.assertEqual(
+            [(d["date"], Decimal(d["balance"])) for d in results],
+            [("2026-02-27", -50), ("2026-02-28", -50), ("2026-03-01", 950)],
         )
 
     def test_balance_history_starts_from_the_balance_before_start(self):
@@ -143,39 +157,9 @@ class AccountTests(HouseholdAPITestCase):
         self.assertEqual([t["amount"] for t in self.results(response)], ["2.00"])
         self.assertEqual(self.results(response)[0]["account"]["name"], "Cash")
 
-    def test_create_transfer(self):
-        payload = {
-            "from_account_id": self.bank.id,
-            "to_account_id": self.cash.id,
-            "amount": "300",
-            "date": "2026-03-04",
-        }
-        response = self.client.post(TRANSFERS_URL, payload)
-        self.assertEqual(response.status_code, 201, response.data)
-        transfer = Transfer.objects.get()
-        self.assertEqual((transfer.household, transfer.user), (self.alice_household, self.alice))
-        response = self.client.get(TRANSFERS_URL, {"account": self.cash.id})
-        self.assertEqual(self.results(response)[0]["from_account"]["name"], "Bank")
-
-    def test_transfer_validation(self):
-        payload = {"from_account_id": self.bank.id, "to_account_id": self.bank.id, "amount": "1"}
-        response = self.client.post(TRANSFERS_URL, payload)
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("to_account_id", response.data)
-        response = self.client.post(
-            TRANSFERS_URL, {**payload, "to_account_id": self.bob_account.id}
-        )
-        self.assertIn("to_account_id", response.data)
-        response = self.client.post(
-            TRANSFERS_URL, {**payload, "to_account_id": self.cash.id, "amount": "0"}
-        )
-        self.assertIn("amount", response.data)
-
     def test_account_in_use_cant_be_deleted(self):
         self._tx("1", date(2026, 3, 2))
         self.assertEqual(self.client.delete(f"{ACCOUNTS_URL}{self.bank.id}/").status_code, 400)
-        self._transfer("1", date(2026, 3, 2), self.cash, self.bob_account)
-        self.assertEqual(self.client.delete(f"{ACCOUNTS_URL}{self.cash.id}/").status_code, 400)
 
     def test_unused_account_is_deleted_with_its_soft_deleted_transactions(self):
         self._tx("1", date(2026, 3, 2), account=self.cash, is_deleted=True)
@@ -200,16 +184,6 @@ class AccountTests(HouseholdAPITestCase):
         self.assertEqual(
             self.client.get(BALANCE_URL, {"account": self.bob_account.id}).status_code, 400
         )
-
-        bob_transfer = Transfer.objects.create(
-            household=self.bob_household,
-            user=self.bob,
-            from_account=self.bob_account,
-            to_account=Account.objects.create(household=self.bob_household, name="Bob cash"),
-            amount=Decimal("5"),
-        )
-        self.assertEqual(self.results(self.client.get(TRANSFERS_URL)), [])
-        self.assertEqual(self.client.get(f"{TRANSFERS_URL}{bob_transfer.id}/").status_code, 404)
 
     def test_sign_up_creates_a_default_account(self):
         self.client.force_authenticate(None)

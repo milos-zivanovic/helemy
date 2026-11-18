@@ -171,8 +171,26 @@ class SignUpDefaultsTests(APITestCase):
 
         groups = {g.name: g for g in household.category_groups.all()}
         self.assertEqual(set(groups), set(DEFAULT_CATEGORIES))
-        for group_name, category_names in DEFAULT_CATEGORIES.items():
-            self.assertEqual(
-                sorted(groups[group_name].categories.values_list("name", flat=True)),
-                sorted(category_names),
+        for group_name, entries in DEFAULT_CATEGORIES.items():
+            expected = sorted(
+                (entry, None) if isinstance(entry, str) else (entry[0], entry[1])
+                for entry in entries
             )
+            actual = sorted(
+                (
+                    c.name,
+                    None
+                    if c.start_month is None
+                    else (c.start_month, c.start_day, c.end_month, c.end_day),
+                )
+                for c in groups[group_name].categories.filter(is_transfer=False)
+            )
+            self.assertEqual(actual, expected)
+
+        # Plus the transfer category, in "Ostalo".
+        transfer = household.categories.get(is_transfer=True)
+        self.assertEqual((transfer.name, transfer.category_group.name), ("Prenos", "Ostalo"))
+
+        heating = household.categories.get(name="Grejanje")
+        self.assertEqual((heating.start_month, heating.start_day), (5, 1))
+        self.assertEqual((heating.end_month, heating.end_day), (8, 1))

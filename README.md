@@ -17,6 +17,7 @@ life_tracker/
 ├── infrastructure/         # docker-compose.yml with dev / dev-pg / prod profiles
 ├── web/                    # React + TypeScript web client (Vite)
 ├── mobile/                 # Future Expo mobile app
+├── branding/               # Master logo (logo.png); web and mobile icons are made from it
 ├── .gitattributes          # Forces LF line endings for files that run inside Linux containers
 └── CLAUDE.md               # Instructions for Claude Code
 ```
@@ -41,7 +42,7 @@ docker compose --profile dev exec api-dev python manage.py createsuperuser
 
 The same command starts the web client too (next section). Then open http://localhost:8000/api/docs/.
 To use PostgreSQL instead of SQLite, use `--profile dev-pg` and the service `api-dev-pg` (API on port 8001,
-without the web); `--profile prod` runs a production-like build, web and API behind nginx on port 8080.
+web `web-dev-pg` on 3000); `--profile prod` runs a production-like build, web and API behind nginx on port 8080.
 Profiles, the prod setup, data reset and troubleshooting:
 [infrastructure/README.md](infrastructure/README.md).
 

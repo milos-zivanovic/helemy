@@ -7,11 +7,14 @@ import { ProgressBar } from '../components/ProgressBar'
 import { StatTile } from '../components/StatTile'
 import { TextLink } from '../components/TextLink'
 import { useAccounts, useActiveBudgets, usePeriodTotals } from '../finances/hooks'
+import { useTrainingStats } from '../fitness/hooks'
 import { useActiveHousehold, useInvitations } from '../household/hooks'
 import { useFormatters } from '../i18n/format'
-import { currentMonth, monthRange } from '../lib/dates'
+import { currentMonth, monthRange, today } from '../lib/dates'
+import { useWeek } from '../nutrition/hooks'
 
-// Start page: a greeting and what needs the user's attention.
+// Start page: a summary of every section (finances, trainings, nutrition) and what needs the
+// user's attention. Each card links to the page with the details.
 export function HomePage() {
   const { t } = useTranslation()
   // Same query key as in AppLayout, so this reads the cached profile: no second request.
@@ -33,9 +36,13 @@ export function HomePage() {
           <TextLink to="/household">{t('home.viewInvitations')}</TextLink>
         </Alert>
       )}
-      <Balance />
-      <MonthSummary />
+      <FinancesSummary />
       <BudgetsAttention />
+      {/* Two columns from tablet width up, one under the other on a phone */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <FitnessSummary />
+        <NutritionSummary userId={me.id} />
+      </div>
       {household && (
         <Card title={t('nav.household')}>
           <p className="text-sm">
@@ -52,67 +59,73 @@ export function HomePage() {
   )
 }
 
-// How much money there is now: the total of all accounts, then each active one.
-function Balance() {
-  const { t } = useTranslation()
-  const { formatMoney } = useFormatters()
-  const accounts = useAccounts()
-  if (!accounts.data || accounts.data.length === 0) return null
-  const total = accounts.data.reduce((sum, account) => sum + Number(account.balance), 0)
-  const active = accounts.data.filter((account) => account.is_active)
-
-  return (
-    <Card title={t('finances.accounts.total')}>
-      <p className={`text-3xl font-semibold ${total < 0 ? 'text-red-700' : ''}`}>
-        {formatMoney(total)}
-      </p>
-      {active.length > 1 && (
-        <ul className="mt-2 flex flex-col gap-1 text-sm">
-          {active.map((account) => (
-            <li key={account.id} className="flex justify-between gap-3">
-              <span className="truncate text-slate-600">{account.name}</span>
-              <span className="tabular-nums">{formatMoney(account.balance)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <TextLink to="/finances/accounts" className="mt-3 inline-block text-sm">
-        {t('home.openAccounts')}
-      </TextLink>
-    </Card>
-  )
-}
-
-function MonthSummary() {
+// How much money there is now (all accounts together, then each open one) and this month so far.
+function FinancesSummary() {
   const { t } = useTranslation()
   const { formatMoney, formatMonth } = useFormatters()
+  const accounts = useAccounts()
   const month = currentMonth()
   const { start, end } = monthRange(month)
   const totals = usePeriodTotals(start, end)
-  if (!totals.data) return null
+  if (!accounts.data) return null
+
+  const total = accounts.data.reduce((sum, account) => sum + Number(account.balance), 0)
+  const open = accounts.data.filter((account) => account.is_active)
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold capitalize">{formatMonth(month)}</h2>
-        <TextLink to="/finances/reports" className="text-sm">
-          {t('home.openReports')}
-        </TextLink>
+    <Card title={t('nav.finances')}>
+      <div className="flex flex-col gap-4">
+        <div>
+          <p className="text-sm text-slate-500">{t('finances.accounts.total')}</p>
+          <p className={`text-3xl font-semibold ${total < 0 ? 'text-red-700' : ''}`}>
+            {formatMoney(total)}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1 text-sm">
+            {open.map((account) => (
+              <li key={account.id} className="flex justify-between gap-3">
+                <span className="truncate text-slate-600">{account.name}</span>
+                <span
+                  className={`tabular-nums ${Number(account.balance) < 0 ? 'text-red-700' : ''}`}
+                >
+                  {formatMoney(account.balance)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {totals.data && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-slate-600 capitalize">{formatMonth(month)}</h3>
+            <dl className="grid grid-cols-3 gap-3">
+              <StatTile
+                label={t('finances.totals.income')}
+                tone="text-green-700"
+                value={formatMoney(totals.data.total_incomes)}
+              />
+              <StatTile
+                label={t('finances.totals.expense')}
+                tone="text-red-700"
+                value={formatMoney(totals.data.total_expenses)}
+              />
+              <StatTile
+                label={t('finances.totals.balance')}
+                value={formatMoney(totals.data.total)}
+              />
+            </dl>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {/* The transactions of this month: the main screen with the month as its period */}
+          <TextLink to={`/finances/transactions?start=${start}&end=${end}`}>
+            {t('home.openTransactions')}
+          </TextLink>
+          <TextLink to="/finances/transactions/new">{t('finances.transactions.new')}</TextLink>
+          <TextLink to="/finances/reports">{t('home.openReports')}</TextLink>
+        </div>
       </div>
-      <dl className="grid grid-cols-3 gap-3">
-        <StatTile
-          label={t('finances.totals.income')}
-          tone="text-green-700"
-          value={formatMoney(totals.data.total_incomes)}
-        />
-        <StatTile
-          label={t('finances.totals.expense')}
-          tone="text-red-700"
-          value={formatMoney(totals.data.total_expenses)}
-        />
-        <StatTile label={t('finances.totals.balance')} value={formatMoney(totals.data.total)} />
-      </dl>
-    </section>
+    </Card>
   )
 }
 
@@ -147,6 +160,71 @@ function BudgetsAttention() {
       </ul>
       <TextLink to="/finances/budgets" className="mt-3 inline-block text-sm">
         {t('home.openBudgets')}
+      </TextLink>
+    </Card>
+  )
+}
+
+// The last training and how many there were this month.
+function FitnessSummary() {
+  const { t } = useTranslation()
+  const { formatDay } = useFormatters()
+  const stats = useTrainingStats(monthRange(currentMonth()).start)
+
+  return (
+    <Card title={t('nav.fitness')}>
+      {stats.data && (
+        <div className="flex flex-col gap-3">
+          <dl className="grid grid-cols-1 gap-3">
+            <StatTile label={t('home.trainingsThisMonth')} value={String(stats.data.countSince)} />
+          </dl>
+          {stats.data.last ? (
+            <p className="text-sm">
+              <span className="text-slate-500">{t('home.lastTraining')}: </span>
+              <TextLink to={`/fitness/trainings/${stats.data.last.id}`} className="capitalize">
+                {formatDay(stats.data.last.date)}
+              </TextLink>
+              {stats.data.last.name && ` · ${stats.data.last.name}`}
+              <span className="block text-xs text-slate-500">
+                {t('fitness.trainings.summary', {
+                  exercises: stats.data.last.items_count,
+                  sets: stats.data.last.total_sets,
+                })}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-slate-600">{t('fitness.trainings.empty')}</p>
+          )}
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <TextLink to="/fitness/trainings/new">{t('fitness.trainings.start')}</TextLink>
+        <TextLink to="/fitness/trainings">{t('home.openTrainings')}</TextLink>
+      </div>
+    </Card>
+  )
+}
+
+// Today's calories and macros of the logged-in member (the diary is personal).
+function NutritionSummary({ userId }: { userId: number }) {
+  const { t } = useTranslation()
+  const day = today()
+  const week = useWeek(day)
+  const mine = week.data
+    ?.find((item) => item.date === day)
+    ?.by_user.find((member) => member.user_id === userId)
+
+  return (
+    <Card title={t('nav.nutrition')}>
+      <h3 className="mb-2 text-sm font-medium text-slate-600">{t('nutrition.diary.today')}</h3>
+      <dl className="grid grid-cols-2 gap-3">
+        <StatTile label={t('nutrition.fields.calories')} value={`${mine?.calories ?? 0} kcal`} />
+        <StatTile label={t('nutrition.fields.protein')} value={`${mine?.protein ?? 0} g`} />
+        <StatTile label={t('nutrition.fields.carbs')} value={`${mine?.carbs ?? 0} g`} />
+        <StatTile label={t('nutrition.fields.fat')} value={`${mine?.fat ?? 0} g`} />
+      </dl>
+      <TextLink to="/nutrition/diary" className="mt-3 inline-block text-sm">
+        {t('home.openDiary')}
       </TextLink>
     </Card>
   )

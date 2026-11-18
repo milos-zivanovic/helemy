@@ -1,16 +1,15 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { Link } from 'react-router'
 
 import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
-import { Button, LinkButton } from '../components/Button'
-import { Card } from '../components/Card'
-import { type Account, useAccounts, useTransfers } from '../finances/hooks'
+import { LinkButton } from '../components/Button'
+import { type Account, useAccounts } from '../finances/hooks'
 import { useFormatters } from '../i18n/format'
 
-// /finances/accounts: where the money is (today's balance per account) and the transfers between
-// accounts. The balances come from the API (opening balance + everything since), never summed here
-// from a page of transactions.
+// /finances/accounts: where the money is (today's balance per account). The balances come from the
+// API (opening balance + all transactions, transfers included), never summed here from a page of
+// transactions. Transfers themselves are in the transaction list, under both accounts.
 export function AccountsPage() {
   const { t } = useTranslation()
   const { formatMoney } = useFormatters()
@@ -35,7 +34,7 @@ export function AccountsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <LinkButton to="/finances/transfers/new" variant="secondary">
+          <LinkButton to="/finances/transactions/new?type=transfer" variant="secondary">
             {t('finances.transfers.new')}
           </LinkButton>
           <LinkButton to="/finances/accounts/new">{t('finances.accounts.new')}</LinkButton>
@@ -51,8 +50,6 @@ export function AccountsPage() {
           <AccountList accounts={archived} />
         </section>
       )}
-
-      <Transfers />
     </div>
   )
 }
@@ -92,68 +89,5 @@ function AccountList({ accounts }: { accounts: Account[] }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-// Transfers, newest first, paginated with ?page= in the URL.
-function Transfers() {
-  const { t } = useTranslation()
-  const { formatMoney, formatDate } = useFormatters()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page')) || 1
-  const transfers = useTransfers({ page })
-  const setPage = (next: number) => setSearchParams({ page: String(next) })
-
-  return (
-    <Card title={t('finances.transfers.title')}>
-      {transfers.isError && <Alert tone="error">{errorMessage(transfers.error, t)}</Alert>}
-      {transfers.data?.results.length === 0 && (
-        <p className="text-sm text-slate-600">{t('finances.transfers.empty')}</p>
-      )}
-      {transfers.data && transfers.data.results.length > 0 && (
-        <div className={transfers.isPlaceholderData ? 'opacity-60' : ''}>
-          <ul className="-mx-2 flex flex-col">
-            {transfers.data.results.map((transfer) => (
-              <li key={transfer.id}>
-                <Link
-                  to={`/finances/transfers/${transfer.id}`}
-                  className="flex items-center justify-between gap-3 rounded-md px-2 py-2 hover:bg-slate-50"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {transfer.from_account.name} → {transfer.to_account.name}
-                    </span>
-                    <span className="block truncate text-xs text-slate-500">
-                      {formatDate(transfer.date ?? '')}
-                      {transfer.description && ` · ${transfer.description}`}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold">
-                    {formatMoney(transfer.amount)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {transfers.data.total_pages > 1 && (
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                {t('common.previous')}
-              </Button>
-              <span className="text-sm text-slate-600">
-                {t('common.pageOf', { page, pages: transfers.data.total_pages })}
-              </span>
-              <Button
-                variant="secondary"
-                disabled={page >= transfers.data.total_pages}
-                onClick={() => setPage(page + 1)}
-              >
-                {t('common.next')}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
   )
 }

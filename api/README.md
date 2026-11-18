@@ -176,23 +176,38 @@ Endpoint groups:
   transactions too. Switch it off instead (`is_active=false`).
 - A transaction's category must be active on the transaction's `date`. This is checked only when the category
   or date changes, so old transactions in archived categories stay editable.
-- The transaction list also returns `total_incomes`, `total_expenses` and `total` (decimal strings, like every
-  amount) for all transactions matching the filters, not just the current page.
+- The transaction list also returns `total_incomes`, `total_expenses`, `total_transfers` and `total` (decimal
+  strings, like every amount) for all transactions matching the filters, not just the current page. Income
+  and expenses leave transfers out; `total_transfers` is the net of the listed transfer legs (with `account`:
+  transfers into it minus out of it; 0 without `account`, as both legs are listed); `total` = income -
+  expenses + transfers, so with `account` it is that account's change in the period.
 - Paginated lists return `count`, `next`, `previous`, `total_pages`, `current_page` and `results`
   (`?page=`, `?page_size=` up to 100).
-- **Accounts** hold the money; every transaction belongs to one (`account_id`), and a `transfer` moves
-  money between two accounts (neither income nor expense). An account's `balance` (today) is
-  `opening_balance` + income - expenses + transfers in - transfers out, counted from its `opening_date`;
-  transactions dated earlier are history the opening balance already includes, so they show in reports but
-  don't change the balance. An archived account (`is_active=false`) takes no new transactions or transfers;
-  old ones stay editable. An account with transactions or transfers can't be deleted (400), only archived.
+- **Accounts** hold the money; every transaction belongs to one (`account_id`). An account's `balance`
+  (today) is `opening_balance` + income - expenses, counting every transaction (transfer legs too) up to
+  today, however old. `opening_balance` is money the account held outside the recorded transactions; it
+  counts from `opening_date` on. An archived account (`is_active=false`) takes no new transactions or
+  transfers; old ones stay editable. An account with transactions can't be deleted (400), only archived.
+- **Transfers** move money between two accounts. A transfer is two transactions pointing at each other
+  (`transfer_pair`): an expense on the source account titled "Prenos na <target>" and an income on the
+  target titled "Prenos sa <source>", with the same amount, date and description, in the household's
+  transfer category (`is_transfer`, created as "Ostalo / Prenos" at sign-up or on the first transfer; it
+  can be renamed but not switched off, and regular income or expenses can't use it). The legs show up in
+  the transaction list (with `transfer`: the other leg's `id` and `account`) and change the balances, but
+  stay out of income/expense totals, `breakdown/`, budgets and `suggestions/`. They are written only
+  through `transfers/` (`from_account_id`, `to_account_id`, `amount`, `date`, `description`): a transfer's
+  `id` is the outgoing leg's (`incoming_id` the other one's), `transfers/<id>/` accepts either leg's id, and
+  a change or a delete always applies to both legs. `PATCH transactions/<leg>/` is refused (400);
+  `DELETE transactions/<leg>/` deletes both legs. Renaming an account renames the legs that name it.
+- `transaction_type` filters `income` / `expense` without transfers, `transfer` only transfer legs.
 - `transactions/breakdown/` accepts the same filters as the list (`start_date`, `end_date`, `category`,
   `category_group`, `account`, `transaction_type`, `is_fixed`, `search`).
 - `transactions/balance-history/` is the real balance per day of all accounts, or of one (`account`), from
-  `start_date` (default: the earliest opening date) to `end_date` (default: today). An account counts from
-  its opening date; a transfer between two counted accounts cancels out.
-- `budgets/` returns the budgets active today with `total_amount`, `total_spent` and `percentage`;
-  `budgets/all/?year=2026` pages through everything.
+  `start_date` (default: the first day that changes the balance, an opening date or the oldest transaction)
+  to `end_date` (default: today). Every transaction counts on its date, an opening balance on its opening
+  date; a transfer between two counted accounts cancels out.
+- `budgets/` returns the budgets active today with `total_amount`, `total_spent` and `percentage`
+  (transfer legs aren't spending); `budgets/all/?year=2026` pages through everything.
 
 ## Fitness rules worth knowing
 

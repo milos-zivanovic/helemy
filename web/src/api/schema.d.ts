@@ -620,10 +620,11 @@ export interface paths {
         };
         /**
          * @description The real balance per day: one account (`account`) or all the household's accounts.
-         *     Each account starts with its opening balance on its opening date; income, expenses and
-         *     transfers change it from then on (see finances.services.balance_history). Defaults:
-         *     `start_date` is the earliest opening date, `end_date` is today. Every day in the range is
-         *     returned, including days without changes.
+         *     Every transaction (transfer legs too) counts on its date; an account's opening balance
+         *     is added on its opening date (see finances.services.balance_history). Defaults:
+         *     `start_date` is the first day that changes the balance (an opening date or the oldest
+         *     transaction), `end_date` is today. Every day in the range is returned, including days
+         *     without changes.
          */
         get: operations["finances_transactions_balance_history_retrieve"];
         put?: never;
@@ -644,7 +645,8 @@ export interface paths {
         /**
          * @description Totals per category group, or per category when `category_group` is given.
          *     Accepts the same filters as the transaction list. Expenses only, unless
-         *     `transaction_type` is passed explicitly. Sorted by total, largest first.
+         *     `transaction_type` is passed explicitly; transfers never count. Sorted by total, largest
+         *     first.
          */
         get: operations["finances_transactions_breakdown_retrieve"];
         put?: never;
@@ -683,10 +685,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Money moved between two accounts of the household; not income or expense. */
+        /**
+         * @description Money moved between two accounts of the household: a pair of linked transactions (see
+         *     finances.models.Transaction), handled here as one object. The legs also appear in the
+         *     transaction list. `<id>` is either leg's id; the list has one row per transfer.
+         */
         get: operations["finances_transfers_list"];
         put?: never;
-        /** @description Money moved between two accounts of the household; not income or expense. */
+        /**
+         * @description Money moved between two accounts of the household: a pair of linked transactions (see
+         *     finances.models.Transaction), handled here as one object. The legs also appear in the
+         *     transaction list. `<id>` is either leg's id; the list has one row per transfer.
+         */
         post: operations["finances_transfers_create"];
         delete?: never;
         options?: never;
@@ -701,15 +711,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Money moved between two accounts of the household; not income or expense. */
+        /**
+         * @description Money moved between two accounts of the household: a pair of linked transactions (see
+         *     finances.models.Transaction), handled here as one object. The legs also appear in the
+         *     transaction list. `<id>` is either leg's id; the list has one row per transfer.
+         */
         get: operations["finances_transfers_retrieve"];
         put?: never;
         post?: never;
-        /** @description Money moved between two accounts of the household; not income or expense. */
+        /**
+         * @description Money moved between two accounts of the household: a pair of linked transactions (see
+         *     finances.models.Transaction), handled here as one object. The legs also appear in the
+         *     transaction list. `<id>` is either leg's id; the list has one row per transfer.
+         */
         delete: operations["finances_transfers_destroy"];
         options?: never;
         head?: never;
-        /** @description Money moved between two accounts of the household; not income or expense. */
+        /**
+         * @description Money moved between two accounts of the household: a pair of linked transactions (see
+         *     finances.models.Transaction), handled here as one object. The legs also appear in the
+         *     transaction list. `<id>` is either leg's id; the list has one row per transfer.
+         */
         patch: operations["finances_transfers_partial_update"];
         trace?: never;
     };
@@ -1225,6 +1247,7 @@ export interface components {
             start_day?: number | null;
             end_month?: number | null;
             end_day?: number | null;
+            readonly is_transfer: boolean;
             readonly transactions_count: number;
             /** Format: decimal */
             readonly total_amount: string;
@@ -1250,10 +1273,11 @@ export interface components {
         };
         CategoryList: {
             readonly id: number;
-            name: string;
-            category_group: number;
+            readonly name: string;
+            readonly category_group: number;
             readonly category_group_name: string;
-            is_active?: boolean;
+            readonly is_active: boolean;
+            readonly is_transfer: boolean;
         };
         /**
          * @description Row of the category list: the select fields plus the activity rules and usage, enough to manage
@@ -1265,6 +1289,7 @@ export interface components {
             readonly category_group: number;
             readonly category_group_name: string;
             readonly is_active: boolean;
+            readonly is_transfer: boolean;
             readonly active_today: boolean;
             /** Format: date */
             readonly start_date: string | null;
@@ -1275,11 +1300,6 @@ export interface components {
             readonly end_month: number | null;
             readonly end_day: number | null;
             readonly transactions_count: number;
-        };
-        CategoryListRequest: {
-            name: string;
-            category_group: number;
-            is_active?: boolean;
         };
         CategoryRequest: {
             name: string;
@@ -1800,6 +1820,8 @@ export interface components {
             /** Format: decimal */
             total_expenses: string;
             /** Format: decimal */
+            total_transfers: string;
+            /** Format: decimal */
             total: string;
         };
         PaginatedTransferList: {
@@ -1911,7 +1933,11 @@ export interface components {
             notes?: string;
             muscle_group_ids?: number[];
         };
-        /** @description The category must be active on the transaction's date (checked only when either changes). */
+        /**
+         * @description Rules for income and expenses: the category must be active on the transaction's date (checked
+         *     only when either changes) and can't be the transfer category. Transfer legs are written only
+         *     through transfers/.
+         */
         PatchedTransactionRequest: {
             /** Type */
             transaction_type?: components["schemas"]["TransactionTypeEnum"];
@@ -1925,6 +1951,11 @@ export interface components {
             account_id?: number;
             is_fixed?: boolean;
         };
+        /**
+         * @description A transfer as one object, made of its two legs (see Transaction). `id` is the outgoing leg's
+         *     id, `incoming_id` the incoming one's; transfers/<id>/ accepts either. Amount, date and
+         *     description are the same on both legs.
+         */
         PatchedTransferRequest: {
             from_account_id?: number;
             to_account_id?: number;
@@ -2055,7 +2086,11 @@ export interface components {
             notes?: string;
             muscle_group_ids?: number[];
         };
-        /** @description The category must be active on the transaction's date (checked only when either changes). */
+        /**
+         * @description Rules for income and expenses: the category must be active on the transaction's date (checked
+         *     only when either changes) and can't be the transfer category. Transfer legs are written only
+         *     through transfers/.
+         */
         Transaction: {
             readonly id: number;
             /** Type */
@@ -2072,11 +2107,16 @@ export interface components {
             readonly account: components["schemas"]["AccountList"];
             readonly user: components["schemas"]["User"];
             is_fixed?: boolean;
+            readonly transfer: components["schemas"]["TransferPair"] | null;
             readonly is_deleted: boolean;
             /** Format: date-time */
             readonly created_at: string;
         };
-        /** @description The category must be active on the transaction's date (checked only when either changes). */
+        /**
+         * @description Rules for income and expenses: the category must be active on the transaction's date (checked
+         *     only when either changes) and can't be the transfer category. Transfer legs are written only
+         *     through transfers/.
+         */
         TransactionCreate: {
             readonly id: number;
             /** Type */
@@ -2089,7 +2129,11 @@ export interface components {
             date?: string;
             is_fixed?: boolean;
         };
-        /** @description The category must be active on the transaction's date (checked only when either changes). */
+        /**
+         * @description Rules for income and expenses: the category must be active on the transaction's date (checked
+         *     only when either changes) and can't be the transfer category. Transfer legs are written only
+         *     through transfers/.
+         */
         TransactionCreateRequest: {
             /** Type */
             transaction_type?: components["schemas"]["TransactionTypeEnum"];
@@ -2103,7 +2147,11 @@ export interface components {
             account_id: number;
             is_fixed?: boolean;
         };
-        /** @description The category must be active on the transaction's date (checked only when either changes). */
+        /**
+         * @description Rules for income and expenses: the category must be active on the transaction's date (checked
+         *     only when either changes) and can't be the transfer category. Transfer legs are written only
+         *     through transfers/.
+         */
         TransactionRequest: {
             /** Type */
             transaction_type?: components["schemas"]["TransactionTypeEnum"];
@@ -2134,8 +2182,14 @@ export interface components {
          * @enum {string}
          */
         TransactionTypeEnum: "income" | "expense";
+        /**
+         * @description A transfer as one object, made of its two legs (see Transaction). `id` is the outgoing leg's
+         *     id, `incoming_id` the incoming one's; transfers/<id>/ accepts either. Amount, date and
+         *     description are the same on both legs.
+         */
         Transfer: {
             readonly id: number;
+            readonly incoming_id: number;
             readonly from_account: components["schemas"]["AccountList"];
             readonly to_account: components["schemas"]["AccountList"];
             /** Format: decimal */
@@ -2147,6 +2201,16 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /** @description The other leg of a transfer, nested in a transaction. */
+        TransferPair: {
+            readonly id: number;
+            readonly account: components["schemas"]["AccountList"];
+        };
+        /**
+         * @description A transfer as one object, made of its two legs (see Transaction). `id` is the outgoing leg's
+         *     id, `incoming_id` the incoming one's; transfers/<id>/ accepts either. Amount, date and
+         *     description are the same on both legs.
+         */
         TransferRequest: {
             from_account_id: number;
             to_account_id: number;
@@ -3361,8 +3425,9 @@ export interface operations {
                 /**
                  * @description * `income` - Income
                  *     * `expense` - Expense
+                 *     * `transfer` - Transfer
                  */
-                transaction_type?: "expense" | "income";
+                transaction_type?: "expense" | "income" | "transfer";
             };
             header?: never;
             path?: never;
@@ -3540,7 +3605,8 @@ export interface operations {
                 search?: string;
                 /** @description Date on or after */
                 start_date?: string;
-                transaction_type?: "expense" | "income";
+                /** @description income / expense: without transfers; transfer: only transfer legs */
+                transaction_type?: "expense" | "income" | "transfer";
             };
             header?: never;
             path?: never;
@@ -3644,7 +3710,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this transfer. */
+                /** @description A unique integer value identifying this transaction. */
                 id: number;
             };
             cookie?: never;
@@ -3666,7 +3732,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this transfer. */
+                /** @description A unique integer value identifying this transaction. */
                 id: number;
             };
             cookie?: never;
@@ -3687,7 +3753,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this transfer. */
+                /** @description A unique integer value identifying this transaction. */
                 id: number;
             };
             cookie?: never;

@@ -4,6 +4,7 @@ import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router'
 
 import { useIsLoggedIn, useLogout, useMe } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
+import { Brand } from '../components/Brand'
 import { Button } from '../components/Button'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useActiveHousehold, useInvitations } from '../household/hooks'
@@ -61,8 +62,10 @@ function Header() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 flex-col">
-          <span className="text-lg font-semibold">{t('app.title')}</span>
+        <div className="flex min-w-0 items-center gap-3">
+          <Link to="/" aria-label={t('nav.home')}>
+            <Brand />
+          </Link>
           {household && <span className="truncate text-xs text-slate-500">{household.name}</span>}
         </div>
         <div className="flex flex-wrap items-center gap-3">

@@ -1,11 +1,13 @@
 import calendar
+from decimal import Decimal
 
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from common.fields import HouseholdPrimaryKeyRelatedField
-from finances.models import Account, Budget, Category, CategoryGroup, Transaction, Transfer
+from finances.models import Account, Budget, Category, CategoryGroup, Transaction
+from finances.services import create_transfer, transfer_legs, update_transfer
 from users.serializers import UserSerializer
 
 
@@ -65,16 +67,25 @@ class CategorySerializer(serializers.ModelSerializer):
             "start_day",
             "end_month",
             "end_day",
+            "is_transfer",
             "transactions_count",
             "total_amount",
             "current_budget",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_transfer", "created_at", "updated_at"]
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        if (
+            self.instance is not None
+            and self.instance.is_transfer
+            and attrs.get("is_active") is False
+        ):
+            raise serializers.ValidationError(
+                {"is_active": "The transfer category can't be switched off."}
+            )
 
         def current(field):
             return attrs.get(field, getattr(self.instance, field, None))
@@ -121,7 +132,8 @@ class CategoryListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", "name", "category_group", "category_group_name", "is_active"]
+        fields = ["id", "name", "category_group", "category_group_name", "is_active", "is_transfer"]
+        read_only_fields = fields  # only nested in other objects or listed, never written
 
 
 class CategoryListItemSerializer(CategoryListSerializer):
@@ -174,6 +186,17 @@ class AccountListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class TransferPairSerializer(serializers.ModelSerializer):
+    """The other leg of a transfer, nested in a transaction."""
+
+    account = AccountListSerializer(read_only=True)
+
+    class Meta:
+        model = Transaction
+        fields = ["id", "account"]
+        read_only_fields = fields
+
+
 def validate_active_account(serializer, attrs, field, source):
     """A new or changed account reference must point to an active account (archived = read-only)."""
     account = attrs.get(source)
@@ -185,11 +208,23 @@ def validate_active_account(serializer, attrs, field, source):
 
 
 class ActiveCategoryValidationMixin:
-    """The category must be active on the transaction's date (checked only when either changes)."""
+    """
+    Rules for income and expenses: the category must be active on the transaction's date (checked
+    only when either changes) and can't be the transfer category. Transfer legs are written only
+    through transfers/.
+    """
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        if self.instance is not None and self.instance.transfer_pair_id:
+            raise serializers.ValidationError(
+                "This transaction is part of a transfer: change it through transfers/."
+            )
         validate_active_account(self, attrs, "account_id", "account")
+        if attrs.get("category") is not None and attrs["category"].is_transfer:
+            raise serializers.ValidationError(
+                {"category_id": "This category is for transfers: use transfers/."}
+            )
         if self.instance is not None and "category" not in attrs and "date" not in attrs:
             return attrs  # editing e.g. the title of an old transaction in an archived category
 
@@ -223,6 +258,8 @@ class TransactionSerializer(ActiveCategoryValidationMixin, serializers.ModelSeri
     user = UserSerializer(read_only=True)
     type_display = serializers.CharField(source="get_transaction_type_display", read_only=True)
     type_sign = serializers.CharField(read_only=True)
+    # Set on transfer legs: the other leg (its id and account); null for income and expenses.
+    transfer = TransferPairSerializer(source="transfer_pair", read_only=True, allow_null=True)
 
     class Meta:
         model = Transaction
@@ -241,6 +278,7 @@ class TransactionSerializer(ActiveCategoryValidationMixin, serializers.ModelSeri
             "account_id",
             "user",
             "is_fixed",
+            "transfer",
             "is_deleted",
             "created_at",
         ]
@@ -353,9 +391,12 @@ class BudgetOverviewSerializer(serializers.Serializer):
 class TransactionTotalsSerializer(serializers.Serializer):
     """Totals added to the transaction list (see finances.pagination.TransactionPagination)."""
 
-    total_incomes = serializers.DecimalField(max_digits=12, decimal_places=2)
-    total_expenses = serializers.DecimalField(max_digits=12, decimal_places=2)
-    total = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_incomes = serializers.DecimalField(max_digits=14, decimal_places=2)
+    total_expenses = serializers.DecimalField(max_digits=14, decimal_places=2)
+    # Net of the listed transfer legs: with an account filter, transfers into it minus out of it;
+    # 0 without one (both legs are listed and cancel out).
+    total_transfers = serializers.DecimalField(max_digits=14, decimal_places=2)
+    total = serializers.DecimalField(max_digits=14, decimal_places=2)
 
 
 class TransactionSuggestionSerializer(serializers.Serializer):
@@ -366,7 +407,7 @@ class TransactionSuggestionSerializer(serializers.Serializer):
     category_group_name = serializers.CharField()
     account_id = serializers.IntegerField()
     is_fixed = serializers.BooleanField()
-    last_amount = serializers.DecimalField(max_digits=8, decimal_places=2)
+    last_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 
 class BreakdownItemSerializer(serializers.Serializer):
@@ -401,7 +442,15 @@ class BalanceHistoryQuerySerializer(serializers.Serializer):
     account = HouseholdPrimaryKeyRelatedField(queryset=Account.objects.all(), required=False)
 
 
-class TransferSerializer(serializers.ModelSerializer):
+class TransferSerializer(serializers.Serializer):
+    """
+    A transfer as one object, made of its two legs (see Transaction). `id` is the outgoing leg's
+    id, `incoming_id` the incoming one's; transfers/<id>/ accepts either. Amount, date and
+    description are the same on both legs.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    incoming_id = serializers.IntegerField(read_only=True)
     from_account = AccountListSerializer(read_only=True)
     to_account = AccountListSerializer(read_only=True)
     from_account_id = HouseholdPrimaryKeyRelatedField(
@@ -410,30 +459,43 @@ class TransferSerializer(serializers.ModelSerializer):
     to_account_id = HouseholdPrimaryKeyRelatedField(
         queryset=Account.objects.all(), source="to_account", write_only=True
     )
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    date = serializers.DateField(required=False)
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
     user = UserSerializer(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
-    class Meta:
-        model = Transfer
-        fields = [
-            "id",
-            "from_account",
-            "from_account_id",
-            "to_account",
-            "to_account_id",
-            "amount",
-            "date",
-            "description",
-            "user",
-            "created_at",
-        ]
-        read_only_fields = ["id", "user", "created_at"]
+    def to_representation(self, instance):
+        outgoing, incoming = transfer_legs(instance)
+        return super().to_representation(
+            {
+                "id": outgoing.id,
+                "incoming_id": incoming.id,
+                "from_account": outgoing.account,
+                "to_account": incoming.account,
+                "amount": outgoing.amount,
+                "date": outgoing.date,
+                "description": outgoing.description,
+                "user": outgoing.user,
+                "created_at": outgoing.created_at,
+            }
+        )
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
-        validate_active_account(self, attrs, "from_account_id", "from_account")
-        validate_active_account(self, attrs, "to_account_id", "to_account")
-        source = attrs.get("from_account", getattr(self.instance, "from_account", None))
-        target = attrs.get("to_account", getattr(self.instance, "to_account", None))
+        current = {"from_account": None, "to_account": None}
+        if self.instance is not None:
+            outgoing, incoming = transfer_legs(self.instance)
+            current = {"from_account": outgoing.account, "to_account": incoming.account}
+        # New money moves only between active accounts; an archived one stays on old transfers.
+        for source, account in current.items():
+            new = attrs.get(source)
+            if new is not None and not new.is_active and new != account:
+                raise serializers.ValidationError(
+                    {f"{source}_id": f'Account "{new.name}" is archived.'}
+                )
+        source = attrs.get("from_account", current["from_account"])
+        target = attrs.get("to_account", current["to_account"])
         if source is not None and source == target:
             raise serializers.ValidationError(
                 {"to_account_id": "Choose an account other than the source account."}
@@ -441,5 +503,7 @@ class TransferSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
+        return create_transfer(user=self.context["request"].user, **validated_data)
+
+    def update(self, instance, validated_data):
+        return update_transfer(instance, **validated_data)

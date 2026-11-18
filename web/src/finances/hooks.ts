@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import { api } from '../api/client'
 import { unwrap } from '../api/errors'
@@ -14,13 +20,40 @@ export type TransactionFilters = NonNullable<
 >
 export type TransactionInput = components['schemas']['TransactionRequest']
 
-export function useTransactions(filters: TransactionFilters) {
+export type Transaction = components['schemas']['Transaction']
+
+/** One page of transactions (newest first) with the totals of everything matching the filters. */
+export function useTransactions(filters: TransactionFilters, enabled = true) {
   return useQuery({
     queryKey: [FINANCES, 'transactions', filters],
     queryFn: async () =>
       unwrap(await api.GET('/api/finances/transactions/', { params: { query: filters } })),
     // While the next month/page loads, keep showing the current one instead of a loading state.
     placeholderData: keepPreviousData,
+    enabled,
+  })
+}
+
+/**
+ * The transaction list as a growing list ("load more"). An infinite query keeps every page loaded
+ * so far in `data.pages`; fetchNextPage() asks for the page that getNextPageParam returns
+ * (undefined = no more). Each page carries the same totals, so the first one is enough for the KPI
+ * row. Transfer legs are transactions too, so they're in it.
+ */
+export function useInfiniteTransactions(filters: TransactionFilters, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: [FINANCES, 'transactions', 'infinite', filters],
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET('/api/finances/transactions/', {
+          params: { query: { ...filters, page: pageParam } },
+        }),
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.current_page < last.total_pages ? last.current_page + 1 : undefined,
+    placeholderData: keepPreviousData,
+    enabled,
   })
 }
 
@@ -272,9 +305,6 @@ export function usePeriodTotals(start: string, end: string) {
 export type Account = components['schemas']['Account']
 export type AccountInput = components['schemas']['AccountRequest']
 export type TransferInput = components['schemas']['TransferRequest']
-export type TransferFilters = NonNullable<
-  operations['finances_transfers_list']['parameters']['query']
->
 
 /** All accounts with today's balance: active ones first, then archived (the API's order). */
 export function useAccounts() {
@@ -319,15 +349,8 @@ export function useDeleteAccount(id: number) {
   })
 }
 
-export function useTransfers(filters: TransferFilters) {
-  return useQuery({
-    queryKey: [FINANCES, 'transfers', filters],
-    queryFn: async () =>
-      unwrap(await api.GET('/api/finances/transfers/', { params: { query: filters } })),
-    placeholderData: keepPreviousData,
-  })
-}
-
+// A transfer is two linked transactions (money out of one account, into the other); the API's
+// transfers/ endpoint handles the pair as one object. `id` may be either transaction's id.
 export function useTransfer(id: number) {
   return useQuery({
     queryKey: [FINANCES, 'transfer', id],

@@ -58,3 +58,10 @@ export function isDay(value: string | null): value is string {
     value !== null && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(parseDate(value).getTime())
   )
 }
+
+/** "2026-11" when start..end is exactly that calendar month, otherwise null. */
+export function fullMonth(start: string | null, end: string | null): string | null {
+  if (!start || !end || start.slice(0, 7) !== end.slice(0, 7)) return null
+  const range = monthRange(start.slice(0, 7))
+  return range.start === start && range.end === end ? start.slice(0, 7) : null
+}
