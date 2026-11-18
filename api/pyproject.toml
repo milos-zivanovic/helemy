@@ -9,7 +9,7 @@ version = "0.1.0"
 description = "Personal finance, fitness, and nutrition tracking API"
 readme = "README.md"
 authors = [{name = "Milos Zivanovic", email = "z.milos93@yahoo.com"}]
-license = {text = "MIT"}
+license = {text = "Proprietary"}  # all rights reserved, see ../LICENSE
 requires-python = ">=3.12"
 dependencies = [
     "Django==5.2.19",  # LTS, supported until April 2028
