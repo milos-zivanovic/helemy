@@ -123,4 +123,5 @@ no secrets.
 
 ## License
 
-MIT
+Proprietary, all rights reserved: the code is public for viewing only, no use, copying or
+distribution without written permission. See [LICENSE](LICENSE).
