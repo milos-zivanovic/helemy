@@ -1,6 +1,7 @@
 import django_filters
+from django.db.models import Q
 
-from finances.models import Budget, Category, CategoryGroup, Transaction
+from finances.models import Budget, Category, CategoryGroup, Transaction, Transfer
 
 
 class ActiveFilterMixin(django_filters.FilterSet):
@@ -43,6 +44,7 @@ class TransactionFilter(django_filters.FilterSet):
     # all households and leak which IDs exist. The queryset is already household-scoped.
     category = django_filters.NumberFilter(field_name="category_id")
     category_group = django_filters.NumberFilter(field_name="category__category_group_id")
+    account = django_filters.NumberFilter(field_name="account_id")
 
     class Meta:
         model = Transaction
@@ -51,9 +53,27 @@ class TransactionFilter(django_filters.FilterSet):
             "end_date",
             "category",
             "category_group",
+            "account",
             "transaction_type",
             "is_fixed",
         ]
+
+
+class TransferFilter(django_filters.FilterSet):
+    start_date = django_filters.DateFilter(
+        field_name="date", lookup_expr="gte", label="Date on or after"
+    )
+    end_date = django_filters.DateFilter(
+        field_name="date", lookup_expr="lte", label="Date on or before"
+    )
+    account = django_filters.NumberFilter(method="filter_account", label="From or to this account")
+
+    class Meta:
+        model = Transfer
+        fields = ["start_date", "end_date", "account"]
+
+    def filter_account(self, queryset, name, value):
+        return queryset.filter(Q(from_account_id=value) | Q(to_account_id=value))
 
 
 class BudgetFilter(django_filters.FilterSet):

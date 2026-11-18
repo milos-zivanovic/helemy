@@ -26,7 +26,7 @@ class MuscleGroupDetailSerializer(MuscleGroupSerializer):
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
-    muscle_group = MuscleGroupSerializer(read_only=True)
+    muscle_group = MuscleGroupSerializer(read_only=True, allow_null=True)
     muscle_group_id = serializers.PrimaryKeyRelatedField(
         queryset=MuscleGroup.objects.all(),
         source="muscle_group",
@@ -61,7 +61,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
 
 
 class ExerciseListSerializer(serializers.ModelSerializer):
-    muscle_group = MuscleGroupSerializer(read_only=True)
+    muscle_group = MuscleGroupSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = Exercise
@@ -70,6 +70,11 @@ class ExerciseListSerializer(serializers.ModelSerializer):
 
 class TrainingSetSerializer(serializers.ModelSerializer):
     volume = serializers.SerializerMethodField()
+    # The model's constraints (weight >= 0, reps > 0) as validation, so bad input is a 400, not a 500.
+    weight = serializers.DecimalField(
+        max_digits=6, decimal_places=2, min_value=Decimal("0"), required=False, allow_null=True
+    )
+    reps = serializers.IntegerField(min_value=1, max_value=32767)
 
     class Meta:
         model = TrainingSet
@@ -82,7 +87,8 @@ class TrainingSetSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        # set_number is assigned by the API (append) and renumbered on delete.
+        read_only_fields = ["id", "set_number", "created_at", "updated_at"]
 
     def get_volume(self, obj) -> float:
         return obj.volume
@@ -246,3 +252,19 @@ class AppendSetSerializer(serializers.Serializer):
                     {"exercise_id": "The exercise's muscle group is not part of this training."}
                 )
         return attrs
+
+
+class ExerciseHistorySetSerializer(serializers.Serializer):
+    weight = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
+    reps = serializers.IntegerField()
+
+
+class ExerciseHistoryEntrySerializer(serializers.Serializer):
+    """One training in which the exercise was done."""
+
+    training_id = serializers.IntegerField()
+    date = serializers.DateField()
+    sets = ExerciseHistorySetSerializer(many=True)
+    max_weight = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
+    total_reps = serializers.IntegerField()
+    volume = serializers.FloatField()

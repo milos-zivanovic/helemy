@@ -76,7 +76,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["auth_households_members_retrieve"];
+        get: operations["auth_households_members_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -333,6 +333,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/finances/accounts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting. */
+        get: operations["finances_accounts_list"];
+        put?: never;
+        /** @description Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting. */
+        post: operations["finances_accounts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/finances/accounts/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting. */
+        get: operations["finances_accounts_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting. */
+        delete: operations["finances_accounts_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting. */
+        patch: operations["finances_accounts_partial_update"];
+        trace?: never;
+    };
     "/api/finances/budgets/": {
         parameters: {
             query?: never;
@@ -397,7 +434,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description All budgets, paginated. Use `?year=2026` for the budgets overlapping a year. */
-        get: operations["finances_budgets_all_retrieve"];
+        get: operations["finances_budgets_all_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -582,10 +619,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Running balance per day (income minus expenses), starting from 0 at `start_date`.
-         *     Accepts the same filters as the transaction list. Defaults: `start_date` is the
-         *     first matching transaction's date, `end_date` is today. Every day in the range is
-         *     returned, including days without transactions.
+         * @description The real balance per day: one account (`account`) or all the household's accounts.
+         *     Each account starts with its opening balance on its opening date; income, expenses and
+         *     transfers change it from then on (see finances.services.balance_history). Defaults:
+         *     `start_date` is the earliest opening date, `end_date` is today. Every day in the range is
+         *     returned, including days without changes.
          */
         get: operations["finances_transactions_balance_history_retrieve"];
         put?: never;
@@ -636,6 +674,43 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/finances/transfers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Money moved between two accounts of the household; not income or expense. */
+        get: operations["finances_transfers_list"];
+        put?: never;
+        /** @description Money moved between two accounts of the household; not income or expense. */
+        post: operations["finances_transfers_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/finances/transfers/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Money moved between two accounts of the household; not income or expense. */
+        get: operations["finances_transfers_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description Money moved between two accounts of the household; not income or expense. */
+        delete: operations["finances_transfers_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Money moved between two accounts of the household; not income or expense. */
+        patch: operations["finances_transfers_partial_update"];
         trace?: never;
     };
     "/api/fitness/exercises/": {
@@ -692,6 +767,27 @@ export interface paths {
          *     Automatically filters by household and sets household on create.
          */
         patch: operations["fitness_exercises_partial_update"];
+        trace?: never;
+    };
+    "/api/fitness/exercises/{id}/history/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every training with this exercise, oldest first: its sets, the heaviest weight, total reps
+         *     and volume (weight x reps). For progress charts and "last time" hints. `?user=` narrows it
+         *     to one household member (a training belongs to the member who logged it).
+         */
+        get: operations["fitness_exercises_history_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/fitness/muscle-groups/": {
@@ -779,10 +875,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description ViewSet for models that belong to a household.
-         *     Automatically filters by household and sets household on create.
-         */
+        /** @description Sets are added through POST trainings/{id}/sets/; here they are read, corrected or deleted. */
         get: operations["fitness_training_sets_list"];
         put?: never;
         post?: never;
@@ -799,21 +892,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description ViewSet for models that belong to a household.
-         *     Automatically filters by household and sets household on create.
-         */
+        /** @description Sets are added through POST trainings/{id}/sets/; here they are read, corrected or deleted. */
         get: operations["fitness_training_sets_retrieve"];
         put?: never;
         post?: never;
-        /**
-         * @description ViewSet for models that belong to a household.
-         *     Automatically filters by household and sets household on create.
-         */
+        /** @description Sets are added through POST trainings/{id}/sets/; here they are read, corrected or deleted. */
         delete: operations["fitness_training_sets_destroy"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Sets are added through POST trainings/{id}/sets/; here they are read, corrected or deleted. */
+        patch: operations["fitness_training_sets_partial_update"];
         trace?: never;
     };
     "/api/fitness/trainings/": {
@@ -881,10 +969,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * @description ViewSet for models that belong to a household.
-         *     Automatically filters by household and sets household on create.
-         */
+        /** @description Add the next set of an exercise; the exercise's item is created on its first set. */
         post: operations["fitness_trainings_sets_create"];
         delete?: never;
         options?: never;
@@ -1029,6 +1114,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Account: {
+            readonly id: number;
+            name: string;
+            /** Format: decimal */
+            opening_balance?: string;
+            /** Format: date */
+            opening_date?: string;
+            /** Format: decimal */
+            readonly balance: string;
+            is_active?: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /** @description Short form nested in transactions and transfers. */
+        AccountList: {
+            readonly id: number;
+            readonly name: string;
+        };
+        AccountRequest: {
+            name: string;
+            /** Format: decimal */
+            opening_balance?: string;
+            /** Format: date */
+            opening_date?: string;
+            is_active?: boolean;
+        };
+        AppendSetRequest: {
+            exercise_id: number;
+            /** Format: decimal */
+            weight?: string | null;
+            /** @default 1 */
+            reps: number;
+        };
         BalanceDay: {
             /** Format: date */
             date: string;
@@ -1137,6 +1255,27 @@ export interface components {
             readonly category_group_name: string;
             is_active?: boolean;
         };
+        /**
+         * @description Row of the category list: the select fields plus the activity rules and usage, enough to manage
+         *     categories. `active_today` and `transactions_count` are annotated in CategoryViewSet.get_queryset.
+         */
+        CategoryListItem: {
+            readonly id: number;
+            readonly name: string;
+            readonly category_group: number;
+            readonly category_group_name: string;
+            readonly is_active: boolean;
+            readonly active_today: boolean;
+            /** Format: date */
+            readonly start_date: string | null;
+            /** Format: date */
+            readonly end_date: string | null;
+            readonly start_month: number | null;
+            readonly start_day: number | null;
+            readonly end_month: number | null;
+            readonly end_day: number | null;
+            readonly transactions_count: number;
+        };
         CategoryListRequest: {
             name: string;
             category_group: number;
@@ -1159,10 +1298,7 @@ export interface components {
             readonly id: number;
             readonly food: number;
             readonly food_name: string;
-            /**
-             * Quantity (grams)
-             * Format: int64
-             */
+            /** Quantity (grams) */
             quantity_grams: number;
             /** Format: date */
             date: string;
@@ -1178,29 +1314,20 @@ export interface components {
         };
         ConsumptionCreate: {
             readonly id: number;
-            /**
-             * Quantity (grams)
-             * Format: int64
-             */
+            /** Quantity (grams) */
             quantity_grams: number;
             /** Format: date */
             date: string;
         };
         ConsumptionCreateRequest: {
             food_id: number;
-            /**
-             * Quantity (grams)
-             * Format: int64
-             */
+            /** Quantity (grams) */
             quantity_grams: number;
             /** Format: date */
             date: string;
         };
         ConsumptionRequest: {
-            /**
-             * Quantity (grams)
-             * Format: int64
-             */
+            /** Quantity (grams) */
             quantity_grams: number;
             /** Format: date */
             date: string;
@@ -1224,7 +1351,7 @@ export interface components {
             readonly id: number;
             name: string;
             description?: string;
-            readonly muscle_group: components["schemas"]["MuscleGroup"];
+            readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
             /** Format: uri */
             image?: string | null;
             readonly image_url: string | null;
@@ -1234,13 +1361,27 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /** @description One training in which the exercise was done. */
+        ExerciseHistoryEntry: {
+            training_id: number;
+            /** Format: date */
+            date: string;
+            sets: components["schemas"]["ExerciseHistorySet"][];
+            /** Format: decimal */
+            max_weight: string | null;
+            total_reps: number;
+            /** Format: double */
+            volume: number;
+        };
+        ExerciseHistorySet: {
+            /** Format: decimal */
+            weight: string | null;
+            reps: number;
+        };
         ExerciseList: {
             readonly id: number;
             name: string;
-            readonly muscle_group: components["schemas"]["MuscleGroup"];
-        };
-        ExerciseListRequest: {
-            name: string;
+            readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
         };
         ExerciseRequest: {
             name: string;
@@ -1254,25 +1395,13 @@ export interface components {
             readonly id: number;
             name: string;
             description?: string;
-            /**
-             * Calories (per 100g)
-             * Format: int64
-             */
+            /** Calories (per 100g) */
             calories: number;
-            /**
-             * Protein (g per 100g)
-             * Format: int64
-             */
+            /** Protein (g per 100g) */
             protein: number;
-            /**
-             * Carbs (g per 100g)
-             * Format: int64
-             */
+            /** Carbs (g per 100g) */
             carbs: number;
-            /**
-             * Fat (g per 100g)
-             * Format: int64
-             */
+            /** Fat (g per 100g) */
             fat: number;
             /** Format: date-time */
             readonly created_at: string;
@@ -1283,75 +1412,39 @@ export interface components {
         FoodCreate: {
             name: string;
             description?: string;
-            /**
-             * Calories (per 100g)
-             * Format: int64
-             */
+            /** Calories (per 100g) */
             calories: number;
-            /**
-             * Protein (g per 100g)
-             * Format: int64
-             */
+            /** Protein (g per 100g) */
             protein: number;
-            /**
-             * Carbs (g per 100g)
-             * Format: int64
-             */
+            /** Carbs (g per 100g) */
             carbs: number;
-            /**
-             * Fat (g per 100g)
-             * Format: int64
-             */
+            /** Fat (g per 100g) */
             fat: number;
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         FoodCreateRequest: {
             name: string;
             description?: string;
-            /**
-             * Calories (per 100g)
-             * Format: int64
-             */
+            /** Calories (per 100g) */
             calories: number;
-            /**
-             * Protein (g per 100g)
-             * Format: int64
-             */
+            /** Protein (g per 100g) */
             protein: number;
-            /**
-             * Carbs (g per 100g)
-             * Format: int64
-             */
+            /** Carbs (g per 100g) */
             carbs: number;
-            /**
-             * Fat (g per 100g)
-             * Format: int64
-             */
+            /** Fat (g per 100g) */
             fat: number;
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         FoodRequest: {
             name: string;
             description?: string;
-            /**
-             * Calories (per 100g)
-             * Format: int64
-             */
+            /** Calories (per 100g) */
             calories: number;
-            /**
-             * Protein (g per 100g)
-             * Format: int64
-             */
+            /** Protein (g per 100g) */
             protein: number;
-            /**
-             * Carbs (g per 100g)
-             * Format: int64
-             */
+            /** Carbs (g per 100g) */
             carbs: number;
-            /**
-             * Fat (g per 100g)
-             * Format: int64
-             */
+            /** Fat (g per 100g) */
             fat: number;
         };
         /**
@@ -1388,9 +1481,6 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
-        HouseholdRequest: {
-            name: string;
-        };
         /**
          * @description * `owner` - owner
          *     * `member` - member
@@ -1412,6 +1502,21 @@ export interface components {
              */
             email: string;
             readonly full_name: string;
+        };
+        InviteMemberRequest: {
+            /** Format: email */
+            email: string;
+        };
+        /** @description One member's totals for a day of the weekly summary. */
+        MemberMacros: {
+            user_id: number;
+            full_name: string;
+            /** Format: email */
+            email: string;
+            calories: number;
+            protein: number;
+            carbs: number;
+            fat: number;
         };
         /** @description Muscle groups are global reference data shared by all households. */
         MuscleGroup: {
@@ -1444,7 +1549,7 @@ export interface components {
         };
         /** @enum {unknown} */
         NullEnum: null;
-        PaginatedBudgetOverviewList: {
+        PaginatedBudgetList: {
             /** @example 123 */
             count: number;
             /**
@@ -1457,7 +1562,11 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["BudgetOverview"][];
+            results: components["schemas"]["Budget"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedCategoryGroupList: {
             /** @example 123 */
@@ -1473,8 +1582,12 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["CategoryGroup"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
-        PaginatedCategoryListList: {
+        PaginatedCategoryListItemList: {
             /** @example 123 */
             count: number;
             /**
@@ -1487,7 +1600,11 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["CategoryList"][];
+            results: components["schemas"]["CategoryListItem"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedConsumptionList: {
             /** @example 123 */
@@ -1503,6 +1620,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Consumption"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedExerciseListList: {
             /** @example 123 */
@@ -1518,6 +1639,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ExerciseList"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedFoodList: {
             /** @example 123 */
@@ -1533,6 +1658,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Food"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedHouseholdInvitationList: {
             /** @example 123 */
@@ -1548,6 +1677,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["HouseholdInvitation"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedHouseholdList: {
             /** @example 123 */
@@ -1563,6 +1696,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Household"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedMuscleGroupDetailList: {
             /** @example 123 */
@@ -1578,6 +1715,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["MuscleGroupDetail"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedTrainingItemList: {
             /** @example 123 */
@@ -1593,6 +1734,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["TrainingItem"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedTrainingList: {
             /** @example 123 */
@@ -1608,6 +1753,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Training"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedTrainingSetList: {
             /** @example 123 */
@@ -1623,6 +1772,10 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["TrainingSet"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PaginatedTransactionList: {
             /** @example 123 */
@@ -1638,8 +1791,18 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Transaction"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
+            /** Format: decimal */
+            total_incomes: string;
+            /** Format: decimal */
+            total_expenses: string;
+            /** Format: decimal */
+            total: string;
         };
-        PaginatedTransactionSuggestionList: {
+        PaginatedTransferList: {
             /** @example 123 */
             count: number;
             /**
@@ -1652,22 +1815,11 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["TransactionSuggestion"][];
-        };
-        PaginatedWeeklyNutritionSummaryList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["WeeklyNutritionSummary"][];
+            results: components["schemas"]["Transfer"][];
+            /** @example 3 */
+            total_pages: number;
+            /** @example 1 */
+            current_page: number;
         };
         PasswordChangeRequest: {
             old_password: string;
@@ -1681,6 +1833,14 @@ export interface components {
         PasswordResetRequestRequest: {
             /** Format: email */
             email: string;
+        };
+        PatchedAccountRequest: {
+            name?: string;
+            /** Format: decimal */
+            opening_balance?: string;
+            /** Format: date */
+            opening_date?: string;
+            is_active?: boolean;
         };
         PatchedBudgetRequest: {
             description?: string;
@@ -1710,10 +1870,7 @@ export interface components {
             end_day?: number | null;
         };
         PatchedConsumptionRequest: {
-            /**
-             * Quantity (grams)
-             * Format: int64
-             */
+            /** Quantity (grams) */
             quantity_grams?: number;
             /** Format: date */
             date?: string;
@@ -1729,29 +1886,22 @@ export interface components {
         PatchedFoodRequest: {
             name?: string;
             description?: string;
-            /**
-             * Calories (per 100g)
-             * Format: int64
-             */
+            /** Calories (per 100g) */
             calories?: number;
-            /**
-             * Protein (g per 100g)
-             * Format: int64
-             */
+            /** Protein (g per 100g) */
             protein?: number;
-            /**
-             * Carbs (g per 100g)
-             * Format: int64
-             */
+            /** Carbs (g per 100g) */
             carbs?: number;
-            /**
-             * Fat (g per 100g)
-             * Format: int64
-             */
+            /** Fat (g per 100g) */
             fat?: number;
         };
         PatchedHouseholdUpdateRequest: {
             name?: string;
+        };
+        PatchedTrainingSetRequest: {
+            /** Format: decimal */
+            weight?: string | null;
+            reps?: number;
         };
         /** @description One training per user per day (mirrors the `unique_training_per_user_per_day` constraint). */
         PatchedTrainingUpdateRequest: {
@@ -1772,7 +1922,17 @@ export interface components {
             /** Format: date */
             date?: string;
             category_id?: number;
+            account_id?: number;
             is_fixed?: boolean;
+        };
+        PatchedTransferRequest: {
+            from_account_id?: number;
+            to_account_id?: number;
+            /** Format: decimal */
+            amount?: string;
+            /** Format: date */
+            date?: string;
+            description?: string;
         };
         RegisterRequest: {
             /**
@@ -1867,29 +2027,11 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
-        TrainingItemRequest: {
-            exercise_id: number;
-            /** Format: int64 */
-            order?: number;
-            notes?: string;
-        };
-        TrainingRequest: {
-            name?: string;
-            /** Format: date */
-            date: string;
-            notes?: string;
-            muscle_group_ids?: number[];
-        };
         TrainingSet: {
             readonly id: number;
-            /** Format: int64 */
-            set_number: number;
-            /**
-             * Weight (kg)
-             * Format: decimal
-             */
+            readonly set_number: number;
+            /** Format: decimal */
             weight?: string | null;
-            /** Format: int64 */
             reps: number;
             /** Format: double */
             readonly volume: number;
@@ -1897,17 +2039,6 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
-        };
-        TrainingSetRequest: {
-            /** Format: int64 */
-            set_number: number;
-            /**
-             * Weight (kg)
-             * Format: decimal
-             */
-            weight?: string | null;
-            /** Format: int64 */
-            reps: number;
         };
         /** @description One training per user per day (mirrors the `unique_training_per_user_per_day` constraint). */
         TrainingUpdate: {
@@ -1938,6 +2069,7 @@ export interface components {
             /** Format: date */
             date?: string;
             readonly category: components["schemas"]["CategoryList"];
+            readonly account: components["schemas"]["AccountList"];
             readonly user: components["schemas"]["User"];
             is_fixed?: boolean;
             readonly is_deleted: boolean;
@@ -1968,6 +2100,7 @@ export interface components {
             /** Format: date */
             date?: string;
             category_id: number;
+            account_id: number;
             is_fixed?: boolean;
         };
         /** @description The category must be active on the transaction's date (checked only when either changes). */
@@ -1981,14 +2114,16 @@ export interface components {
             /** Format: date */
             date?: string;
             category_id: number;
+            account_id: number;
             is_fixed?: boolean;
         };
         TransactionSuggestion: {
             title: string;
-            transaction_type: string;
+            transaction_type: components["schemas"]["TransactionTypeEnum"];
             category_id: number;
             category_name: string;
             category_group_name: string;
+            account_id: number;
             is_fixed: boolean;
             /** Format: decimal */
             last_amount: string;
@@ -1999,6 +2134,28 @@ export interface components {
          * @enum {string}
          */
         TransactionTypeEnum: "income" | "expense";
+        Transfer: {
+            readonly id: number;
+            readonly from_account: components["schemas"]["AccountList"];
+            readonly to_account: components["schemas"]["AccountList"];
+            /** Format: decimal */
+            amount: string;
+            /** Format: date */
+            date?: string;
+            description?: string;
+            readonly user: components["schemas"]["User"];
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        TransferRequest: {
+            from_account_id: number;
+            to_account_id: number;
+            /** Format: decimal */
+            amount: string;
+            /** Format: date */
+            date?: string;
+            description?: string;
+        };
         User: {
             readonly id: number;
             /**
@@ -2017,6 +2174,26 @@ export interface components {
             /** Format: date-time */
             readonly last_activity: string | null;
             readonly role: (components["schemas"]["HouseholdRoleEnum"] | components["schemas"]["NullEnum"]) | null;
+        };
+        UserDetail: {
+            readonly id: number;
+            /**
+             * Email address
+             * Format: email
+             */
+            email: string;
+            first_name?: string;
+            last_name?: string;
+            readonly full_name: string;
+            timezone?: string;
+            language?: string;
+            currency?: string;
+            /** Format: date-time */
+            readonly date_joined: string;
+            /** Format: date-time */
+            readonly last_activity: string | null;
+            readonly role: (components["schemas"]["HouseholdRoleEnum"] | components["schemas"]["NullEnum"]) | null;
+            readonly households: components["schemas"]["Household"][];
         };
         UserRequest: {
             /**
@@ -2037,9 +2214,7 @@ export interface components {
             protein: number;
             carbs: number;
             fat: number;
-            by_user?: {
-                [key: string]: unknown;
-            }[];
+            by_user: components["schemas"]["MemberMacros"][];
         };
     };
     responses: never;
@@ -2165,18 +2340,18 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HouseholdRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["HouseholdRequest"];
-                "multipart/form-data": components["schemas"]["HouseholdRequest"];
+                "application/json": components["schemas"]["InviteMemberRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["InviteMemberRequest"];
+                "multipart/form-data": components["schemas"]["InviteMemberRequest"];
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Household"];
+                    "application/json": components["schemas"]["HouseholdInvitation"];
                 };
             };
         };
@@ -2203,7 +2378,7 @@ export interface operations {
             };
         };
     };
-    auth_households_members_retrieve: {
+    auth_households_members_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -2220,7 +2395,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Household"];
+                    "application/json": components["schemas"]["User"][];
                 };
             };
         };
@@ -2399,7 +2574,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["UserDetail"];
                 };
             };
         };
@@ -2552,16 +2727,127 @@ export interface operations {
             };
         };
     };
+    finances_accounts_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"][];
+                };
+            };
+        };
+    };
+    finances_accounts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AccountRequest"];
+                "multipart/form-data": components["schemas"]["AccountRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+        };
+    };
+    finances_accounts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this account. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+        };
+    };
+    finances_accounts_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this account. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finances_accounts_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this account. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedAccountRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedAccountRequest"];
+                "multipart/form-data": components["schemas"]["PatchedAccountRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Account"];
+                };
+            };
+        };
+    };
     finances_budgets_list: {
         parameters: {
             query?: {
                 category?: number;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 /** @description Budgets overlapping this year */
@@ -2578,7 +2864,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedBudgetOverviewList"];
+                    "application/json": components["schemas"]["BudgetOverview"];
                 };
             };
         };
@@ -2707,9 +2993,21 @@ export interface operations {
             };
         };
     };
-    finances_budgets_all_retrieve: {
+    finances_budgets_all_list: {
         parameters: {
-            query?: never;
+            query?: {
+                category?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description Budgets overlapping this year */
+                year?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2721,7 +3019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Budget"];
+                    "application/json": components["schemas"]["PaginatedBudgetList"];
                 };
             };
         };
@@ -2755,7 +3053,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedCategoryListList"];
+                    "application/json": components["schemas"]["PaginatedCategoryListItemList"];
                 };
             };
         };
@@ -3044,6 +3342,7 @@ export interface operations {
     finances_transactions_list: {
         parameters: {
             query?: {
+                account?: number;
                 category?: number;
                 category_group?: number;
                 /** @description Date on or before */
@@ -3207,7 +3506,11 @@ export interface operations {
     };
     finances_transactions_balance_history_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                account?: number;
+                end_date?: string;
+                start_date?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3226,7 +3529,19 @@ export interface operations {
     };
     finances_transactions_breakdown_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                account?: number;
+                category?: number;
+                category_group?: number;
+                /** @description Date on or before */
+                end_date?: string;
+                is_fixed?: boolean;
+                /** @description Part of the title or description */
+                search?: string;
+                /** @description Date on or after */
+                start_date?: string;
+                transaction_type?: "expense" | "income";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3246,10 +3561,6 @@ export interface operations {
     finances_transactions_suggestions_list: {
         parameters: {
             query: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
                 /** @description Part of the title */
                 q: string;
             };
@@ -3264,7 +3575,137 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedTransactionSuggestionList"];
+                    "application/json": components["schemas"]["TransactionSuggestion"][];
+                };
+            };
+        };
+    };
+    finances_transfers_list: {
+        parameters: {
+            query?: {
+                /** @description From or to this account */
+                account?: number;
+                /** @description Date on or before */
+                end_date?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+                /** @description Date on or after */
+                start_date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedTransferList"];
+                };
+            };
+        };
+    };
+    finances_transfers_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TransferRequest"];
+                "multipart/form-data": components["schemas"]["TransferRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Transfer"];
+                };
+            };
+        };
+    };
+    finances_transfers_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this transfer. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Transfer"];
+                };
+            };
+        };
+    };
+    finances_transfers_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this transfer. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finances_transfers_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this transfer. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTransferRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTransferRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTransferRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Transfer"];
                 };
             };
         };
@@ -3420,6 +3861,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Exercise"];
+                };
+            };
+        };
+    };
+    fitness_exercises_history_list: {
+        parameters: {
+            query?: {
+                /** @description Only this member's trainings */
+                user?: number;
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this exercise. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExerciseHistoryEntry"][];
                 };
             };
         };
@@ -3616,6 +4082,34 @@ export interface operations {
             };
         };
     };
+    fitness_training_sets_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this training set. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTrainingSetRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTrainingSetRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTrainingSetRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingSet"];
+                };
+            };
+        };
+    };
     fitness_trainings_list: {
         parameters: {
             query?: {
@@ -3768,7 +4262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TrainingUpdate"];
+                    "application/json": components["schemas"]["Training"];
                 };
             };
         };
@@ -3785,18 +4279,18 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TrainingRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TrainingRequest"];
-                "multipart/form-data": components["schemas"]["TrainingRequest"];
+                "application/json": components["schemas"]["AppendSetRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AppendSetRequest"];
+                "multipart/form-data": components["schemas"]["AppendSetRequest"];
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Training"];
+                    "application/json": components["schemas"]["TrainingSet"];
                 };
             };
         };
@@ -3967,10 +4461,6 @@ export interface operations {
             query?: {
                 /** @description Any day of the wanted week (YYYY-MM-DD). Defaults to today. */
                 date?: string;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
             };
             header?: never;
             path?: never;
@@ -3983,7 +4473,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedWeeklyNutritionSummaryList"];
+                    "application/json": components["schemas"]["WeeklyNutritionSummary"][];
                 };
             };
         };

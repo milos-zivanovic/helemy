@@ -3,10 +3,95 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import DecimalField, Exists, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models import (
+    DecimalField,
+    Exists,
+    ExpressionWrapper,
+    F,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+)
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+MONEY = DecimalField(max_digits=14, decimal_places=2)
+
+
+def _sum_subquery(queryset, field="amount"):
+    """A correlated SUM(field) of `queryset` (filtered with OuterRef) as a subquery; 0 if none."""
+    # Group by a constant so SUM covers every row of the subquery (a plain .values(field) would
+    # group by the field itself).
+    total = (
+        queryset.order_by()
+        .annotate(_group=Value(1))
+        .values("_group")
+        .annotate(total=Sum(field))
+        .values("total")
+    )
+    return Coalesce(Subquery(total, output_field=MONEY), Value(Decimal("0")), output_field=MONEY)
+
+
+class AccountQuerySet(models.QuerySet):
+    def with_balance(self, on_date=None):
+        """
+        Annotate `balance`: the account's balance at the end of `on_date` (default: today).
+
+        balance = opening_balance + income - expenses + transfers in - transfers out, counting only
+        what happened from `opening_date` (the opening balance already contains everything before
+        it) up to `on_date`. Soft-deleted transactions don't count. One query, four subqueries.
+        """
+        on_date = on_date or timezone.localdate()
+        period = {"date__gte": OuterRef("opening_date"), "date__lte": on_date}
+        transactions = Transaction.objects.filter(
+            account=OuterRef("pk"), is_deleted=False, **period
+        )
+        income = _sum_subquery(transactions.filter(transaction_type=Transaction.INCOME))
+        expense = _sum_subquery(transactions.filter(transaction_type=Transaction.EXPENSE))
+        transfers_in = _sum_subquery(Transfer.objects.filter(to_account=OuterRef("pk"), **period))
+        transfers_out = _sum_subquery(
+            Transfer.objects.filter(from_account=OuterRef("pk"), **period)
+        )
+        return self.annotate(
+            balance=ExpressionWrapper(
+                F("opening_balance") + income - expense + transfers_in - transfers_out,
+                output_field=MONEY,
+            )
+        )
+
+
+class Account(models.Model):
+    """
+    Where money is kept: a bank account, cash, savings. Every transaction belongs to one account;
+    moving money between accounts is a Transfer, not income or expense.
+    """
+
+    household = models.ForeignKey(
+        "users.Household",
+        on_delete=models.CASCADE,
+        related_name="accounts",
+    )
+    name = models.CharField(_("name"), max_length=100)
+    # The balance at the start of opening_date (before that day's transactions). Transactions
+    # dated earlier are history the opening balance already includes; they don't change it.
+    opening_balance = models.DecimalField(
+        _("opening balance"), max_digits=12, decimal_places=2, default=Decimal("0")
+    )
+    opening_date = models.DateField(_("opening date"), default=timezone.localdate)
+    is_active = models.BooleanField(_("is active"), default=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
+
+    objects = AccountQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
 
 
 class CategoryGroupQuerySet(models.QuerySet):
@@ -19,9 +104,9 @@ class CategoryGroupQuerySet(models.QuerySet):
 class CategoryQuerySet(models.QuerySet):
     def active(self, on_date=None):
         """
-        Categories active on `on_date` (default: today). All three conditions must hold:
+        Categories active on `on_date` (default: today). All conditions must hold:
 
-        - `is_active` is on (manual switch, e.g. to archive a category);
+        - `is_active` is on (manual switch, e.g. to archive a category), and so is the group's;
         - `on_date` is inside the one-off range `start_date`..`end_date` (each bound optional);
         - `on_date` is inside the yearly window `start_month/start_day`..`end_month/end_day`
           (each bound optional). A window can wrap the new year, e.g. 12/01..02/28.
@@ -55,6 +140,7 @@ class CategoryQuerySet(models.QuerySet):
             Q(start_date__isnull=True) | Q(start_date__lte=on_date),
             Q(end_date__isnull=True) | Q(end_date__gte=on_date),
             is_active=True,
+            category_group__is_active=True,
         )
 
 
@@ -227,6 +313,12 @@ class Transaction(models.Model):
         related_name="transactions",
         on_delete=models.CASCADE,
     )
+    # PROTECT: an account with transactions can't be deleted (the view refuses it with a 400 first).
+    account = models.ForeignKey(
+        Account,
+        related_name="transactions",
+        on_delete=models.PROTECT,
+    )
     title = models.CharField(_("title"), max_length=100)
     description = models.CharField(_("description"), max_length=255, blank=True)
     amount = models.DecimalField(
@@ -261,3 +353,42 @@ class Transaction(models.Model):
         if not self.category:
             return ""
         return str(self.category)
+
+
+class Transfer(models.Model):
+    """Money moved from one account to another (e.g. cash withdrawal). Not income or expense."""
+
+    household = models.ForeignKey(
+        "users.Household",
+        on_delete=models.CASCADE,
+        related_name="transfers",
+    )
+    from_account = models.ForeignKey(
+        Account, related_name="transfers_out", on_delete=models.PROTECT
+    )
+    to_account = models.ForeignKey(Account, related_name="transfers_in", on_delete=models.PROTECT)
+    amount = models.DecimalField(
+        _("amount"),
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    date = models.DateField(_("date"), default=timezone.localdate, db_index=True)
+    description = models.CharField(_("description"), max_length=255, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="transfers",
+    )
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_account=F("to_account")), name="transfer_between_two_accounts"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.from_account} -> {self.to_account}: {self.amount}"

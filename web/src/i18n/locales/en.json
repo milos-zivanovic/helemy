@@ -5,11 +5,414 @@
   "language": {
     "label": "Language"
   },
-  "apiStatus": {
-    "title": "API connection",
-    "checking": "Checking…",
-    "ok": "The API is up and asks for a login (401), as expected.",
-    "unexpected": "The API answered with status {{status}}.",
-    "unreachable": "The API isn't reachable at {{url}}. Is it running?"
+  "nav": {
+    "home": "Home",
+    "household": "Household",
+    "pendingInvitations": "Pending invitations: {{n}}",
+    "profile": "Profile",
+    "finances": "Finances",
+    "fitness": "Fitness",
+    "nutrition": "Nutrition"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "sending": "Sending…",
+    "yes": "Yes",
+    "no": "No",
+    "save": "Save",
+    "cancel": "Cancel",
+    "choose": "Choose…",
+    "delete": "Delete",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{pages}}"
+  },
+  "errors": {
+    "network": "The server isn't reachable. Check your connection and try again.",
+    "throttled": "Too many attempts. Wait a little and try again.",
+    "unexpected": "Something went wrong (status {{status}}). Please try again.",
+    "loadProfile": "Your profile couldn't be loaded."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email address.",
+    "passwordMin": "The password must have at least {{min}} characters.",
+    "passwordMismatch": "The passwords don't match.",
+    "maxLength": "At most {{max}} characters.",
+    "amount": "Enter an amount above zero, at most two decimals (e.g. 1250.50).",
+    "endBeforeStart": "The end can't be before the start."
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "passwordConfirm": "Repeat password",
+      "newPassword": "New password",
+      "firstName": "First name",
+      "lastName": "Last name"
+    },
+    "login": {
+      "title": "Log in",
+      "submit": "Log in",
+      "invalidCredentials": "Wrong email or password.",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "No account yet?",
+      "toRegister": "Sign up"
+    },
+    "register": {
+      "title": "Sign up",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "toLogin": "Log in"
+    },
+    "forgot": {
+      "title": "Forgotten password",
+      "intro": "Enter your account's email and we'll send you a link to set a new password.",
+      "submit": "Send link",
+      "sent": "If an account with that email exists, we've sent a link. It's valid for one hour."
+    },
+    "reset": {
+      "title": "New password",
+      "submit": "Save password",
+      "done": "Your password has been changed. Log in with the new password.",
+      "invalidLink": "The link is invalid or has expired.",
+      "requestNew": "Request a new link"
+    },
+    "backToLogin": "Back to login",
+    "logout": "Log out"
+  },
+  "home": {
+    "greeting": "Hello, {{name}}!",
+    "pendingInvitations": "Pending household invitations: {{n}}.",
+    "openHousehold": "Open household",
+    "members": "members: {{n}}",
+    "viewInvitations": "View them",
+    "thisMonth": "This month",
+    "openReports": "Reports",
+    "budgetsAttention": "Budgets running out",
+    "openBudgets": "All budgets",
+    "openAccounts": "Accounts and transfers"
+  },
+  "household": {
+    "title": "Household",
+    "roles": {
+      "owner": "owner",
+      "member": "member"
+    },
+    "details": {
+      "title": "Details",
+      "name": "Name",
+      "role": "Your role",
+      "memberCount": "Members",
+      "rename": "Rename"
+    },
+    "members": {
+      "title": "Members",
+      "you": "you",
+      "remove": "Remove",
+      "removeConfirm": "Remove {{name}} from the household?",
+      "leave": "Leave household",
+      "leaveInfo": "When you leave, you become the owner of your personal household again, with the data you had there. What you entered here stays with this household.",
+      "leaveConfirm": "Really leave the household?"
+    },
+    "invite": {
+      "title": "Invite members",
+      "intro": "Invite someone who already has an account. They'll see the invitation when they log in.",
+      "submit": "Send invitation",
+      "sent": "Invitation sent to {{email}}.",
+      "pending": "Sent invitations",
+      "cancel": "Withdraw"
+    },
+    "received": {
+      "title": "Invitations for you",
+      "text": "{{who}} invites you to the household “{{household}}”.",
+      "warning": "If you accept, you move to that household. Your current household is kept with all its data, and you return to it if you leave.",
+      "confirm": "Accept the invitation?",
+      "accept": "Accept",
+      "decline": "Decline"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "account": "Account",
+    "name": "Name",
+    "currency": "Currency",
+    "timezone": "Time zone",
+    "language": "Language",
+    "memberSince": "Member since",
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "submit": "Change password",
+      "info": "After the change you'll be logged out on all other devices.",
+      "changed": "Your password has been changed. Other devices have been logged out."
+    }
+  },
+  "finances": {
+    "title": "Finances",
+    "tabs": {
+      "transactions": "Transactions",
+      "categories": "Categories",
+      "budgets": "Budgets",
+      "reports": "Reports",
+      "accounts": "Accounts"
+    },
+    "types": {
+      "expense": "Expense",
+      "income": "Income"
+    },
+    "fields": {
+      "type": "Type",
+      "title": "Title",
+      "amount": "Amount",
+      "date": "Date",
+      "category": "Category",
+      "description": "Description",
+      "isFixed": "Fixed cost (repeats every month)",
+      "account": "Account"
+    },
+    "filters": {
+      "allTypes": "All types",
+      "allCategories": "All categories",
+      "search": "Search",
+      "allAccounts": "All accounts"
+    },
+    "totals": {
+      "income": "Income",
+      "expense": "Expenses",
+      "balance": "Balance"
+    },
+    "transactions": {
+      "new": "New transaction",
+      "edit": "Edit transaction",
+      "empty": "No transactions for these filters.",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "deleteConfirm": "Delete the transaction?",
+      "backToList": "Back to the list"
+    },
+    "categories": {
+      "intro": "Categories are grouped. A transaction can only use a category that is active on its date.",
+      "newGroup": "New group",
+      "newCategory": "New category",
+      "editCategory": "Edit category",
+      "groupName": "Group name",
+      "name": "Name",
+      "group": "Group",
+      "isActive": "Switched on",
+      "off": "switched off",
+      "inactiveToday": "inactive today",
+      "switchOff": "Switch off",
+      "switchOn": "Switch on",
+      "emptyGroup": "No categories.",
+      "transactionsCount": "transactions: {{n}}",
+      "deleteGroupConfirm": "Delete the group and all its categories?",
+      "deleteCategoryConfirm": "Delete the category?",
+      "groupInUse": "The group has categories with transactions and can't be deleted. Switch it off instead.",
+      "categoryInUse": "The category has transactions and can't be deleted. Switch it off instead.",
+      "backToList": "Back to categories",
+      "period": "One-off period",
+      "periodHelp": "Optional: the category is valid only between these dates (e.g. a trip, a renovation).",
+      "startDate": "From",
+      "endDate": "Until",
+      "yearly": "Every year",
+      "yearlyHelp": "Optional: the category is valid every year in this window (e.g. heating from 15 October to 15 April).",
+      "fromMonth": "From month",
+      "toMonth": "To month",
+      "day": "Day",
+      "monthAndDay": "Choose both the month and the day, or neither.",
+      "invalidDay": "That month has no such day.",
+      "rules": {
+        "from": "from {{date}}",
+        "until": "until {{date}}",
+        "yearly": "{{window}}, every year"
+      }
+    },
+    "budgets": {
+      "new": "New budget",
+      "edit": "Edit budget",
+      "active": "Active today",
+      "byYear": "All budgets",
+      "previousYear": "Previous year",
+      "nextYear": "Next year",
+      "total": "Total",
+      "spentOf": "{{spent}} of {{amount}}",
+      "left": "{{amount}} left",
+      "over": "Over by {{amount}}",
+      "noneActive": "No budgets apply today.",
+      "noneInYear": "No budgets in {{year}}.",
+      "amount": "Budget amount",
+      "thisMonth": "This month",
+      "nextMonth": "Next month",
+      "thisYear": "This year",
+      "overlap": "This category already has a budget overlapping the chosen period.",
+      "deleteConfirm": "Delete the budget?",
+      "backToList": "Back to budgets"
+    },
+    "reports": {
+      "lastMonth": "Last month",
+      "lastThreeMonths": "Last 3 months",
+      "expensesBy": "Expenses by group",
+      "incomeBy": "Income by group",
+      "allGroups": "All groups",
+      "byGroupHint": "Click a group to see its categories.",
+      "byCategoryHint": "Categories of the chosen group.",
+      "noData": "No transactions in this period.",
+      "balanceTitle": "Account balance",
+      "balanceHint": "Balance at the end of each day: the accounts' opening balance plus every change.",
+      "balance": "Balance",
+      "dayNet": "Change that day",
+      "showTable": "Show as a table"
+    },
+    "accounts": {
+      "total": "Total balance",
+      "new": "New account",
+      "edit": "Edit account",
+      "name": "Name (e.g. Current account, Cash, Savings)",
+      "openingBalance": "Opening balance",
+      "openingDate": "On",
+      "openingHint": "How much the account held at the start of that day. Transactions before that date count in reports but don't change the balance (they're already in it).",
+      "isActive": "Active (switch off when you close the account; it stays in history)",
+      "archived": "Archived accounts",
+      "openedWith": "Opened with {{amount}} on {{date}}",
+      "noneActive": "There is no active account. Create one first.",
+      "backToList": "Back to accounts",
+      "deleteConfirm": "Delete the account?",
+      "inUse": "The account has transactions or transfers, so it can't be deleted. Switch it off (Active) so it's no longer offered."
+    },
+    "transfers": {
+      "title": "Transfers between accounts",
+      "new": "New transfer",
+      "edit": "Edit transfer",
+      "from": "From account",
+      "to": "To account",
+      "hint": "Moving money between your accounts (e.g. a cash withdrawal). Neither income nor expense: it changes only the two accounts' balances.",
+      "sameAccount": "Choose a different account.",
+      "empty": "No transfers yet.",
+      "deleteConfirm": "Delete the transfer?"
+    }
+  },
+  "fitness": {
+    "title": "Fitness",
+    "tabs": {
+      "trainings": "Trainings",
+      "exercises": "Exercises"
+    },
+    "fields": {
+      "name": "Name",
+      "trainingName": "Name (optional, e.g. Push day)",
+      "muscleGroup": "Muscle group",
+      "muscleGroups": "Muscle groups",
+      "description": "Description",
+      "date": "Date",
+      "notes": "Notes",
+      "exercise": "Exercise",
+      "weight": "Weight (kg)",
+      "reps": "Reps"
+    },
+    "validation": {
+      "weight": "Weight in kg, up to two decimals (e.g. 82.5), or empty.",
+      "reps": "A whole number above zero."
+    },
+    "trainings": {
+      "new": "New training",
+      "edit": "Edit training",
+      "start": "Start training",
+      "empty": "No trainings yet.",
+      "backToList": "Back to trainings",
+      "summary": "Exercises: {{exercises}} · sets: {{sets}}",
+      "deleteConfirm": "Delete the whole training with all its sets?",
+      "muscleGroupsHint": "With groups chosen, only their exercises are offered. Without, all exercises are.",
+      "addExercise": "Add exercise",
+      "addFirstSet": "Add exercise and first set",
+      "addSet": "Add set",
+      "editSet": "Edit",
+      "deleteSet": "Delete set {{n}}",
+      "lastTime": "Last time ({{date}}):",
+      "removeExercise": "Remove exercise",
+      "removeExerciseConfirm": "Remove the exercise and all its sets from this training?",
+      "noExercisesLeft": "No more exercises for the chosen muscle groups.",
+      "weightHint": "Leave the weight empty for bodyweight exercises (pull-ups, push-ups)."
+    },
+    "exercises": {
+      "new": "New exercise",
+      "edit": "Edit exercise",
+      "empty": "No exercises yet. Add the first one.",
+      "backToList": "Back to exercises",
+      "noMuscleGroup": "No muscle group",
+      "deleteConfirm": "Delete the exercise?",
+      "inUse": "The exercise is used in trainings, so it can't be deleted (its history would be lost)."
+    },
+    "progress": {
+      "title": "Progress",
+      "empty": "This exercise isn't in any of your trainings yet.",
+      "bestWeight": "Heaviest weight",
+      "bestReps": "Most reps",
+      "lastTime": "Last time",
+      "trainings": "Trainings",
+      "chartWeight": "Heaviest set of each training (kg)",
+      "chartReps": "Total reps of each training",
+      "showAll": "All trainings with this exercise"
+    }
+  },
+  "nutrition": {
+    "title": "Nutrition",
+    "tabs": {
+      "diary": "Diary",
+      "foods": "Foods"
+    },
+    "per100": "{{kcal}} kcal / 100 g",
+    "fields": {
+      "food": "Food",
+      "grams": "Grams",
+      "name": "Name",
+      "description": "Description (optional)",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbohydrates",
+      "fat": "Fat",
+      "kcal": "kcal",
+      "proteinG": "Protein (g)",
+      "carbsG": "Carbs (g)",
+      "fatG": "Fat (g)"
+    },
+    "short": {
+      "protein": "P",
+      "carbs": "C",
+      "fat": "F"
+    },
+    "validation": {
+      "grams": "Enter whole grams from 1 to 10000.",
+      "calories": "Enter a whole number from 0 to 900.",
+      "macro": "Enter a whole number from 0 to 100.",
+      "pickFood": "Pick a food from the list."
+    },
+    "diary": {
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "add": "Add to diary",
+      "addButton": "Add",
+      "searchFood": "Start typing a name…",
+      "noFoodFound": "No food with that name.",
+      "missingFood": "Not on the list?",
+      "empty": "Nothing logged for this day.",
+      "macros": "P {{protein}} g · C {{carbs}} g · F {{fat}} g",
+      "editGrams": "Edit",
+      "deleteEntry": "Delete {{food}}",
+      "week": "Week",
+      "day": "Day"
+    },
+    "foods": {
+      "new": "New food",
+      "edit": "Edit food",
+      "search": "Search",
+      "empty": "No foods yet. Add the first one.",
+      "backToList": "Back to foods",
+      "per100Hint": "Values per 100 g (as on the label)",
+      "deleteConfirm": "Delete this food?",
+      "inUse": "This food is in the diary and can't be deleted."
+    }
   }
 }

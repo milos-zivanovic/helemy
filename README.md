@@ -6,7 +6,7 @@ Personal finance, fitness and nutrition tracker. One REST API serves a web clien
 |---|---|---|---|
 | REST API (Django + DRF) | [`api/`](api/) | Working | [api/README.md](api/README.md) |
 | Docker Compose | [`infrastructure/`](infrastructure/) | Working for development | [infrastructure/README.md](infrastructure/README.md) |
-| Web client (React + TypeScript, Vite) | [`web/`](web/) | In progress (phase 0) | [web/README.md](web/README.md) |
+| Web client (React + TypeScript, Vite) | [`web/`](web/) | In progress (auth, household, finances, fitness, Docker done) | [web/README.md](web/README.md) |
 | Mobile app (Expo / React Native) | [`mobile/`](mobile/) | Planned | [mobile/README.md](mobile/README.md) |
 
 ## Project structure
@@ -39,22 +39,27 @@ docker compose --profile dev up -d --build                    # API on http://lo
 docker compose --profile dev exec api-dev python manage.py createsuperuser
 ```
 
-Then open http://localhost:8000/api/docs/. To use PostgreSQL instead of SQLite, use `--profile dev-pg` and
-the service `api-dev-pg` (API on port 8001); `--profile prod` runs a production-like build on port 8002.
+The same command starts the web client too (next section). Then open http://localhost:8000/api/docs/.
+To use PostgreSQL instead of SQLite, use `--profile dev-pg` and the service `api-dev-pg` (API on port 8001,
+without the web); `--profile prod` runs a production-like build, web and API behind nginx on port 8080.
 Profiles, the prod setup, data reset and troubleshooting:
 [infrastructure/README.md](infrastructure/README.md).
 
-### Web (once `web/` exists)
+### Web
 
-The plan is a `web-dev` service in the same `dev` profile, so one command starts API and web together:
+The `dev` profile also starts `web-dev`, the Vite dev server with hot reload:
 
 ```bash
 cd infrastructure
-docker compose --profile dev up -d --build    # API on :8000, web on :3000
+docker compose --profile dev up -d --build    # API on :8000, web on http://localhost:3000
 ```
 
-Until that service is added, run the web dev server on the host as described in
-[web/README.md](web/README.md).
+To run the web dev server on the host instead (`npm run dev`, see [web/README.md](web/README.md)), start
+only the API, because both use port 3000:
+
+```bash
+docker compose --profile dev up -d api-dev    # API only, no web-dev
+```
 
 ### Mobile (once `mobile/` exists)
 

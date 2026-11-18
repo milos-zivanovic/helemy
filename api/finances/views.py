@@ -1,9 +1,7 @@
-from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Case, Count, DecimalField, F, Q, Sum, When
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.utils import timezone
-from django.utils.dateparse import parse_date
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import action
@@ -13,23 +11,50 @@ from rest_framework.response import Response
 from common.mixins import HouseholdModelViewSet
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsHouseholdMember
-from finances.filters import BudgetFilter, CategoryFilter, CategoryGroupFilter, TransactionFilter
-from finances.models import Budget, Category, CategoryGroup, Transaction
+from finances.filters import (
+    BudgetFilter,
+    CategoryFilter,
+    CategoryGroupFilter,
+    TransactionFilter,
+    TransferFilter,
+)
+from finances.models import Account, Budget, Category, CategoryGroup, Transaction, Transfer
+from finances.pagination import TransactionPagination
 from finances.serializers import (
+    AccountSerializer,
+    BalanceHistoryQuerySerializer,
     BalanceHistorySerializer,
     BreakdownSerializer,
     BudgetOverviewSerializer,
     BudgetSerializer,
     CategoryGroupSerializer,
-    CategoryListSerializer,
+    CategoryListItemSerializer,
     CategorySerializer,
     TransactionCreateSerializer,
     TransactionSerializer,
     TransactionSuggestionSerializer,
+    TransactionTotalsSerializer,
+    TransferSerializer,
 )
+from finances.services import balance_history
 
 MAX_BALANCE_HISTORY_DAYS = 3660  # ~10 years of daily points
 MAX_SUGGESTIONS = 10
+
+# The report actions apply TransactionFilter like the list does, but drf-spectacular documents filter
+# parameters only on list views, so they are listed here explicitly.
+TRANSACTION_FILTER_PARAMETERS = [
+    OpenApiParameter("start_date", OpenApiTypes.DATE, description="Date on or after"),
+    OpenApiParameter("end_date", OpenApiTypes.DATE, description="Date on or before"),
+    OpenApiParameter("category", OpenApiTypes.INT),
+    OpenApiParameter("category_group", OpenApiTypes.INT),
+    OpenApiParameter("account", OpenApiTypes.INT),
+    OpenApiParameter(
+        "transaction_type", OpenApiTypes.STR, enum=[Transaction.INCOME, Transaction.EXPENSE]
+    ),
+    OpenApiParameter("is_fixed", OpenApiTypes.BOOL),
+    OpenApiParameter("search", OpenApiTypes.STR, description="Part of the title or description"),
+]
 
 
 @extend_schema_view(
@@ -48,6 +73,15 @@ class CategoryGroupViewSet(HouseholdModelViewSet):
     ordering_fields = ["name", "created_at"]
     filterset_class = CategoryGroupFilter
     search_fields = ["name"]
+
+    def perform_destroy(self, instance):
+        # Deleting a group cascades to its categories and their transactions: refuse while any of
+        # them is in use, so a click can't wipe out history. Switching the group off hides it instead.
+        if Transaction.objects.filter(category__category_group=instance, is_deleted=False).exists():
+            raise ValidationError(
+                {"detail": "This group has categories with transactions. Switch it off instead."}
+            )
+        instance.delete()
 
 
 @extend_schema_view(
@@ -72,8 +106,24 @@ class CategoryViewSet(HouseholdModelViewSet):
 
     def get_serializer_class(self):
         if self.action == "list":
-            return CategoryListSerializer
+            return CategoryListItemSerializer
         return CategorySerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "list":
+            # Same rules as Category.objects.active(), evaluated per row inside the list query.
+            active = Category.objects.active().filter(pk=OuterRef("pk"))
+            queryset = queryset.annotate(active_today=Exists(active))
+        return queryset
+
+    def perform_destroy(self, instance):
+        # The category's transactions would be deleted with it (CASCADE): refuse, see above.
+        if instance.transactions.filter(is_deleted=False).exists():
+            raise ValidationError(
+                {"detail": "This category has transactions. Switch it off instead."}
+            )
+        instance.delete()
 
 
 @extend_schema_view(
@@ -85,11 +135,11 @@ class CategoryViewSet(HouseholdModelViewSet):
 )
 class TransactionViewSet(HouseholdModelViewSet):
     queryset = Transaction.objects.select_related(
-        "category", "category__category_group", "user"
+        "category", "category__category_group", "account", "user"
     ).all()
     serializer_class = TransactionSerializer
     permission_classes = [IsHouseholdMember]
-    pagination_class = StandardResultsSetPagination
+    pagination_class = TransactionPagination
     ordering = ["-date", "-created_at"]
     ordering_fields = ["amount", "date", "created_at"]
     filterset_class = TransactionFilter
@@ -115,27 +165,25 @@ class TransactionViewSet(HouseholdModelViewSet):
             total_income=Sum("amount", filter=Q(transaction_type=Transaction.INCOME)),
             total_expense=Sum("amount", filter=Q(transaction_type=Transaction.EXPENSE)),
         )
-        total_income = totals["total_income"] or 0
-        total_expense = totals["total_expense"] or 0
+        total_income = totals["total_income"] or Decimal("0")
+        total_expense = totals["total_expense"] or Decimal("0")
+        totals_data = TransactionTotalsSerializer(
+            {
+                "total_incomes": total_income,
+                "total_expenses": total_expense,
+                "total": total_income - total_expense,
+            }
+        ).data
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
-            response.data["total_incomes"] = total_income
-            response.data["total_expenses"] = total_expense
-            response.data["total"] = total_income - total_expense
+            response.data.update(totals_data)
             return response
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response(
-            {
-                "total_incomes": total_income,
-                "total_expenses": total_expense,
-                "total": total_income - total_expense,
-                "results": serializer.data,
-            }
-        )
+        return Response({**totals_data, "results": serializer.data})
 
     @extend_schema(
         tags=["Finances - Transactions"],
@@ -144,7 +192,13 @@ class TransactionViewSet(HouseholdModelViewSet):
         ],
         responses={200: TransactionSuggestionSerializer(many=True)},
     )
-    @action(detail=False, methods=["get"], url_path="suggestions", filter_backends=[])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="suggestions",
+        filter_backends=[],
+        pagination_class=None,
+    )
     def suggestions(self, request):
         """
         Title autocomplete for quick entry. One entry per distinct title (case-insensitive),
@@ -165,6 +219,7 @@ class TransactionViewSet(HouseholdModelViewSet):
                 "category_id",
                 "category__name",
                 "category__category_group__name",
+                "account_id",
                 "is_fixed",
                 "amount",
             )[:200]
@@ -180,6 +235,7 @@ class TransactionViewSet(HouseholdModelViewSet):
                 "category_id": row["category_id"],
                 "category_name": row["category__name"],
                 "category_group_name": row["category__category_group__name"],
+                "account_id": row["account_id"],
                 "is_fixed": row["is_fixed"],
                 "last_amount": row["amount"],
             }
@@ -187,7 +243,11 @@ class TransactionViewSet(HouseholdModelViewSet):
                 break
         return Response(TransactionSuggestionSerializer(suggestions.values(), many=True).data)
 
-    @extend_schema(tags=["Finances - Reports"], responses={200: BreakdownSerializer})
+    @extend_schema(
+        tags=["Finances - Reports"],
+        parameters=TRANSACTION_FILTER_PARAMETERS,
+        responses={200: BreakdownSerializer},
+    )
     @action(detail=False, methods=["get"], url_path="breakdown")
     def breakdown(self, request):
         """
@@ -221,33 +281,34 @@ class TransactionViewSet(HouseholdModelViewSet):
         }
         return Response(BreakdownSerializer(data).data)
 
-    @extend_schema(tags=["Finances - Reports"], responses={200: BalanceHistorySerializer})
-    @action(detail=False, methods=["get"], url_path="balance-history")
+    @extend_schema(
+        tags=["Finances - Reports"],
+        parameters=[BalanceHistoryQuerySerializer],
+        responses={200: BalanceHistorySerializer},
+    )
+    @action(detail=False, methods=["get"], url_path="balance-history", filter_backends=[])
     def balance_history(self, request):
         """
-        Running balance per day (income minus expenses), starting from 0 at `start_date`.
-        Accepts the same filters as the transaction list. Defaults: `start_date` is the
-        first matching transaction's date, `end_date` is today. Every day in the range is
-        returned, including days without transactions.
+        The real balance per day: one account (`account`) or all the household's accounts.
+        Each account starts with its opening balance on its opening date; income, expenses and
+        transfers change it from then on (see finances.services.balance_history). Defaults:
+        `start_date` is the earliest opening date, `end_date` is today. Every day in the range is
+        returned, including days without changes.
         """
-        queryset = self.filter_queryset(self.get_queryset()).order_by()
-        money = DecimalField(max_digits=12, decimal_places=2)
-        daily = queryset.values("date").annotate(
-            net=Sum(
-                Case(
-                    When(transaction_type=Transaction.INCOME, then=F("amount")),
-                    default=-F("amount"),
-                    output_field=money,
-                )
-            )
+        params = BalanceHistoryQuerySerializer(
+            data=request.query_params, context=self.get_serializer_context()
         )
-        net_by_day = {row["date"]: row["net"] for row in daily}
-
-        # The filter backend has already rejected malformed dates.
-        start = parse_date(request.query_params.get("start_date", "")) or min(
-            net_by_day, default=None
+        params.is_valid(raise_exception=True)
+        account = params.validated_data.get("account")
+        accounts = (
+            [account]
+            if account
+            else list(Account.objects.filter(household=request.user.get_active_household()))
         )
-        end = parse_date(request.query_params.get("end_date", "")) or timezone.localdate()
+        start = params.validated_data.get("start_date") or min(
+            (a.opening_date for a in accounts), default=None
+        )
+        end = params.validated_data.get("end_date") or timezone.localdate()
         if start is None:
             return Response(
                 BalanceHistorySerializer({"start_date": None, "end_date": end, "results": []}).data
@@ -258,14 +319,11 @@ class TransactionViewSet(HouseholdModelViewSet):
             raise ValidationError(
                 {"start_date": f"Range is limited to {MAX_BALANCE_HISTORY_DAYS} days."}
             )
-
-        results, balance = [], Decimal("0")
-        for offset in range((end - start).days + 1):
-            day = start + timedelta(days=offset)
-            net = net_by_day.get(day, Decimal("0"))
-            balance += net
-            results.append({"date": day, "net": net, "balance": balance})
-        data = {"start_date": start, "end_date": end, "results": results}
+        data = {
+            "start_date": start,
+            "end_date": end,
+            "results": balance_history(accounts, start, end),
+        }
         return Response(BalanceHistorySerializer(data).data)
 
 
@@ -294,7 +352,15 @@ class BudgetViewSet(HouseholdModelViewSet):
             queryset = queryset.filter(start_date__lte=today, end_date__gte=today)
         return queryset
 
-    @extend_schema(tags=["Finances - Budgets"], responses={200: BudgetOverviewSerializer})
+    @extend_schema(
+        tags=["Finances - Budgets"],
+        responses={200: BudgetOverviewSerializer},
+        # Unpaginated, although the viewset has a paginator (for all/).
+        parameters=[
+            OpenApiParameter("page", exclude=True),
+            OpenApiParameter("page_size", exclude=True),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         """
         Budgets active today with overall totals (unpaginated, there are only a handful).
@@ -314,7 +380,7 @@ class BudgetViewSet(HouseholdModelViewSet):
         }
         return Response(BudgetOverviewSerializer(data, context=self.get_serializer_context()).data)
 
-    @extend_schema(tags=["Finances - Budgets"])
+    @extend_schema(tags=["Finances - Budgets"], responses={200: BudgetSerializer(many=True)})
     @action(detail=False, methods=["get"], url_path="all")
     def all_budgets(self, request):
         """All budgets, paginated. Use `?year=2026` for the budgets overlapping a year."""
@@ -325,3 +391,58 @@ class BudgetViewSet(HouseholdModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Finances - Accounts"]),
+    create=extend_schema(tags=["Finances - Accounts"]),
+    retrieve=extend_schema(tags=["Finances - Accounts"]),
+    partial_update=extend_schema(tags=["Finances - Accounts"]),
+    destroy=extend_schema(tags=["Finances - Accounts"]),
+)
+class AccountViewSet(HouseholdModelViewSet):
+    """Where money is kept. `balance` is today's balance; archive (is_active=false) instead of deleting."""
+
+    queryset = Account.objects.all()
+    serializer_class = AccountSerializer
+    permission_classes = [IsHouseholdMember]
+    pagination_class = None  # a household has a handful of accounts
+    filter_backends = []
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return super().get_queryset().with_balance().order_by("-is_active", "name")
+
+    def perform_destroy(self, instance):
+        # Only an unused account can be deleted. Soft-deleted transactions are hidden history: they
+        # go with it (the database protects accounts that still have any transaction).
+        if (
+            instance.transactions.filter(is_deleted=False).exists()
+            or instance.transfers_in.exists()
+            or instance.transfers_out.exists()
+        ):
+            raise ValidationError(
+                {"detail": "This account has transactions or transfers. Archive it instead."}
+            )
+        instance.transactions.all().delete()
+        instance.delete()
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Finances - Accounts"]),
+    create=extend_schema(tags=["Finances - Accounts"]),
+    retrieve=extend_schema(tags=["Finances - Accounts"]),
+    partial_update=extend_schema(tags=["Finances - Accounts"]),
+    destroy=extend_schema(tags=["Finances - Accounts"]),
+)
+class TransferViewSet(HouseholdModelViewSet):
+    """Money moved between two accounts of the household; not income or expense."""
+
+    queryset = Transfer.objects.select_related("from_account", "to_account", "user").all()
+    serializer_class = TransferSerializer
+    permission_classes = [IsHouseholdMember]
+    pagination_class = StandardResultsSetPagination
+    filterset_class = TransferFilter
+    ordering = ["-date", "-created_at"]
+    ordering_fields = ["amount", "date", "created_at"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]

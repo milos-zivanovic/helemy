@@ -1,0 +1,7 @@
+# Build context is web/. node_modules must stay out: the host's has Windows binaries, the image
+# installs its own with `npm ci`.
+node_modules
+dist
+.env
+.env.*
+*.log

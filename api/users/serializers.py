@@ -8,7 +8,7 @@ from django.utils.http import urlsafe_base64_decode
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from finances.services import create_default_categories
+from finances.services import create_default_finances
 from users.models import Household, HouseholdInvitation
 
 User = get_user_model()
@@ -184,7 +184,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # The post_save signal creates the user's personal household; sign up also seeds it.
         user = User.objects.create_user(**validated_data)
-        create_default_categories(user.get_active_household())
+        create_default_finances(user.get_active_household())
         return user
 
 

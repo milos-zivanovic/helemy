@@ -143,3 +143,64 @@ class NutritionAPITests(HouseholdAPITestCase):
         )
         self.assertEqual(dates({"user": self.bob.id}), [])
         self.assertEqual(self.client.get(CONSUMPTIONS_URL, {"date": "02.03.2026"}).status_code, 400)
+
+
+class NutritionValidationTests(HouseholdAPITestCase):
+    def setUp(self):
+        super().setUp()
+        self.food = Food.objects.create(
+            household=self.alice_household, name="Rice", calories=360, protein=7, carbs=79, fat=1
+        )
+
+    def test_eaten_food_cant_be_deleted(self):
+        Consumption.objects.create(
+            household=self.alice_household,
+            user=self.alice,
+            food=self.food,
+            quantity_grams=100,
+            date=date(2026, 3, 1),
+        )
+        self.assertEqual(self.client.delete(f"{FOODS_URL}{self.food.id}/").status_code, 400)
+        unused = Food.objects.create(
+            household=self.alice_household, name="Salt", calories=0, protein=0, carbs=0, fat=0
+        )
+        self.assertEqual(self.client.delete(f"{FOODS_URL}{unused.id}/").status_code, 204)
+
+    def test_food_values_are_validated(self):
+        payload = {"name": "X", "calories": 100, "protein": 10, "carbs": 10, "fat": 10}
+        for field, value in [("protein", -1), ("fat", 101), ("calories", 901)]:
+            response = self.client.post(FOODS_URL, {**payload, field: value})
+            self.assertEqual(response.status_code, 400, field)
+            self.assertIn(field, response.data)
+        url = f"{FOODS_URL}{self.food.id}/"
+        self.assertEqual(self.client.patch(url, {"carbs": -5}).status_code, 400)
+
+    def test_quantity_must_be_positive(self):
+        payload = {"food_id": self.food.id, "date": "2026-03-01"}
+        for grams in (0, -50, 10001):
+            response = self.client.post(CONSUMPTIONS_URL, {**payload, "quantity_grams": grams})
+            self.assertEqual(response.status_code, 400, grams)
+        response = self.client.post(CONSUMPTIONS_URL, {**payload, "quantity_grams": 150})
+        self.assertEqual(response.status_code, 201, response.data)
+        url = f"{CONSUMPTIONS_URL}{response.data['id']}/"
+        self.assertEqual(self.client.patch(url, {"quantity_grams": 0}).status_code, 400)
+        self.assertEqual(self.client.patch(url, {"quantity_grams": 200}).status_code, 200)
+
+    def test_other_household_food_and_entries_are_hidden(self):
+        bob_food = Food.objects.create(
+            household=self.bob_household, name="Bob", calories=1, protein=0, carbs=0, fat=0
+        )
+        bob_entry = Consumption.objects.create(
+            household=self.bob_household,
+            user=self.bob,
+            food=bob_food,
+            quantity_grams=10,
+            date=date(2026, 3, 1),
+        )
+        self.assertEqual(self.client.delete(f"{FOODS_URL}{bob_food.id}/").status_code, 404)
+        self.assertEqual(
+            self.client.patch(
+                f"{CONSUMPTIONS_URL}{bob_entry.id}/", {"quantity_grams": 1}
+            ).status_code,
+            404,
+        )

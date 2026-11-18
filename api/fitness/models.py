@@ -142,6 +142,11 @@ class TrainingItem(models.Model):
     def __str__(self):
         return f"{self.training} - {self.exercise}"
 
+    @property
+    def household(self):
+        """The training's household; IsHouseholdMember checks object access through it."""
+        return self.training.household
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
@@ -194,6 +199,11 @@ class TrainingSet(models.Model):
         return (
             f"{self.training_item.exercise} - Set {self.set_number}: {weight_str}{self.reps} reps"
         )
+
+    @property
+    def household(self):
+        """The training's household; IsHouseholdMember checks object access through it."""
+        return self.training_item.training.household
 
     @property
     def volume(self):

@@ -10,7 +10,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from finances.services import create_default_categories
+from finances.services import create_default_finances
 from users.models import Household, HouseholdInvitation
 
 
@@ -56,9 +56,9 @@ class HouseholdError(Exception):
 
 @transaction.atomic
 def create_personal_household(user):
-    """A new personal household with the default finance categories."""
+    """A new personal household with the default finance categories and account."""
     household = Household.create_personal(user)
-    create_default_categories(household)
+    create_default_finances(household)
     return household
 
 

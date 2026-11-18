@@ -50,7 +50,7 @@ Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
   (owned) household is never deleted: it has no members while they're in another household and becomes active
   again when they leave or are removed. Membership changes go through `users.services` (`accept_invitation`,
   `remove_from_household`), never `household.members.add/remove` directly; households have no DELETE.
-  Sign up seeds `finances.services.DEFAULT_CATEGORIES`.
+  Sign up seeds `finances.services.create_default_finances` (default categories and one account).
 - `fitness.MuscleGroup` is global reference data (no household), read-only via the API; defaults seeded by
   `fitness/migrations/0003_seed_muscle_groups.py`, edited in the admin.
 - `finances.Transaction.date` is the day it happened (filters/budgets use it); `created_at` is audit only.

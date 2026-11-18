@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from common.testing import HouseholdAPITestCase
-from finances.models import Category, CategoryGroup, Transaction
+from finances.models import Account, Category, CategoryGroup, Transaction
 
 TRANSACTIONS_URL = "/api/finances/transactions/"
 CATEGORIES_URL = "/api/finances/categories/"
@@ -15,6 +15,7 @@ class ActiveCategoryTests(HouseholdAPITestCase):
     def setUp(self):
         super().setUp()
         self.group = CategoryGroup.objects.create(household=self.alice_household, name="Seasonal")
+        self.account = Account.objects.create(household=self.alice_household, name="Bank")
 
     def _category(self, name, **fields):
         return Category.objects.create(
@@ -90,6 +91,7 @@ class ActiveCategoryTests(HouseholdAPITestCase):
             "title": "Hotel",
             "amount": "100",
             "category_id": trip.id,
+            "account_id": self.account.id,
         }
 
         response = self.client.post(
@@ -108,6 +110,7 @@ class ActiveCategoryTests(HouseholdAPITestCase):
         transaction = Transaction.objects.create(
             household=self.alice_household,
             user=self.alice,
+            account=self.account,
             category=category,
             title="Old",
             amount=1,
@@ -139,6 +142,9 @@ class TransactionReportTests(HouseholdAPITestCase):
         self.fuel = Category.objects.create(
             household=self.alice_household, category_group=self.car, name="Fuel"
         )
+        self.account = Account.objects.create(
+            household=self.alice_household, name="Bank", opening_date=date(2026, 3, 1)
+        )
 
         bob_group = CategoryGroup.objects.create(household=self.bob_household, name="Bob home")
         bob_category = Category.objects.create(
@@ -147,6 +153,7 @@ class TransactionReportTests(HouseholdAPITestCase):
         Transaction.objects.create(
             household=self.bob_household,
             user=self.bob,
+            account=Account.objects.create(household=self.bob_household, name="Bob bank"),
             category=bob_category,
             title="Milk from Bob",
             amount=999,
@@ -157,6 +164,7 @@ class TransactionReportTests(HouseholdAPITestCase):
         return Transaction.objects.create(
             household=self.alice_household,
             user=self.alice,
+            account=fields.pop("account", self.account),
             category=category,
             title=title,
             amount=Decimal(amount),
@@ -234,7 +242,7 @@ class TransactionReportTests(HouseholdAPITestCase):
         data = self.client.get(
             f"{TRANSACTIONS_URL}balance-history/", {"end_date": "2026-03-04"}
         ).data
-        self.assertEqual(data["start_date"], "2026-03-01")  # defaults to the first transaction
+        self.assertEqual(data["start_date"], "2026-03-01")  # defaults to the opening date
         self.assertEqual(
             [(d["date"], Decimal(d["balance"])) for d in data["results"]],
             [("2026-03-01", 900), ("2026-03-02", 900), ("2026-03-03", 600), ("2026-03-04", 600)],
@@ -245,4 +253,5 @@ class TransactionReportTests(HouseholdAPITestCase):
         response = self.client.get(url, {"start_date": "2026-03-05", "end_date": "2026-03-01"})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.client.get(url, {"start_date": "nope"}).status_code, 400)
-        self.assertEqual(self.client.get(url).data["results"], [])  # no transactions at all
+        Account.objects.filter(household=self.alice_household).delete()
+        self.assertEqual(self.client.get(url).data["results"], [])  # no accounts at all

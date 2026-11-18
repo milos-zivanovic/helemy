@@ -1,8 +1,10 @@
+from django.db import transaction
 from django.db.models import Count, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -12,6 +14,7 @@ from common.permissions import IsHouseholdMember
 from fitness.models import Exercise, MuscleGroup, Training, TrainingItem, TrainingSet
 from fitness.serializers import (
     AppendSetSerializer,
+    ExerciseHistoryEntrySerializer,
     ExerciseListSerializer,
     ExerciseSerializer,
     MuscleGroupDetailSerializer,
@@ -67,6 +70,63 @@ class ExerciseViewSet(HouseholdModelViewSet):
             return ExerciseListSerializer
         return ExerciseSerializer
 
+    def perform_destroy(self, instance):
+        # Deleting would cascade into every training that has this exercise (its whole history).
+        if instance.training_items.exists():
+            raise ValidationError(
+                {"detail": "This exercise is used in trainings and can't be deleted."}
+            )
+        instance.delete()
+
+    @extend_schema(
+        tags=["Fitness - Exercises"],
+        parameters=[
+            OpenApiParameter("user", OpenApiTypes.INT, description="Only this member's trainings")
+        ],
+        responses={200: ExerciseHistoryEntrySerializer(many=True)},
+    )
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="history",
+        filter_backends=[],
+        pagination_class=None,  # a plain list; also keeps the schema from describing a page
+    )
+    def history(self, request, pk=None):
+        """
+        Every training with this exercise, oldest first: its sets, the heaviest weight, total reps
+        and volume (weight x reps). For progress charts and "last time" hints. `?user=` narrows it
+        to one household member (a training belongs to the member who logged it).
+        """
+        exercise = self.get_object()
+        items = (
+            TrainingItem.objects.filter(exercise=exercise)
+            .select_related("training")
+            .prefetch_related("sets")
+            .order_by("training__date", "training__created_at")
+        )
+        user = request.query_params.get("user")
+        if user:
+            if not user.isdigit():
+                raise ValidationError({"user": "A user id is a number."})
+            items = items.filter(training__user_id=int(user))
+
+        entries = []
+        for item in items:
+            sets = list(item.sets.all())
+            weights = [s.weight for s in sets if s.weight is not None]
+            entries.append(
+                {
+                    "training_id": item.training_id,
+                    "date": item.training.date,
+                    "sets": [{"weight": s.weight, "reps": s.reps} for s in sets],
+                    "max_weight": max(weights) if weights else None,
+                    "total_reps": sum(s.reps for s in sets),
+                    "volume": sum(s.volume for s in sets),
+                }
+            )
+        return Response(ExerciseHistoryEntrySerializer(entries, many=True).data)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -78,7 +138,8 @@ class ExerciseViewSet(HouseholdModelViewSet):
     ),
     create=extend_schema(tags=["Fitness - Trainings"]),
     retrieve=extend_schema(tags=["Fitness - Trainings"]),
-    partial_update=extend_schema(tags=["Fitness - Trainings"]),
+    # The update response is the full training (see `update`), not the update serializer.
+    partial_update=extend_schema(tags=["Fitness - Trainings"], responses=TrainingSerializer),
     destroy=extend_schema(tags=["Fitness - Trainings"]),
 )
 class TrainingViewSet(HouseholdModelViewSet):
@@ -123,8 +184,14 @@ class TrainingViewSet(HouseholdModelViewSet):
         self.perform_update(serializer)
         return Response(TrainingSerializer(instance, context={"request": request}).data)
 
+    @extend_schema(
+        tags=["Fitness - Trainings"],
+        request=AppendSetSerializer,
+        responses={201: TrainingSetSerializer},
+    )
     @action(detail=True, methods=["post"], url_path="sets")
     def append_set(self, request, pk=None):
+        """Add the next set of an exercise; the exercise's item is created on its first set."""
         training = self.get_object()
 
         serializer = AppendSetSerializer(
@@ -158,7 +225,7 @@ class TrainingItemViewSet(HouseholdModelViewSet):
     def get_queryset(self):
         return (
             TrainingItem.objects.filter(training__household=get_request_household(self.request))
-            .select_related("exercise", "exercise__muscle_group", "training")
+            .select_related("exercise", "exercise__muscle_group", "training__household")
             .prefetch_related("sets")
         )
 
@@ -166,14 +233,27 @@ class TrainingItemViewSet(HouseholdModelViewSet):
 @extend_schema_view(
     list=extend_schema(tags=["Fitness - Training Sets"]),
     retrieve=extend_schema(tags=["Fitness - Training Sets"]),
+    partial_update=extend_schema(tags=["Fitness - Training Sets"]),
     destroy=extend_schema(tags=["Fitness - Training Sets"]),
 )
 class TrainingSetViewSet(HouseholdModelViewSet):
+    """Sets are added through POST trainings/{id}/sets/; here they are read, corrected or deleted."""
+
     serializer_class = TrainingSetSerializer
     permission_classes = [IsHouseholdMember]
-    http_method_names = ["get", "delete", "head", "options"]
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        # Keep the remaining sets numbered 1..n (deleting set 2 of 3 makes set 3 the new set 2).
+        item = instance.training_item
+        instance.delete()
+        for number, training_set in enumerate(item.sets.order_by("set_number"), start=1):
+            if training_set.set_number != number:
+                training_set.set_number = number
+                training_set.save(update_fields=["set_number"])
 
     def get_queryset(self):
         return TrainingSet.objects.filter(
             training_item__training__household=get_request_household(self.request)
-        ).select_related("training_item__training", "training_item__exercise")
+        ).select_related("training_item__training__household", "training_item__exercise")

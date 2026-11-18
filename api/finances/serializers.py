@@ -1,11 +1,11 @@
 import calendar
 
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from common.fields import HouseholdPrimaryKeyRelatedField
-from finances.models import Budget, Category, CategoryGroup, Transaction
+from finances.models import Account, Budget, Category, CategoryGroup, Transaction, Transfer
 from users.serializers import UserSerializer
 
 
@@ -124,11 +124,72 @@ class CategoryListSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "category_group", "category_group_name", "is_active"]
 
 
+class CategoryListItemSerializer(CategoryListSerializer):
+    """
+    Row of the category list: the select fields plus the activity rules and usage, enough to manage
+    categories. `active_today` and `transactions_count` are annotated in CategoryViewSet.get_queryset.
+    """
+
+    active_today = serializers.BooleanField(read_only=True)
+    transactions_count = serializers.IntegerField(read_only=True)
+
+    class Meta(CategoryListSerializer.Meta):
+        fields = CategoryListSerializer.Meta.fields + [
+            "active_today",
+            "start_date",
+            "end_date",
+            "start_month",
+            "start_day",
+            "end_month",
+            "end_day",
+            "transactions_count",
+        ]
+        read_only_fields = fields
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    # Annotated by AccountQuerySet.with_balance(): the balance at the end of today.
+    balance = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Account
+        fields = [
+            "id",
+            "name",
+            "opening_balance",
+            "opening_date",
+            "balance",
+            "is_active",
+            "created_at",
+        ]
+        read_only_fields = ["id", "balance", "created_at"]
+
+
+class AccountListSerializer(serializers.ModelSerializer):
+    """Short form nested in transactions and transfers."""
+
+    class Meta:
+        model = Account
+        fields = ["id", "name"]
+        read_only_fields = fields
+
+
+def validate_active_account(serializer, attrs, field, source):
+    """A new or changed account reference must point to an active account (archived = read-only)."""
+    account = attrs.get(source)
+    if account is None or account.is_active:
+        return
+    if serializer.instance is not None and getattr(serializer.instance, source) == account:
+        return  # editing something else on an old record of an archived account
+    raise serializers.ValidationError({field: f'Account "{account.name}" is archived.'})
+
+
 class ActiveCategoryValidationMixin:
     """The category must be active on the transaction's date (checked only when either changes)."""
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        validate_active_account(self, attrs, "account_id", "account")
         if self.instance is not None and "category" not in attrs and "date" not in attrs:
             return attrs  # editing e.g. the title of an old transaction in an archived category
 
@@ -153,6 +214,12 @@ class TransactionSerializer(ActiveCategoryValidationMixin, serializers.ModelSeri
         source="category",
         write_only=True,
     )
+    account = AccountListSerializer(read_only=True)
+    account_id = HouseholdPrimaryKeyRelatedField(
+        queryset=Account.objects.all(),
+        source="account",
+        write_only=True,
+    )
     user = UserSerializer(read_only=True)
     type_display = serializers.CharField(source="get_transaction_type_display", read_only=True)
     type_sign = serializers.CharField(read_only=True)
@@ -170,6 +237,8 @@ class TransactionSerializer(ActiveCategoryValidationMixin, serializers.ModelSeri
             "date",
             "category",
             "category_id",
+            "account",
+            "account_id",
             "user",
             "is_fixed",
             "is_deleted",
@@ -185,6 +254,11 @@ class TransactionCreateSerializer(ActiveCategoryValidationMixin, serializers.Mod
         source="category",
         write_only=True,
     )
+    account_id = HouseholdPrimaryKeyRelatedField(
+        queryset=Account.objects.all(),
+        source="account",
+        write_only=True,
+    )
 
     class Meta:
         model = Transaction
@@ -196,6 +270,7 @@ class TransactionCreateSerializer(ActiveCategoryValidationMixin, serializers.Mod
             "amount",
             "date",
             "category_id",
+            "account_id",
             "is_fixed",
         ]
         read_only_fields = ["id"]
@@ -266,6 +341,8 @@ class BudgetSerializer(serializers.ModelSerializer):
 # --- Read-only response shapes for summary/report endpoints -----------------
 
 
+# many=False: the list action returns this one object, not a (paginated) list of them.
+@extend_schema_serializer(many=False)
 class BudgetOverviewSerializer(serializers.Serializer):
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_spent = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -273,12 +350,21 @@ class BudgetOverviewSerializer(serializers.Serializer):
     results = BudgetSerializer(many=True)
 
 
+class TransactionTotalsSerializer(serializers.Serializer):
+    """Totals added to the transaction list (see finances.pagination.TransactionPagination)."""
+
+    total_incomes = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_expenses = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
 class TransactionSuggestionSerializer(serializers.Serializer):
     title = serializers.CharField()
-    transaction_type = serializers.CharField()
+    transaction_type = serializers.ChoiceField(choices=Transaction.TRANSACTION_TYPES)
     category_id = serializers.IntegerField()
     category_name = serializers.CharField()
     category_group_name = serializers.CharField()
+    account_id = serializers.IntegerField()
     is_fixed = serializers.BooleanField()
     last_amount = serializers.DecimalField(max_digits=8, decimal_places=2)
 
@@ -305,3 +391,55 @@ class BalanceHistorySerializer(serializers.Serializer):
     start_date = serializers.DateField(allow_null=True)
     end_date = serializers.DateField()
     results = BalanceDaySerializer(many=True)
+
+
+class BalanceHistoryQuerySerializer(serializers.Serializer):
+    """Query parameters of balance-history (validated here: the action has no filter backends)."""
+
+    start_date = serializers.DateField(required=False)
+    end_date = serializers.DateField(required=False)
+    account = HouseholdPrimaryKeyRelatedField(queryset=Account.objects.all(), required=False)
+
+
+class TransferSerializer(serializers.ModelSerializer):
+    from_account = AccountListSerializer(read_only=True)
+    to_account = AccountListSerializer(read_only=True)
+    from_account_id = HouseholdPrimaryKeyRelatedField(
+        queryset=Account.objects.all(), source="from_account", write_only=True
+    )
+    to_account_id = HouseholdPrimaryKeyRelatedField(
+        queryset=Account.objects.all(), source="to_account", write_only=True
+    )
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Transfer
+        fields = [
+            "id",
+            "from_account",
+            "from_account_id",
+            "to_account",
+            "to_account_id",
+            "amount",
+            "date",
+            "description",
+            "user",
+            "created_at",
+        ]
+        read_only_fields = ["id", "user", "created_at"]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        validate_active_account(self, attrs, "from_account_id", "from_account")
+        validate_active_account(self, attrs, "to_account_id", "to_account")
+        source = attrs.get("from_account", getattr(self.instance, "from_account", None))
+        target = attrs.get("to_account", getattr(self.instance, "to_account", None))
+        if source is not None and source == target:
+            raise serializers.ValidationError(
+                {"to_account_id": "Choose an account other than the source account."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)

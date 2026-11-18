@@ -6,10 +6,11 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from common.testing import HouseholdAPITestCase
-from finances.models import Budget, Category, CategoryGroup, Transaction
+from finances.models import Account, Budget, Category, CategoryGroup, Transaction
 
 TRANSACTIONS_URL = "/api/finances/transactions/"
 CATEGORIES_URL = "/api/finances/categories/"
+CATEGORY_GROUPS_URL = "/api/finances/category-groups/"
 BUDGETS_URL = "/api/finances/budgets/"
 
 
@@ -20,13 +21,16 @@ class FinancesAPITests(HouseholdAPITestCase):
         self.alice_category = Category.objects.create(
             household=self.alice_household, category_group=self.alice_group, name="Groceries"
         )
+        self.alice_account = Account.objects.create(household=self.alice_household, name="Bank")
         bob_group = CategoryGroup.objects.create(household=self.bob_household, name="Bob home")
         self.bob_category = Category.objects.create(
             household=self.bob_household, category_group=bob_group, name="Bob groceries"
         )
+        self.bob_account = Account.objects.create(household=self.bob_household, name="Bob bank")
         self.bob_transaction = Transaction.objects.create(
             household=self.bob_household,
             user=self.bob,
+            account=self.bob_account,
             category=self.bob_category,
             title="Bob secret",
             amount=Decimal("100"),
@@ -38,6 +42,7 @@ class FinancesAPITests(HouseholdAPITestCase):
             "title": "Milk",
             "amount": "120.50",
             "category_id": self.alice_category.id,
+            "account_id": self.alice_account.id,
         }
         payload.update(overrides)
         return self.client.post(TRANSACTIONS_URL, payload, format="json")
@@ -57,7 +62,7 @@ class FinancesAPITests(HouseholdAPITestCase):
         self.assertEqual(response.status_code, 200)
         titles = [t["title"] for t in self.results(response)]
         self.assertEqual(titles, ["Milk"])
-        self.assertEqual(response.data["total_expenses"], Decimal("120.50"))
+        self.assertEqual(response.data["total_expenses"], "120.50")
 
     def test_cannot_retrieve_update_or_delete_other_household_object(self):
         url = f"{TRANSACTIONS_URL}{self.bob_transaction.id}/"
@@ -96,6 +101,20 @@ class FinancesAPITests(HouseholdAPITestCase):
         response = self.client.get(TRANSACTIONS_URL, {"end_date": yesterday.isoformat()})
         self.assertEqual([t["title"] for t in self.results(response)], ["Yesterday"])
 
+    def test_list_totals_cover_all_pages_and_are_strings(self):
+        self._create_transaction(amount="10.00")
+        self._create_transaction(amount="5.25")
+        self._create_transaction(transaction_type="income", title="Salary", amount="100")
+        response = self.client.get(TRANSACTIONS_URL, {"page_size": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["total_pages"], 3)
+        self.assertEqual(response.data["current_page"], 1)
+        # Same format as every amount in the API, totals of all matching rows, not of the page.
+        self.assertEqual(response.data["total_incomes"], "100.00")
+        self.assertEqual(response.data["total_expenses"], "15.25")
+        self.assertEqual(response.data["total"], "84.75")
+
     def test_delete_is_soft(self):
         transaction_id = self._create_transaction().data["id"]
         response = self.client.delete(f"{TRANSACTIONS_URL}{transaction_id}/")
@@ -112,6 +131,66 @@ class FinancesAPITests(HouseholdAPITestCase):
             response = self.client.get(CATEGORIES_URL)
         labels = {f"{c['category_group_name']} / {c['name']}" for c in self.results(response)}
         self.assertEqual(labels, {"Home / Groceries", "Car / Fuel"})
+
+    def test_category_list_has_rules_usage_and_active_today(self):
+        self._create_transaction()
+        today = timezone.localdate()
+        Category.objects.create(
+            household=self.alice_household,
+            category_group=self.alice_group,
+            name="Old trip",
+            end_date=today - timedelta(days=1),
+        )
+        response = self.client.get(CATEGORIES_URL)
+        self.assertEqual(response.status_code, 200)
+        rows = {c["name"]: c for c in self.results(response)}
+        self.assertTrue(rows["Groceries"]["active_today"])
+        self.assertEqual(rows["Groceries"]["transactions_count"], 1)
+        self.assertFalse(rows["Old trip"]["active_today"])
+        self.assertEqual(rows["Old trip"]["end_date"], str(today - timedelta(days=1)))
+        self.assertEqual(rows["Old trip"]["transactions_count"], 0)
+
+    def test_switched_off_group_makes_its_categories_inactive(self):
+        self.client.patch(
+            f"{CATEGORY_GROUPS_URL}{self.alice_group.id}/", {"is_active": False}, format="json"
+        )
+        rows = self.results(self.client.get(CATEGORIES_URL))
+        self.assertFalse(rows[0]["active_today"])
+        response = self._create_transaction()
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("category_id", response.data)
+
+    def test_category_with_transactions_cannot_be_deleted(self):
+        self._create_transaction()
+        response = self.client.delete(f"{CATEGORIES_URL}{self.alice_category.id}/")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.data)
+        self.assertTrue(Category.objects.filter(id=self.alice_category.id).exists())
+
+    def test_unused_category_can_be_deleted(self):
+        # A soft-deleted transaction doesn't block it (it is hidden everywhere already).
+        response = self._create_transaction()
+        self.client.delete(f"{TRANSACTIONS_URL}{response.data['id']}/")
+        response = self.client.delete(f"{CATEGORIES_URL}{self.alice_category.id}/")
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Category.objects.filter(id=self.alice_category.id).exists())
+
+    def test_group_with_used_categories_cannot_be_deleted(self):
+        self._create_transaction()
+        response = self.client.delete(f"{CATEGORY_GROUPS_URL}{self.alice_group.id}/")
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(CategoryGroup.objects.filter(id=self.alice_group.id).exists())
+
+    def test_unused_group_is_deleted_with_its_categories(self):
+        response = self.client.delete(f"{CATEGORY_GROUPS_URL}{self.alice_group.id}/")
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Category.objects.filter(id=self.alice_category.id).exists())
+
+    def test_cannot_delete_other_household_group(self):
+        bob_group = self.bob_category.category_group
+        response = self.client.delete(f"{CATEGORY_GROUPS_URL}{bob_group.id}/")
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(CategoryGroup.objects.filter(id=bob_group.id).exists())
 
     def test_category_counts_are_annotated(self):
         self._create_transaction(amount="10")

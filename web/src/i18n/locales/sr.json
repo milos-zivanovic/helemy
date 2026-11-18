@@ -5,11 +5,414 @@
   "language": {
     "label": "Jezik"
   },
-  "apiStatus": {
-    "title": "Veza sa API-jem",
-    "checking": "Proveravam…",
-    "ok": "API radi i traži prijavu (401), kako i treba.",
-    "unexpected": "API je odgovorio statusom {{status}}.",
-    "unreachable": "API nije dostupan na {{url}}. Da li je pokrenut?"
+  "nav": {
+    "home": "Početna",
+    "household": "Domaćinstvo",
+    "pendingInvitations": "Poziva na čekanju: {{n}}",
+    "profile": "Profil",
+    "finances": "Finansije",
+    "fitness": "Fitnes",
+    "nutrition": "Ishrana"
+  },
+  "common": {
+    "loading": "Učitavam…",
+    "retry": "Pokušaj ponovo",
+    "sending": "Šaljem…",
+    "yes": "Da",
+    "no": "Ne",
+    "save": "Sačuvaj",
+    "cancel": "Otkaži",
+    "choose": "Izaberite…",
+    "delete": "Obriši",
+    "previous": "Prethodna",
+    "next": "Sledeća",
+    "pageOf": "Strana {{page}} od {{pages}}"
+  },
+  "errors": {
+    "network": "Server nije dostupan. Proverite vezu i pokušajte ponovo.",
+    "throttled": "Previše pokušaja. Sačekajte malo pa pokušajte ponovo.",
+    "unexpected": "Došlo je do greške (status {{status}}). Pokušajte ponovo.",
+    "loadProfile": "Profil nije učitan."
+  },
+  "validation": {
+    "required": "Obavezno polje.",
+    "email": "Unesite ispravnu email adresu.",
+    "passwordMin": "Lozinka mora imati najmanje {{min}} karaktera.",
+    "passwordMismatch": "Lozinke se ne poklapaju.",
+    "maxLength": "Najviše {{max}} karaktera.",
+    "amount": "Unesite iznos veći od nule, najviše dve decimale (npr. 1250,50).",
+    "endBeforeStart": "Kraj ne može biti pre početka."
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Lozinka",
+      "passwordConfirm": "Ponovite lozinku",
+      "newPassword": "Nova lozinka",
+      "firstName": "Ime",
+      "lastName": "Prezime"
+    },
+    "login": {
+      "title": "Prijava",
+      "submit": "Prijavi se",
+      "invalidCredentials": "Pogrešan email ili lozinka.",
+      "forgotPassword": "Zaboravili ste lozinku?",
+      "noAccount": "Nemate nalog?",
+      "toRegister": "Registrujte se"
+    },
+    "register": {
+      "title": "Registracija",
+      "submit": "Napravi nalog",
+      "haveAccount": "Već imate nalog?",
+      "toLogin": "Prijavite se"
+    },
+    "forgot": {
+      "title": "Zaboravljena lozinka",
+      "intro": "Unesite email naloga i poslaćemo vam link za postavljanje nove lozinke.",
+      "submit": "Pošalji link",
+      "sent": "Ako nalog sa tim emailom postoji, poslali smo link. Važi jedan sat."
+    },
+    "reset": {
+      "title": "Nova lozinka",
+      "submit": "Sačuvaj lozinku",
+      "done": "Lozinka je promenjena. Prijavite se novom lozinkom.",
+      "invalidLink": "Link nije ispravan ili je istekao.",
+      "requestNew": "Zatražite novi link"
+    },
+    "backToLogin": "Nazad na prijavu",
+    "logout": "Odjavi se"
+  },
+  "home": {
+    "greeting": "Zdravo, {{name}}!",
+    "pendingInvitations": "Poziva u domaćinstvo na čekanju: {{n}}.",
+    "openHousehold": "Otvori domaćinstvo",
+    "members": "članova: {{n}}",
+    "viewInvitations": "Pogledajte",
+    "thisMonth": "Ovaj mesec",
+    "openReports": "Izveštaji",
+    "budgetsAttention": "Budžeti pri kraju",
+    "openBudgets": "Svi budžeti",
+    "openAccounts": "Računi i prenosi"
+  },
+  "household": {
+    "title": "Domaćinstvo",
+    "roles": {
+      "owner": "vlasnik",
+      "member": "član"
+    },
+    "details": {
+      "title": "Podaci",
+      "name": "Naziv",
+      "role": "Vaša uloga",
+      "memberCount": "Broj članova",
+      "rename": "Preimenuj"
+    },
+    "members": {
+      "title": "Članovi",
+      "you": "vi",
+      "remove": "Ukloni",
+      "removeConfirm": "Ukloniti korisnika {{name}} iz domaćinstva?",
+      "leave": "Napusti domaćinstvo",
+      "leaveInfo": "Kad napustite domaćinstvo, ponovo postajete vlasnik svog ličnog domaćinstva sa podacima koje ste u njemu imali. Ono što ste uneli ovde ostaje ovom domaćinstvu.",
+      "leaveConfirm": "Sigurno napuštate domaćinstvo?"
+    },
+    "invite": {
+      "title": "Pozivanje članova",
+      "intro": "Pozovite osobu koja već ima nalog. Poziv će videti kad se prijavi.",
+      "submit": "Pošalji poziv",
+      "sent": "Poziv je poslat korisniku {{email}}.",
+      "pending": "Poslati pozivi",
+      "cancel": "Povuci"
+    },
+    "received": {
+      "title": "Pozivi za vas",
+      "text": "{{who}} vas poziva u domaćinstvo „{{household}}”.",
+      "warning": "Ako prihvatite, prelazite u to domaćinstvo. Vaše trenutno domaćinstvo se čuva sa svim podacima i vraćate mu se ako ga napustite.",
+      "confirm": "Prihvatiti poziv?",
+      "accept": "Prihvati",
+      "decline": "Odbij"
+    }
+  },
+  "profile": {
+    "title": "Profil",
+    "account": "Nalog",
+    "name": "Ime i prezime",
+    "currency": "Valuta",
+    "timezone": "Vremenska zona",
+    "language": "Jezik",
+    "memberSince": "Član od",
+    "password": {
+      "title": "Promena lozinke",
+      "current": "Trenutna lozinka",
+      "submit": "Promeni lozinku",
+      "info": "Posle promene bićete odjavljeni na svim ostalim uređajima.",
+      "changed": "Lozinka je promenjena. Ostali uređaji su odjavljeni."
+    }
+  },
+  "finances": {
+    "title": "Finansije",
+    "tabs": {
+      "transactions": "Transakcije",
+      "categories": "Kategorije",
+      "budgets": "Budžeti",
+      "reports": "Izveštaji",
+      "accounts": "Računi"
+    },
+    "types": {
+      "expense": "Rashod",
+      "income": "Prihod"
+    },
+    "fields": {
+      "type": "Vrsta",
+      "title": "Naziv",
+      "amount": "Iznos",
+      "date": "Datum",
+      "category": "Kategorija",
+      "description": "Opis",
+      "isFixed": "Fiksni trošak (ponavlja se svakog meseca)",
+      "account": "Račun"
+    },
+    "filters": {
+      "allTypes": "Sve vrste",
+      "allCategories": "Sve kategorije",
+      "search": "Pretraga",
+      "allAccounts": "Svi računi"
+    },
+    "totals": {
+      "income": "Prihodi",
+      "expense": "Rashodi",
+      "balance": "Saldo"
+    },
+    "transactions": {
+      "new": "Nova transakcija",
+      "edit": "Izmena transakcije",
+      "empty": "Nema transakcija za izabrane filtere.",
+      "previousMonth": "Prethodni mesec",
+      "nextMonth": "Sledeći mesec",
+      "deleteConfirm": "Obrisati transakciju?",
+      "backToList": "Nazad na listu"
+    },
+    "categories": {
+      "intro": "Kategorije su grupisane. Transakcija može da koristi samo kategoriju koja je aktivna na njen datum.",
+      "newGroup": "Nova grupa",
+      "newCategory": "Nova kategorija",
+      "editCategory": "Izmena kategorije",
+      "groupName": "Naziv grupe",
+      "name": "Naziv",
+      "group": "Grupa",
+      "isActive": "Uključena",
+      "off": "isključena",
+      "inactiveToday": "danas neaktivna",
+      "switchOff": "Isključi",
+      "switchOn": "Uključi",
+      "emptyGroup": "Nema kategorija.",
+      "transactionsCount": "transakcija: {{n}}",
+      "deleteGroupConfirm": "Obrisati grupu i sve njene kategorije?",
+      "deleteCategoryConfirm": "Obrisati kategoriju?",
+      "groupInUse": "Grupa ima kategorije sa transakcijama i ne može da se obriše. Isključite je umesto toga.",
+      "categoryInUse": "Kategorija ima transakcije i ne može da se obriše. Isključite je umesto toga.",
+      "backToList": "Nazad na kategorije",
+      "period": "Jednokratni period",
+      "periodHelp": "Opciono: kategorija važi samo između ovih datuma (npr. putovanje, renoviranje).",
+      "startDate": "Od",
+      "endDate": "Do",
+      "yearly": "Svake godine",
+      "yearlyHelp": "Opciono: kategorija važi svake godine u ovom periodu (npr. grejanje od 15. oktobra do 15. aprila).",
+      "fromMonth": "Od meseca",
+      "toMonth": "Do meseca",
+      "day": "Dan",
+      "monthAndDay": "Izaberite i mesec i dan, ili ništa.",
+      "invalidDay": "Taj mesec nema taj dan.",
+      "rules": {
+        "from": "od {{date}}",
+        "until": "do {{date}}",
+        "yearly": "{{window}}, svake godine"
+      }
+    },
+    "budgets": {
+      "new": "Novi budžet",
+      "edit": "Izmena budžeta",
+      "active": "Aktivni danas",
+      "byYear": "Svi budžeti",
+      "previousYear": "Prethodna godina",
+      "nextYear": "Sledeća godina",
+      "total": "Ukupno",
+      "spentOf": "{{spent}} od {{amount}}",
+      "left": "Preostalo {{amount}}",
+      "over": "Prekoračeno za {{amount}}",
+      "noneActive": "Nema budžeta koji važe danas.",
+      "noneInYear": "Nema budžeta u {{year}}. godini.",
+      "amount": "Iznos budžeta",
+      "thisMonth": "Ovaj mesec",
+      "nextMonth": "Sledeći mesec",
+      "thisYear": "Ova godina",
+      "overlap": "Ova kategorija već ima budžet koji se preklapa sa izabranim periodom.",
+      "deleteConfirm": "Obrisati budžet?",
+      "backToList": "Nazad na budžete"
+    },
+    "reports": {
+      "lastMonth": "Prošli mesec",
+      "lastThreeMonths": "Poslednja 3 meseca",
+      "expensesBy": "Rashodi po grupama",
+      "incomeBy": "Prihodi po grupama",
+      "allGroups": "Sve grupe",
+      "byGroupHint": "Kliknite na grupu da vidite njene kategorije.",
+      "byCategoryHint": "Kategorije izabrane grupe.",
+      "noData": "Nema transakcija u ovom periodu.",
+      "balanceTitle": "Stanje računa",
+      "balanceHint": "Stanje na kraju svakog dana: početno stanje računa plus sve promene.",
+      "balance": "Saldo",
+      "dayNet": "Promena tog dana",
+      "showTable": "Prikaži kao tabelu"
+    },
+    "accounts": {
+      "total": "Ukupno stanje",
+      "new": "Novi račun",
+      "edit": "Izmena računa",
+      "name": "Naziv (npr. Tekući račun, Gotovina, Štednja)",
+      "openingBalance": "Početno stanje",
+      "openingDate": "Na dan",
+      "openingHint": "Koliko je bilo na računu na početku tog dana. Transakcije pre tog datuma se vode u izveštajima, ali ne menjaju stanje (već su uračunate u početno).",
+      "isActive": "Aktivan (isključite kad zatvorite račun; ostaje u istoriji)",
+      "archived": "Arhivirani računi",
+      "openedWith": "Početno {{amount}} na dan {{date}}",
+      "noneActive": "Nema aktivnog računa. Prvo napravite račun.",
+      "backToList": "Nazad na račune",
+      "deleteConfirm": "Obrisati račun?",
+      "inUse": "Račun ima transakcije ili prenose, pa ne može da se obriše. Isključite ga (Aktivan) da se više ne nudi."
+    },
+    "transfers": {
+      "title": "Prenosi između računa",
+      "new": "Novi prenos",
+      "edit": "Izmena prenosa",
+      "from": "Sa računa",
+      "to": "Na račun",
+      "hint": "Prebacivanje novca između vaših računa (npr. podizanje gotovine). Nije ni prihod ni rashod: menja samo stanja ta dva računa.",
+      "sameAccount": "Izaberite drugi račun.",
+      "empty": "Još nema prenosa.",
+      "deleteConfirm": "Obrisati prenos?"
+    }
+  },
+  "fitness": {
+    "title": "Fitnes",
+    "tabs": {
+      "trainings": "Treninzi",
+      "exercises": "Vežbe"
+    },
+    "fields": {
+      "name": "Naziv",
+      "trainingName": "Naziv (opciono, npr. Push dan)",
+      "muscleGroup": "Mišićna grupa",
+      "muscleGroups": "Mišićne grupe",
+      "description": "Opis",
+      "date": "Datum",
+      "notes": "Beleška",
+      "exercise": "Vežba",
+      "weight": "Težina (kg)",
+      "reps": "Ponavljanja"
+    },
+    "validation": {
+      "weight": "Težina u kg, do dve decimale (npr. 82,5), ili prazno.",
+      "reps": "Ceo broj veći od nule."
+    },
+    "trainings": {
+      "new": "Novi trening",
+      "edit": "Izmeni trening",
+      "start": "Započni trening",
+      "empty": "Još nema treninga.",
+      "backToList": "Nazad na treninge",
+      "summary": "Vežbi: {{exercises}} · serija: {{sets}}",
+      "deleteConfirm": "Obrisati ceo trening sa svim serijama?",
+      "muscleGroupsHint": "Ako izaberete grupe, nude se samo vežbe tih grupa. Bez izbora, nude se sve vežbe.",
+      "addExercise": "Dodaj vežbu",
+      "addFirstSet": "Dodaj vežbu i prvu seriju",
+      "addSet": "Dodaj seriju",
+      "editSet": "Izmeni",
+      "deleteSet": "Obriši seriju {{n}}",
+      "lastTime": "Prošli put ({{date}}):",
+      "removeExercise": "Ukloni vežbu",
+      "removeExerciseConfirm": "Ukloniti vežbu i sve njene serije iz ovog treninga?",
+      "noExercisesLeft": "Nema više vežbi za izabrane mišićne grupe.",
+      "weightHint": "Težinu ostavite praznu za vežbe sa sopstvenom težinom (zgibovi, sklekovi)."
+    },
+    "exercises": {
+      "new": "Nova vežba",
+      "edit": "Izmena vežbe",
+      "empty": "Još nema vežbi. Dodajte prvu.",
+      "backToList": "Nazad na vežbe",
+      "noMuscleGroup": "Bez mišićne grupe",
+      "deleteConfirm": "Obrisati vežbu?",
+      "inUse": "Vežba je korišćena u treninzima, pa ne može da se obriše (izgubila bi se istorija)."
+    },
+    "progress": {
+      "title": "Napredak",
+      "empty": "Ova vežba još nije rađena na vašim treninzima.",
+      "bestWeight": "Najveća težina",
+      "bestReps": "Najviše ponavljanja",
+      "lastTime": "Poslednji put",
+      "trainings": "Treninga",
+      "chartWeight": "Najteža serija na svakom treningu (kg)",
+      "chartReps": "Ukupno ponavljanja na svakom treningu",
+      "showAll": "Svi treninzi sa ovom vežbom"
+    }
+  },
+  "nutrition": {
+    "title": "Ishrana",
+    "tabs": {
+      "diary": "Dnevnik",
+      "foods": "Namirnice"
+    },
+    "per100": "{{kcal}} kcal / 100 g",
+    "fields": {
+      "food": "Namirnica",
+      "grams": "Grama",
+      "name": "Naziv",
+      "description": "Opis (opciono)",
+      "calories": "Kalorije",
+      "protein": "Proteini",
+      "carbs": "Ugljeni hidrati",
+      "fat": "Masti",
+      "kcal": "kcal",
+      "proteinG": "Proteini (g)",
+      "carbsG": "Ugljeni hidrati (g)",
+      "fatG": "Masti (g)"
+    },
+    "short": {
+      "protein": "P",
+      "carbs": "UH",
+      "fat": "M"
+    },
+    "validation": {
+      "grams": "Unesi ceo broj grama od 1 do 10000.",
+      "calories": "Unesi ceo broj od 0 do 900.",
+      "macro": "Unesi ceo broj od 0 do 100.",
+      "pickFood": "Izaberi namirnicu sa liste."
+    },
+    "diary": {
+      "previousDay": "Prethodni dan",
+      "nextDay": "Sledeći dan",
+      "today": "Danas",
+      "add": "Dodaj u dnevnik",
+      "addButton": "Dodaj",
+      "searchFood": "Počni da kucaš naziv…",
+      "noFoodFound": "Nema namirnice sa tim nazivom.",
+      "missingFood": "Nema je na listi?",
+      "empty": "Za ovaj dan nema unosa.",
+      "macros": "P {{protein}} g · UH {{carbs}} g · M {{fat}} g",
+      "editGrams": "Izmeni",
+      "deleteEntry": "Obriši {{food}}",
+      "week": "Nedelja",
+      "day": "Dan"
+    },
+    "foods": {
+      "new": "Nova namirnica",
+      "edit": "Izmena namirnice",
+      "search": "Pretraga",
+      "empty": "Još nema namirnica. Dodaj prvu.",
+      "backToList": "Nazad na namirnice",
+      "per100Hint": "Vrednosti na 100 g (kao na deklaraciji)",
+      "deleteConfirm": "Obrisati namirnicu?",
+      "inUse": "Namirnica je u dnevniku i ne može da se obriše."
+    }
   }
 }

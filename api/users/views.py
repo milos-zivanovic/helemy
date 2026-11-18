@@ -147,6 +147,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
             return UserDetailSerializer
         return UserSerializer
 
+    @extend_schema(tags=["Users"], responses={200: UserDetailSerializer})
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
         serializer = UserDetailSerializer(request.user, context={"request": request})
@@ -191,13 +192,21 @@ class HouseholdViewSet(
     def get_queryset(self):
         return self.request.user.households.select_related("owner").all()
 
-    @action(detail=True, methods=["get"], url_path="members")
+    @extend_schema(tags=["Households"], responses={200: UserSerializer(many=True)})
+    @action(
+        detail=True, methods=["get"], url_path="members", pagination_class=None, filter_backends=[]
+    )
     def members(self, request, pk=None):
         household = self.get_object()
         members = household.members.all()
         serializer = UserSerializer(members, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["Households"],
+        request=InviteMemberSerializer,
+        responses={201: HouseholdInvitationSerializer},
+    )
     @action(detail=True, methods=["post"], url_path="invite")
     def invite_member(self, request, pk=None):
         household = self.get_object()
@@ -233,6 +242,7 @@ class HouseholdViewSet(
         active = request.user.get_active_household()
         return Response(HouseholdSerializer(active, context={"request": request}).data)
 
+    @extend_schema(tags=["Households"], responses={204: None})
     @action(detail=True, methods=["delete"], url_path=r"members/(?P<user_id>\d+)")
     def remove_member(self, request, pk=None, user_id=None):
         household = self.get_object()

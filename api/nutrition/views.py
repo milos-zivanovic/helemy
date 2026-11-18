@@ -44,6 +44,12 @@ class FoodViewSet(HouseholdModelViewSet):
             return FoodCreateSerializer
         return FoodSerializer
 
+    def perform_destroy(self, instance):
+        # The database protects foods that were eaten (PROTECT); answer with a 400, not a 500.
+        if instance.consumptions.exists():
+            raise ValidationError({"detail": "This food is in the diary and can't be deleted."})
+        instance.delete()
+
 
 @extend_schema_view(
     list=extend_schema(tags=["Nutrition - Consumptions"]),
@@ -77,7 +83,13 @@ class ConsumptionViewSet(HouseholdModelViewSet):
         ],
         responses={200: WeeklyNutritionSummarySerializer(many=True)},
     )
-    @action(detail=False, methods=["get"], url_path="weekly-summary", filter_backends=[])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="weekly-summary",
+        filter_backends=[],
+        pagination_class=None,  # a plain list of 7 days; without this the schema says "paginated"
+    )
     def weekly_summary(self, request):
         """
         Calories and macros per day for the calendar week (Monday to Sunday) containing `date`.

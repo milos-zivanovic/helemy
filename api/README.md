@@ -20,7 +20,7 @@ Dependencies and tool config (ruff, coverage) are in [`pyproject.toml`](pyprojec
 api/
 ├── life_tracker/   # Django project: settings.py, urls.py, wsgi/asgi
 ├── users/          # Custom User (login by email), Household, membership endpoints
-├── finances/       # Category groups, categories, transactions, budgets
+├── finances/       # Accounts, transfers, category groups, categories, transactions, budgets
 ├── fitness/        # Muscle groups (global), exercises, trainings, items, sets
 ├── nutrition/      # Foods, consumptions, weekly summary
 ├── common/         # Household mixins, permissions, pagination, scoped FK field, test helpers
@@ -124,14 +124,17 @@ Onboarding a new user (what a client does after sign up):
 
 1. `POST /api/auth/register/` → `user` + `access` + `refresh`, so the user is logged in right away. A personal
    household ("<first name or email>'s Household") is created with the user as owner and only member, and
-   seeded with default finance category groups and categories (`finances.services.DEFAULT_CATEGORIES`).
+   seeded with default finance category groups and categories (`finances.services.DEFAULT_CATEGORIES`)
+   and one account, "Tekući račun", with balance 0 from today (`create_default_finances`).
    A user always belongs to exactly one household, and all domain data is stored there.
 2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`
    default `en`; users can't change these yet), `role` (`owner`/`member`) and `households`.
 3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
    starts empty. Muscle groups are global and already exist:
    - finances: `POST /api/finances/category-groups/` (`name`) and `POST /api/finances/categories/`
-     (`name`, `category_group_id`) for own categories. Transactions need an active category. Budgets are
+     (`name`, `category_group_id`) for own categories. `PATCH /api/finances/accounts/{id}/` sets the seeded
+     account's real `opening_balance` and `opening_date`; `POST` adds more (cash, savings). Transactions need
+     an active category and an active account (`account_id`). Budgets are
      optional (`POST /api/finances/budgets/` with `category_id`, `amount`, `start_date`, `end_date`)
    - fitness: `GET /api/fitness/muscle-groups/`, then `POST /api/fitness/exercises/` (`name`, optional
      `muscle_group_id`)
@@ -158,22 +161,61 @@ Endpoint groups:
 | Prefix | Content |
 |---|---|
 | `/api/auth/` | `register/`, `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/`, `households/` (members, invite, remove member, leave), `invitations/` (+ `accept/`, `decline/`) |
-| `/api/finances/` | `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
+| `/api/finances/` | `accounts/`, `transfers/`, `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
 | `/api/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
 | `/api/nutrition/` | `foods/`, `consumptions/` (`?date=`, `?start_date=`, `?end_date=`, `?food=`, `?user=`), `consumptions/weekly-summary/` |
 
 ## Finance rules worth knowing
 
-- **Active categories** (`Category.objects.active(on_date)`): `is_active` is on, the day is inside the optional
-  one-off range `start_date`..`end_date`, and inside the optional yearly window `start_month/start_day`..
-  `end_month/end_day` (a window may wrap the new year, e.g. 12/01..02/28). A group is active when it has an
-  active category. Lists accept `?active=true|false` and `?active_on=YYYY-MM-DD`.
+- **Active categories** (`Category.objects.active(on_date)`): `is_active` is on (the category's and its
+  group's), the day is inside the optional one-off range `start_date`..`end_date`, and inside the optional
+  yearly window `start_month/start_day`..`end_month/end_day` (a window may wrap the new year, e.g.
+  12/01..02/28). A group is active when it has an active category. Lists accept `?active=true|false` and `?active_on=YYYY-MM-DD`. The category list also returns
+  `active_today`, the activity rules and `transactions_count`.
+- A category or group that still has transactions can't be deleted (400): deleting would remove its
+  transactions too. Switch it off instead (`is_active=false`).
 - A transaction's category must be active on the transaction's `date`. This is checked only when the category
   or date changes, so old transactions in archived categories stay editable.
-- `transactions/breakdown/` and `transactions/balance-history/` accept the same filters as the list
-  (`start_date`, `end_date`, `category`, `category_group`, `transaction_type`, `is_fixed`, `search`).
+- The transaction list also returns `total_incomes`, `total_expenses` and `total` (decimal strings, like every
+  amount) for all transactions matching the filters, not just the current page.
+- Paginated lists return `count`, `next`, `previous`, `total_pages`, `current_page` and `results`
+  (`?page=`, `?page_size=` up to 100).
+- **Accounts** hold the money; every transaction belongs to one (`account_id`), and a `transfer` moves
+  money between two accounts (neither income nor expense). An account's `balance` (today) is
+  `opening_balance` + income - expenses + transfers in - transfers out, counted from its `opening_date`;
+  transactions dated earlier are history the opening balance already includes, so they show in reports but
+  don't change the balance. An archived account (`is_active=false`) takes no new transactions or transfers;
+  old ones stay editable. An account with transactions or transfers can't be deleted (400), only archived.
+- `transactions/breakdown/` accepts the same filters as the list (`start_date`, `end_date`, `category`,
+  `category_group`, `account`, `transaction_type`, `is_fixed`, `search`).
+- `transactions/balance-history/` is the real balance per day of all accounts, or of one (`account`), from
+  `start_date` (default: the earliest opening date) to `end_date` (default: today). An account counts from
+  its opening date; a transfer between two counted accounts cancels out.
 - `budgets/` returns the budgets active today with `total_amount`, `total_spent` and `percentage`;
   `budgets/all/?year=2026` pages through everything.
+
+## Fitness rules worth knowing
+
+- A training belongs to the member who logged it (one per member per day; a second one on the same
+  date is a 400 on `date`). Its exercises (`TrainingItem`) appear with their first set:
+  `POST trainings/{id}/sets/` (`exercise_id`, `weight` or null for bodyweight, `reps`) adds the next set
+  and creates the item when needed. When the training has muscle groups, the exercise must be in one.
+- `training-sets/{id}/` corrects a set (`PATCH` `weight`, `reps`) or deletes it; the remaining sets are
+  renumbered 1..n. `training-items/{id}/` (`DELETE`) removes an exercise with all its sets.
+- `exercises/{id}/history/` lists every training with the exercise, oldest first: sets, `max_weight`,
+  `total_reps`, `volume` (`?user=` for one member). An exercise used in a training can't be deleted
+  (400): deleting would erase that history.
+
+## Nutrition rules worth knowing
+
+- Foods are shared by the household; names are unique per household (case-insensitive). Values are
+  per 100 g, whole numbers: `calories` 0-900, `protein`/`carbs`/`fat` 0-100. A food that appears in a
+  consumption can't be deleted (400).
+- A consumption belongs to the member who logged it; `quantity_grams` is 1-10000. Calories and macros
+  of an entry are computed from the food (value per 100 g x grams / 100, rounded). The list shows the
+  whole household's entries; `?user=` narrows it to one member (the web diary asks for its own).
+- `consumptions/weekly-summary/?date=` returns the 7 days (Monday-Sunday) of that date's week, with
+  household totals and a `by_user` row for every member (zeros included).
 
 ## Data isolation (important)
 
