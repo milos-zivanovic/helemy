@@ -3,7 +3,7 @@
 // tests (webServer in playwright.config.ts) and stops it afterwards.
 //
 // Usage: node e2e/api-server.mjs <port> <web origin allowed by CORS>
-// Python: the repo's .venv, or E2E_PYTHON to point at another interpreter.
+// Python: api/.venv, or E2E_PYTHON to point at another interpreter.
 
 import { spawn, spawnSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
@@ -19,7 +19,7 @@ if (!port || !webOrigin) {
 const apiDir = resolve(import.meta.dirname, '../../api')
 const python =
   process.env.E2E_PYTHON ??
-  resolve(apiDir, '../.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
+  resolve(apiDir, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
 
 // Outside the repo, and never api/data/: the tests must not touch a real database.
 const database = join(tmpdir(), 'helemy-e2e.sqlite3')

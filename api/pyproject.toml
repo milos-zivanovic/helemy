@@ -69,7 +69,7 @@ quote-style = "double"
 indent-style = "space"
 
 # Tests run with Django's runner. Coverage, from api/:
-#   ../.venv/Scripts/python.exe -m coverage run manage.py test && ../.venv/Scripts/python.exe -m coverage report
+#   .venv/Scripts/python.exe -m coverage run manage.py test && .venv/Scripts/python.exe -m coverage report
 [tool.coverage.run]
 source = ["helemy", "users", "finances", "fitness", "nutrition", "common"]
 omit = [

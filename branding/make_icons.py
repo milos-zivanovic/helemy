@@ -1,7 +1,7 @@
 """
 Make the web icons from the master logo (branding/logo.png). Run from the repo root:
 
-    .venv/Scripts/python.exe branding/make_icons.py
+    api/.venv/Scripts/python.exe branding/make_icons.py
 
 The logo is a symbol on a transparent background. It is trimmed to its visible part and centred on
 a square canvas with a little padding. The opaque icons put it on the brand's dark background.

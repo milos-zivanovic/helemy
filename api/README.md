@@ -59,13 +59,12 @@ docker compose --profile dev down
 
 ## Running on the host (without Docker)
 
-Needs Python 3.12+. The virtualenv lives in the repo root (`.venv`), dependencies come from `api/pyproject.toml`.
-From the repo root:
+Needs Python 3.12+. The virtualenv lives in this folder (`api/.venv`), dependencies come from `api/pyproject.toml`.
+From `api/`:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
-cd api
 pip install ".[dev]"
 # create api/.env with at least: DEBUG=1 and SECRET_KEY=<any string> (all variables: Configuration below)
 mkdir -p data

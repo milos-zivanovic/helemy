@@ -98,7 +98,7 @@ account, add an income and an expense, transfer to the savings account, check th
 the transaction list, the accounts page and the home page, then log out and back in. Playwright starts
 both servers itself (`webServer` in `playwright.config.ts`) and stops them afterwards:
 
-- the API on http://127.0.0.1:8010 via `e2e/api-server.mjs`: the repo's `.venv` (or `E2E_PYTHON`), a
+- the API on http://127.0.0.1:8010 via `e2e/api-server.mjs`: `api/.venv` (or `E2E_PYTHON`), a
   fresh SQLite database in the system temp folder every run (never `api/data/`), migrations, `runserver`
 - the web dev server on http://127.0.0.1:3010, pointed at that API
 

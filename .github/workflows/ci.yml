@@ -148,7 +148,7 @@ jobs:
       - name: Smoke test (Playwright)
         working-directory: web
         env:
-          E2E_PYTHON: python # setup-python's interpreter instead of the repo's .venv
+          E2E_PYTHON: python # setup-python's interpreter instead of api/.venv
         run: npm run test:e2e
       # On a failure: screenshot and trace, downloadable from the run's page (Artifacts).
       - name: Upload Playwright results
