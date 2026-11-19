@@ -5,6 +5,8 @@ from django.utils import timezone
 
 from common.testing import HouseholdAPITestCase
 from fitness.models import Exercise, MuscleGroup, Training, TrainingSet
+from users.models import HouseholdInvitation
+from users.services import accept_invitation
 
 EXERCISES_URL = "/api/fitness/exercises/"
 MUSCLE_GROUPS_URL = "/api/fitness/muscle-groups/"
@@ -72,6 +74,36 @@ class FitnessAPITests(HouseholdAPITestCase):
         payload = {"date": "2026-01-10"}
         self.assertEqual(self.client.post(TRAININGS_URL, payload, format="json").status_code, 201)
         self.assertEqual(self.client.post(TRAININGS_URL, payload, format="json").status_code, 400)
+
+    def test_exercises_of_several_muscle_groups(self):
+        # The web asks with one comma-separated value; a repeated key would count only the last.
+        back = MuscleGroup.objects.create(name="Back", order=2)
+        row = Exercise.objects.create(
+            household=self.alice_household, muscle_group=back, name="Barbell row"
+        )
+        response = self.client.get(
+            EXERCISES_URL, {"muscle_group__in": f"{self.chest.id},{back.id}"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({e["id"] for e in self.results(response)}, {self.alice_bench.id, row.id})
+
+    def test_household_members_each_get_one_training_per_day(self):
+        # Bob joins Alice's household: both may train on the same day, each only once.
+        accept_invitation(
+            HouseholdInvitation.objects.create(
+                household=self.alice_household, invited_user=self.bob, invited_by=self.alice
+            )
+        )
+        payload = {"date": "2026-01-10"}
+        self.assertEqual(self.client.post(TRAININGS_URL, payload, format="json").status_code, 201)
+        self.client.force_authenticate(self.bob)
+        response = self.client.post(TRAININGS_URL, payload, format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(self.client.post(TRAININGS_URL, payload, format="json").status_code, 400)
+        self.assertEqual(
+            Training.objects.filter(household=self.alice_household, date=date(2026, 1, 10)).count(),
+            2,
+        )
 
     def test_moving_training_to_a_taken_date_is_400_not_500(self):
         Training.objects.create(

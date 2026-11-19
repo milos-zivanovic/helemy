@@ -51,7 +51,7 @@ export function CategoriesPage() {
     <div className="flex flex-col gap-4">
       <p className="text-sm text-slate-600">{t('finances.categories.intro')}</p>
       {creatingGroup ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="surface p-4">
           <GroupNameForm onDone={() => setCreatingGroup(false)} />
         </div>
       ) : (
@@ -81,9 +81,7 @@ function GroupCard({ group, categories }: { group: Group; categories: Category[]
   const error = deleteError || (update.error && errorMessage(update.error, t))
 
   return (
-    <section
-      className={`rounded-lg border border-slate-200 bg-white p-4 ${isActive ? '' : 'opacity-70'}`}
-    >
+    <section className={`surface p-4 ${isActive ? '' : 'opacity-70'}`}>
       {renaming ? (
         <GroupNameForm group={group} onDone={() => setRenaming(false)} />
       ) : (

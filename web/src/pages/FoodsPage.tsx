@@ -6,6 +6,7 @@ import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { LinkButton } from '../components/Button'
 import { TextField } from '../components/TextField'
+import { Icon } from '../components/Icon'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useFoods } from '../nutrition/hooks'
 
@@ -27,19 +28,22 @@ export function FoodsPage() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <LinkButton to="/nutrition/foods/new">{t('nutrition.foods.new')}</LinkButton>
+        <LinkButton to="/nutrition/foods/new">
+          <Icon name="plus" className="size-4" />
+          {t('nutrition.foods.new')}
+        </LinkButton>
       </div>
 
       {foods.isPending && <p className="text-sm text-slate-600">{t('common.loading')}</p>}
       {foods.isError && <Alert tone="error">{errorMessage(foods.error, t)}</Alert>}
       {foods.data?.length === 0 && (
-        <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+        <p className="surface p-8 text-center text-sm text-slate-500">
           {search ? t('nutrition.diary.noFoodFound') : t('nutrition.foods.empty')}
         </p>
       )}
       {foods.data && foods.data.length > 0 && (
         <ul
-          className={`divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white ${
+          className={`surface divide-y divide-slate-100 overflow-hidden ${
             foods.isPlaceholderData ? 'opacity-60' : ''
           }`}
         >

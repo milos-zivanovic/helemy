@@ -44,7 +44,7 @@ export function DiaryPage() {
   const dayTotals = week.data?.find((day) => day.date === date)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button
@@ -72,15 +72,20 @@ export function DiaryPage() {
 
       <Totals totals={dayTotals ? mine(dayTotals) : undefined} />
 
-      <Card title={t('nutrition.diary.add')}>
-        {/* key: switching days starts a fresh form */}
-        <AddEntryForm key={date} date={date} />
-      </Card>
-
-      <Entries date={date} />
-
-      {week.isError && <Alert tone="error">{errorMessage(week.error, t)}</Alert>}
-      {week.data && <WeekTable days={week.data} selected={date} mine={mine} onSelect={goTo} />}
+      {/* From a laptop up: the day on the left (add + entries), the week beside it */}
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-5">
+        <div className="flex flex-col gap-4 xl:col-span-3">
+          <Card title={t('nutrition.diary.add')}>
+            {/* key: switching days starts a fresh form */}
+            <AddEntryForm key={date} date={date} />
+          </Card>
+          <Entries date={date} />
+        </div>
+        <div className="flex flex-col gap-4 xl:col-span-2">
+          {week.isError && <Alert tone="error">{errorMessage(week.error, t)}</Alert>}
+          {week.data && <WeekTable days={week.data} selected={date} mine={mine} onSelect={goTo} />}
+        </div>
+      </div>
     </div>
   )
 }
@@ -177,15 +182,13 @@ function Entries({ date }: { date: string }) {
   if (!entries.data) return null
   if (entries.data.length === 0) {
     return (
-      <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-        {t('nutrition.diary.empty')}
-      </p>
+      <p className="surface p-8 text-center text-sm text-slate-500">{t('nutrition.diary.empty')}</p>
     )
   }
 
   return (
     <ul
-      className={`divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white ${
+      className={`surface divide-y divide-slate-100 ${
         entries.isPlaceholderData ? 'opacity-60' : ''
       }`}
     >
@@ -328,7 +331,7 @@ function WeekTable({
               return (
                 <tr
                   key={day.date}
-                  className={`cursor-pointer hover:bg-slate-50 ${day.date === selected ? 'bg-slate-100 font-medium' : ''}`}
+                  className={`cursor-pointer hover:bg-slate-50 ${day.date === selected ? 'bg-brand-50 text-brand-700 font-medium' : ''}`}
                   onClick={() => onSelect(day.date)}
                 >
                   <td className="px-2 py-1.5">

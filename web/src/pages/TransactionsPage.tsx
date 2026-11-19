@@ -9,6 +9,8 @@ import { SelectField } from '../components/SelectField'
 import { StatTile } from '../components/StatTile'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
+import { segmentedOption, segmentedTrack } from '../components/segmented'
+import { Icon } from '../components/Icon'
 import { CategoryOptions } from '../finances/CategoryOptions'
 import {
   type Transaction,
@@ -25,6 +27,7 @@ import { useActiveHousehold } from '../household/hooks'
 import { useFormatters } from '../i18n/format'
 import { currentMonth, fullMonth, isDay, monthRange, shiftMonth, today } from '../lib/dates'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
+import { useMediaQuery } from '../lib/useMediaQuery'
 
 type Params = Record<string, string | null>
 type Type = NonNullable<TransactionFilters['transaction_type']>
@@ -92,43 +95,67 @@ export function TransactionsPage() {
   const error = view === 'list' ? list.error : totalsOnly.error
   const accounts = useAccounts()
   const backState = { back: location.pathname + location.search }
+  const wide = useMediaQuery('(min-width: 640px)')
+  // Open by itself when the page opens with filters already in the URL (e.g. a bookmark).
+  const activeFilters = [type, group, category, account, fixed, get('q')].filter(Boolean).length
+  const [filtersOpen, setFiltersOpen] = useState(activeFilters > 0)
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <TotalBalance />
         <LinkButton to="/finances/transactions/new" state={backState}>
-          + {t('finances.transactions.new')}
+          <Icon name="plus" className="size-4" />
+          {t('finances.transactions.new')}
         </LinkButton>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="surface flex flex-col gap-4 p-4 sm:p-5">
         <PeriodPicker start={start} end={end} onChange={updateParams} />
-        <Filters
-          type={type}
-          group={group}
-          category={category}
-          account={account}
-          fixed={fixed}
-          search={search}
-          onSearch={setSearch}
-          onChange={updateParams}
-        />
+        {/* On a phone the other filters fold away behind a button (with how many are set), so the
+            transactions aren't a whole screen down; from tablet width up they are always shown. */}
+        {!wide && (
+          <Button
+            variant="secondary"
+            className="self-start"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <Icon name="filter" className="size-4" />
+            {activeFilters > 0
+              ? t('finances.filters.toggleCount', { n: activeFilters })
+              : t('finances.filters.toggle')}
+            <Icon
+              name="chevronDown"
+              className={`size-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+            />
+          </Button>
+        )}
+        {(wide || filtersOpen) && (
+          <Filters
+            type={type}
+            group={group}
+            category={category}
+            account={account}
+            fixed={fixed}
+            search={search}
+            onSearch={setSearch}
+            onChange={updateParams}
+          />
+        )}
       </div>
 
       {error && <Alert tone="error">{errorMessage(error, t)}</Alert>}
       {totals && <Totals data={totals} showTransfers={account !== null} />}
 
-      <div className="flex self-start rounded-md border border-slate-300 p-1">
+      <div className={`${segmentedTrack} self-start`}>
         {(['list', 'chart'] as const).map((option) => (
           <button
             key={option}
             type="button"
             aria-pressed={view === option}
             onClick={() => updateParams({ view: option === 'list' ? null : option })}
-            className={`rounded px-3 py-1 text-sm font-medium ${
-              view === option ? 'bg-slate-900 text-white' : 'text-slate-700'
-            }`}
+            className={segmentedOption(view === option)}
           >
             {t(
               option === 'list'
@@ -147,7 +174,7 @@ export function TransactionsPage() {
             {/* isPlaceholderData: still showing the previous result while the new one loads */}
             <div className={list.isPlaceholderData ? 'opacity-60' : ''}>
               {list.data.pages[0].results.length === 0 ? (
-                <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+                <p className="surface p-8 text-center text-sm text-slate-500">
                   {t('finances.transactions.empty')}
                 </p>
               ) : (
@@ -426,7 +453,7 @@ function Breakdown({
   const breakdown = useBreakdown({ ...filters, transaction_type: type ?? 'expense' })
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
+    <section className="surface p-4 sm:p-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">
           {t(type === 'income' ? 'finances.reports.incomeBy' : 'finances.reports.expensesBy')}
@@ -536,7 +563,7 @@ function TransactionList({
           <h3 className="mb-1 px-1 text-xs font-medium text-slate-500 capitalize">
             {formatDay(day)}
           </h3>
-          <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <ul className="surface divide-y divide-slate-100 overflow-hidden">
             {dayItems.map((transaction) => (
               <li key={transaction.id}>
                 <TransactionRow
@@ -555,8 +582,9 @@ function TransactionList({
 }
 
 // Income in green, an expense in red. Half of a transfer in neutral grey: it moves money between
-// two accounts, it isn't income or expense. Its title names the other account, read from the API
-// each time (`transfer.account`), so it follows renames and the current language.
+// two accounts, it isn't income or expense. Its title starts with the row's own account, the one
+// the sign is about ("Savings ← Bank  +1.000", "Bank → Savings  -1.000"), then the other side.
+// Both names come from the API each time (`transfer.account`), so they follow renames.
 function TransactionRow({
   transaction,
   backState,
@@ -576,11 +604,12 @@ function TransactionRow({
 
   const [title, details, tone] = pair
     ? [
-        `⇄ ${t(outgoing ? 'finances.transfers.toAccount' : 'finances.transfers.fromAccount', {
-          name: pair.account.name,
+        `⇄ ${t(outgoing ? 'finances.transfers.outgoingLeg' : 'finances.transfers.incomingLeg', {
+          account: transaction.account.name,
+          other: pair.account.name,
         })}`,
-        // A transfer row always names its account: that's the side of the transfer it shows.
-        [transaction.account.name, transaction.description, user],
+        // The accounts are in the title already; the category ("Prenos") says what the row is.
+        [transaction.category.name, transaction.description, user],
         'text-slate-500',
       ]
     : [

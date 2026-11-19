@@ -159,11 +159,22 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     await page.getByRole('button', { name: tr('common.save') }).click()
     await expect(page).toHaveURL(/\/finances\/transactions(\?|$)/)
 
-    // Two linked transactions, one per account, each naming the other side.
-    await expect(row(page, tr('finances.transfers.toAccount', { name: SAVINGS }))).toBeVisible()
-    await expect(
-      row(page, tr('finances.transfers.fromAccount', { name: DEFAULT_ACCOUNT })),
-    ).toBeVisible()
+    // Two linked transactions, one per account: the title starts with the row's own account and
+    // the sign is about it. Newest first, so the incoming one (created second) is on top.
+    const amount = await money(page, 30000)
+    const incoming = row(
+      page,
+      tr('finances.transfers.incomingLeg', { account: SAVINGS, other: DEFAULT_ACCOUNT }),
+    )
+    const outgoing = row(
+      page,
+      tr('finances.transfers.outgoingLeg', { account: DEFAULT_ACCOUNT, other: SAVINGS }),
+    )
+    await expect(incoming).toContainText(`+${amount}`)
+    await expect(outgoing).toContainText(`-${amount}`)
+    const transferRows = page.getByRole('link').filter({ hasText: '⇄' })
+    await expect(transferRows).toHaveCount(2)
+    await expect(transferRows.first()).toContainText(`+${amount}`)
   })
 
   // 100.000 in, 2.500,50 out, 30.000 moved: 97.499,50 in total, 30.000 of it in savings.
@@ -246,5 +257,19 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     expect(response.status()).toBe(200)
     expect((await response.json()).language).toBe('en')
     await expect(savedLanguage('en')).toHaveText('English') // the page is in English now, too
+
+    // Logged out, the language is the browser's and not saved anywhere: Serbian on the login page.
+    await page.getByRole('button', { name: tr('auth.logout', {}, 'en') }).click()
+    await expect(page).toHaveURL('/login')
+    await page.getByLabel(tr('language.label', {}, 'en')).selectOption('sr')
+    await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
+    await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
+    await page.getByRole('button', { name: tr('auth.login.submit') }).click()
+
+    // Logged in (back on the page of the logout), the account's language wins: English again, and
+    // the account still says English.
+    await expect(page).toHaveURL('/profile')
+    await expect(page.getByRole('heading', { name: tr('profile.title', {}, 'en') })).toBeVisible()
+    await expect(savedLanguage('en')).toHaveText('English')
   })
 })

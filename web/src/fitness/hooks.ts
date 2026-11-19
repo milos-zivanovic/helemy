@@ -52,7 +52,15 @@ export function useExercises(muscleGroupIds: number[] = []) {
   return useQuery({
     queryKey: [FITNESS, 'exercises', query],
     queryFn: async () =>
-      unwrap(await api.GET('/api/fitness/exercises/', { params: { query } })).results,
+      unwrap(
+        await api.GET('/api/fitness/exercises/', {
+          params: { query },
+          // django-filter's `__in` wants one comma-separated value (?muscle_group__in=1,2). By
+          // default openapi-fetch repeats the key (?muscle_group__in=1&muscle_group__in=2), and
+          // Django then reads only the last one, so only the last muscle group's exercises came.
+          querySerializer: { array: { style: 'form', explode: false } },
+        }),
+      ).results,
   })
 }
 

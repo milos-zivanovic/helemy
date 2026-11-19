@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
+import { segmentedOption, segmentedTrack } from '../components/segmented'
+
 export type Kind = 'expense' | 'income' | 'transfer'
 
 /** What a new entry keeps when the user switches between the transaction and the transfer form. */
@@ -20,15 +22,10 @@ export function KindToggle({
 }) {
   const { t } = useTranslation()
   return (
-    <fieldset className="flex rounded-md border border-slate-300 p-1">
+    <fieldset className={segmentedTrack}>
       <legend className="sr-only">{t('finances.fields.type')}</legend>
       {kinds.map((kind) => (
-        <label
-          key={kind}
-          className={`flex-1 cursor-pointer rounded px-3 py-1.5 text-center text-sm font-medium ${
-            value === kind ? 'bg-slate-900 text-white' : 'text-slate-700'
-          }`}
-        >
+        <label key={kind} className={segmentedOption(value === kind, 'flex-1 cursor-pointer')}>
           <input
             type="radio"
             name="kind"

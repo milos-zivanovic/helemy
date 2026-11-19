@@ -27,7 +27,7 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
         {t('home.greeting', { name: me.first_name || me.email })}
       </h1>
       {pending > 0 && (
@@ -36,26 +36,41 @@ export function HomePage() {
           <TextLink to="/household">{t('home.viewInvitations')}</TextLink>
         </Alert>
       )}
-      <FinancesSummary />
-      <BudgetsAttention />
+      {/* One column on a phone; from a laptop up finances take two thirds, the rest goes beside */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <FinancesSummary />
+        <div className="flex flex-col gap-6">
+          <BudgetsAttention />
+          {household && <HouseholdSummary household={household} />}
+        </div>
+      </div>
       {/* Two columns from tablet width up, one under the other on a phone */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <FitnessSummary />
         <NutritionSummary userId={me.id} />
       </div>
-      {household && (
-        <Card title={t('nav.household')}>
-          <p className="text-sm">
-            {household.name} ·{' '}
-            {household.user_role ? t(`household.roles.${household.user_role}`) : '—'} ·{' '}
-            {t('home.members', { n: household.member_count })}
-          </p>
-          <TextLink to="/household" className="mt-2 inline-block text-sm">
-            {t('home.openHousehold')}
-          </TextLink>
-        </Card>
-      )}
     </div>
+  )
+}
+
+// The active household: name, the user's role and how many members it has.
+function HouseholdSummary({
+  household,
+}: {
+  household: NonNullable<ReturnType<typeof useActiveHousehold>>
+}) {
+  const { t } = useTranslation()
+  return (
+    <Card title={t('nav.household')}>
+      <p className="text-sm font-medium">{household.name}</p>
+      <p className="mt-1 text-sm text-slate-500">
+        {household.user_role ? t(`household.roles.${household.user_role}`) : '—'} ·{' '}
+        {t('home.members', { n: household.member_count })}
+      </p>
+      <TextLink to="/household" className="mt-3 inline-block text-sm">
+        {t('home.openHousehold')}
+      </TextLink>
+    </Card>
   )
 }
 
@@ -73,22 +88,19 @@ function FinancesSummary() {
   const open = accounts.data.filter((account) => account.is_active)
 
   return (
-    <Card title={t('nav.finances')}>
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="text-sm text-slate-500">{t('finances.accounts.total')}</p>
-          <p className={`text-3xl font-semibold ${total < 0 ? 'text-red-700' : ''}`}>
+    <Card title={t('nav.finances')} className="lg:col-span-2">
+      <div className="flex flex-col gap-5">
+        {/* The headline number on the logo's gradient: the one place it's this loud */}
+        <div className="bg-brand-gradient shadow-brand-500/20 rounded-2xl p-5 text-white shadow-lg sm:p-6">
+          <p className="text-sm text-white/80">{t('finances.accounts.total')}</p>
+          <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">
             {formatMoney(total)}
           </p>
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
+          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             {open.map((account) => (
               <li key={account.id} className="flex justify-between gap-3">
-                <span className="truncate text-slate-600">{account.name}</span>
-                <span
-                  className={`tabular-nums ${Number(account.balance) < 0 ? 'text-red-700' : ''}`}
-                >
-                  {formatMoney(account.balance)}
-                </span>
+                <span className="truncate text-white/80">{account.name}</span>
+                <span className="font-medium tabular-nums">{formatMoney(account.balance)}</span>
               </li>
             ))}
           </ul>

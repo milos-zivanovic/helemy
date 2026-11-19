@@ -1,4 +1,4 @@
-# Life Tracker services. Run from this folder, always with a profile:
+# Helemy services. Run from this folder, always with a profile:
 #   docker compose --profile dev up -d --build      web -> http://localhost:3000, API (SQLite) -> http://localhost:8000
 #   docker compose --profile dev-pg up -d --build   web -> http://localhost:3000, API (PostgreSQL) -> http://localhost:8001
 #   docker compose --profile prod up -d --build     web + API behind nginx -> http://localhost:8080, needs infrastructure/.env
@@ -25,7 +25,7 @@ services:
   # Development with SQLite (default)
   api-dev:
     build: *api-build
-    image: life-tracker-api:dev
+    image: helemy-api:dev
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ../api:/app          # live code reload
@@ -44,7 +44,7 @@ services:
     build:
       context: ../web
       target: dev
-    image: life-tracker-web:dev
+    image: helemy-web:dev
     volumes:
       - ../web:/app          # live code reload
       - /app/node_modules    # keep the image's Linux node_modules, don't use the host's
@@ -64,7 +64,7 @@ services:
   # Development with PostgreSQL
   api-dev-pg:
     build: *api-build
-    image: life-tracker-api:dev
+    image: helemy-api:dev
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ../api:/app
@@ -72,7 +72,7 @@ services:
       - "8001:8000"
     environment:
       <<: *api-dev-env
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/life_tracker
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/helemy
     depends_on:
       db:
         condition: service_healthy
@@ -96,13 +96,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: life_tracker
+      POSTGRES_DB: helemy
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d life_tracker"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d helemy"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -114,7 +114,7 @@ services:
   # Required variables come from infrastructure/.env (see infrastructure/README.md).
   api-prod:
     build: *api-build
-    image: life-tracker-api:prod
+    image: helemy-api:prod
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
@@ -127,9 +127,9 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       EMAIL_URL: ${EMAIL_URL:-consolemail://}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Life Tracker <noreply@localhost>}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Helemy <noreply@localhost>}
       PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:8080/reset-password?uid={uid}&token={token}}
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/life_tracker
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/helemy
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
     depends_on:
@@ -146,7 +146,7 @@ services:
     build:
       context: ../web
       target: prod
-    image: life-tracker-web:prod
+    image: helemy-web:prod
     ports:
       - "8080:80"
     depends_on:

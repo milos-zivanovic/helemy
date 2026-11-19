@@ -40,7 +40,7 @@ def send_password_reset_email(user):
     link = settings.PASSWORD_RESET_URL.format(uid=uid, token=token)
     minutes = settings.PASSWORD_RESET_TIMEOUT // 60
     send_mail(
-        subject=_("Life Tracker: reset your password"),
+        subject=_("Helemy: reset your password"),
         message=_(
             "Someone asked to reset the password for %(email)s.\n\n"
             "Open this link to choose a new password (valid for %(minutes)s minutes):\n"

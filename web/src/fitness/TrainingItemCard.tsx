@@ -54,7 +54,7 @@ export function TrainingItemCard({ item, training }: { item: TrainingItem; train
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4">
+    <section className="surface p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <Link
           to={`/fitness/exercises/${item.exercise.id}`}

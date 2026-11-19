@@ -16,11 +16,16 @@ export function HouseholdPage() {
   // sections away and mounts fresh ones, so no state (open forms, old errors) carries over.
   return (
     <div key={household.id} className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{t('household.title')}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t('household.title')}</h1>
       <ReceivedInvitations />
-      <HouseholdDetails household={household} />
-      <Members household={household} />
-      {household.user_role === 'owner' && <Invitations household={household} />}
+      {/* From a laptop up: the household and its members on the left, invitations on the right */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          <HouseholdDetails household={household} />
+          <Members household={household} />
+        </div>
+        {household.user_role === 'owner' && <Invitations household={household} />}
+      </div>
     </div>
   )
 }

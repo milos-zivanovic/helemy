@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Life Tracker"
+    "title": "Helemy"
   },
   "language": {
     "label": "Jezik"
@@ -188,7 +188,9 @@
       "fixed": "Fiksni troškovi",
       "fixedAll": "Svi",
       "fixedOnly": "Samo fiksni",
-      "fixedNone": "Bez fiksnih"
+      "fixedNone": "Bez fiksnih",
+      "toggle": "Filteri",
+      "toggleCount": "Filteri ({{n}})"
     },
     "totals": {
       "income": "Prihodi",
@@ -309,8 +311,8 @@
       "hint": "Prebacivanje novca između vaših računa (npr. podizanje gotovine). Pravi dve povezane transakcije, odlaznu i dolaznu: menjaju stanja ta dva računa, ali se ne računaju u prihode i rashode.",
       "sameAccount": "Izaberite drugi račun.",
       "deleteConfirm": "Obrisati prenos?",
-      "toAccount": "Prenos na {{name}}",
-      "fromAccount": "Prenos sa {{name}}"
+      "outgoingLeg": "{{account}} → {{other}}",
+      "incomingLeg": "{{account}} ← {{other}}"
     }
   },
   "fitness": {

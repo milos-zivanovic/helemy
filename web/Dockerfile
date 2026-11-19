@@ -1,4 +1,4 @@
-# Life Tracker web image. Build context is web/ (this folder), see infrastructure/docker-compose.yml.
+# Helemy web image. Build context is web/ (this folder), see infrastructure/docker-compose.yml.
 # Targets: `dev` (Vite dev server, code mounted from the host) and `prod` (static build behind nginx).
 
 # ---- Dependencies: installed from the lockfile, Linux binaries (not the host's node_modules) ----

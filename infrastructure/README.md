@@ -1,4 +1,4 @@
-# infrastructure — Docker Compose for the Life Tracker services
+# infrastructure — Docker Compose for the Helemy services
 
 Everything needed to run the project's services in containers, so the host only needs Docker.
 It runs the API (`../api`), PostgreSQL and the web client (`../web`). The mobile app (`../mobile`) runs
@@ -111,7 +111,7 @@ set up yet.
   | `CORS_ALLOWED_ORIGINS` | no | `http://localhost:3000` |
   | `POSTGRES_PASSWORD` | no | `postgres` (also used by `dev-pg`) |
   | `EMAIL_URL` | no | `consolemail://` (emails printed to the container log) |
-  | `DEFAULT_FROM_EMAIL` | no | `Life Tracker <noreply@localhost>` |
+  | `DEFAULT_FROM_EMAIL` | no | `Helemy <noreply@localhost>` |
   | `PASSWORD_RESET_URL` | no | `http://localhost:8080/reset-password?uid={uid}&token={token}` (the web app of this profile) |
 - The full list of API variables and their defaults: [`../api/README.md`](../api/README.md#configuration).
 

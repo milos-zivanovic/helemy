@@ -1,7 +1,8 @@
 // How much of a limit is used. Green under 80 %, amber up to 100 %, red above; the bar itself stops
 // at 100 % while the label shows the real percentage (e.g. 135 %).
 export function ProgressBar({ percentage, label }: { percentage: number; label: string }) {
-  const tone = percentage > 100 ? 'bg-red-600' : percentage >= 80 ? 'bg-amber-500' : 'bg-green-600'
+  const tone =
+    percentage > 100 ? 'bg-red-500' : percentage >= 80 ? 'bg-amber-400' : 'bg-brand-gradient'
   const width = Math.min(Math.max(percentage, 0), 100)
 
   return (

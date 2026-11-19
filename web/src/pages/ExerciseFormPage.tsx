@@ -35,7 +35,7 @@ export function NewExercisePage() {
   const navigate = useNavigate()
 
   return (
-    <Card title={t('fitness.exercises.new')}>
+    <Card className="max-w-2xl" title={t('fitness.exercises.new')}>
       <ExerciseForm
         defaultValues={{ name: '', muscle_group_id: '', description: '' }}
         onSubmit={async (values) => {

@@ -8,7 +8,7 @@ script again.
 ## Derived files
 
 ```bash
-.venv/Scripts/python.exe branding/make_icons.py     # from the repo root (the root .venv has Pillow)
+api/.venv/Scripts/python.exe branding/make_icons.py     # from the repo root (api/.venv has Pillow)
 ```
 
 The script trims the symbol to its visible part and centres it on a square canvas.

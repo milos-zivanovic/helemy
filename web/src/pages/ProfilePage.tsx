@@ -8,6 +8,7 @@ import { showMutationError, unwrap } from '../api/errors'
 import { changePasswordSchema } from '../auth/schemas'
 import { setTokens } from '../auth/tokens'
 import { useMe } from '../auth/useAuth'
+import { Avatar } from '../components/Avatar'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -25,26 +26,42 @@ export function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
-      <Card title={t('profile.account')}>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-slate-500">{t('auth.fields.email')}</dt>
-          <dd className="min-w-0 truncate">{me.email}</dd>
-          <dt className="text-slate-500">{t('profile.name')}</dt>
-          <dd>{me.full_name || '—'}</dd>
-          <dt className="text-slate-500">{t('profile.currency')}</dt>
-          <dd>{me.currency}</dd>
-          <dt className="text-slate-500">{t('profile.timezone')}</dt>
-          <dd>{me.timezone}</dd>
-          <dt className="text-slate-500">{t('profile.language')}</dt>
-          <dd>{language ? LANGUAGES[language] : me.language || '—'}</dd>
-          <dt className="text-slate-500">{t('profile.memberSince')}</dt>
-          <dd>{formatDate(me.date_joined)}</dd>
-        </dl>
-      </Card>
-      <Card title={t('profile.password.title')}>
-        <ChangePasswordForm />
-      </Card>
+      <div className="flex items-center gap-4">
+        <Avatar
+          firstName={me.first_name}
+          lastName={me.last_name}
+          email={me.email}
+          className="size-14 text-lg"
+        />
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t('profile.title')}
+          </h1>
+          <p className="truncate text-sm text-slate-500">{me.full_name}</p>
+        </div>
+      </div>
+      {/* Side by side from a laptop up */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <Card title={t('profile.account')}>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            <dt className="text-slate-500">{t('auth.fields.email')}</dt>
+            <dd className="min-w-0 truncate">{me.email}</dd>
+            <dt className="text-slate-500">{t('profile.name')}</dt>
+            <dd>{me.full_name || '—'}</dd>
+            <dt className="text-slate-500">{t('profile.currency')}</dt>
+            <dd>{me.currency}</dd>
+            <dt className="text-slate-500">{t('profile.timezone')}</dt>
+            <dd>{me.timezone}</dd>
+            <dt className="text-slate-500">{t('profile.language')}</dt>
+            <dd>{language ? LANGUAGES[language] : me.language || '—'}</dd>
+            <dt className="text-slate-500">{t('profile.memberSince')}</dt>
+            <dd>{formatDate(me.date_joined)}</dd>
+          </dl>
+        </Card>
+        <Card title={t('profile.password.title')}>
+          <ChangePasswordForm />
+        </Card>
+      </div>
     </div>
   )
 }

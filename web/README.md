@@ -1,8 +1,8 @@
-# web — Life Tracker web client
+# web — Helemy web client
 
 > **Status:** phases 1-5 (auth, household, finances, fitness, nutrition, Docker) done.
 
-Browser client for Life Tracker. It uses only the REST API in [`../api`](../api/README.md) and never touches
+Browser client for Helemy. It uses only the REST API in [`../api`](../api/README.md) and never touches
 the database directly.
 
 ## Stack
@@ -98,7 +98,7 @@ account, add an income and an expense, transfer to the savings account, check th
 the transaction list, the accounts page and the home page, then log out and back in. Playwright starts
 both servers itself (`webServer` in `playwright.config.ts`) and stops them afterwards:
 
-- the API on http://127.0.0.1:8010 via `e2e/api-server.mjs`: the repo's `.venv` (or `E2E_PYTHON`), a
+- the API on http://127.0.0.1:8010 via `e2e/api-server.mjs`: `api/.venv` (or `E2E_PYTHON`), a
   fresh SQLite database in the system temp folder every run (never `api/data/`), migrations, `runserver`
 - the web dev server on http://127.0.0.1:3010, pointed at that API
 
@@ -128,9 +128,11 @@ TypeScript then reports every place in the web code that no longer matches. The 
 - **Routes**: `AuthLayout` frames the public pages and sends a logged-in user into the app (back to the page
   they first asked for); `AppLayout` sends a logged-out user to `/login` and loads `GET /api/auth/me/`.
 - **Language**: every request carries the app's language in `Accept-Language` (`sr-latn` / `en`, see
-  `API_LANGUAGES` in `src/i18n/index.ts`), so API errors come translated. `useSyncLanguage` (in `AppLayout`)
-  saves it on the account with `PATCH /api/auth/me/` after login and after every switch; the device used
-  last wins.
+  `API_LANGUAGES` in `src/i18n/index.ts`), so API errors come translated. The language belongs to the
+  user (`User.language`): `useSyncLanguage` (in `AppLayout`) switches the app to it after login, on reload
+  and when it changed on another device, and saves a switch made in the app with `PATCH /api/auth/me/`.
+  Logged out (login, sign up...) it's the browser's: the last one picked there, else the browser's
+  language, else English. Sign up stores the language it was done in on the new account.
 - **Logout** drops both tokens and the whole query cache, then blacklists the refresh token on the API.
 - **Password change** (`/profile`): the API logs out every session and returns a new token pair, which
   replaces the stored one; other tabs of the same browser keep working because they share `localStorage`.
@@ -191,7 +193,7 @@ this month's income, expenses and balance), budgets at 80 % or more (only when t
 
 ## Finances
 
-Tabs: **Budgets**, **Transactions** (the main screen, where `/finances` opens), **Reports** and
+Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, **Reports** and
 **Settings**, which groups the pages set up once and opened rarely: Accounts and Categories
 (`src/finances/FinancesLayout.tsx`; their URLs don't change).
 
@@ -281,6 +283,20 @@ Optional; put it in `web/.env.local` (gitignored). Only variables starting with 
 | -------------- | ------------------------------------------------ | -------------------------------------------------------------------------- |
 | `VITE_API_URL` | dev: `http://localhost:8000`, build: same origin | Origin of the API, without `/api` (the generated paths start with `/api/`) |
 
+## Design
+
+- **Colours**: a white app with the logo's two colours as Tailwind tokens in `src/index.css`
+  (`@theme`): `brand` (#5371ff) for actions, links and the active state, `accent` (#cb6ce6) only in
+  the brand gradient (`bg-brand-gradient`: the total balance, the avatar, the active bottom-bar item).
+  Charts use the same blue (`src/lib/chartTheme.ts`).
+- **Shared looks**: `surface` (the white box of cards and lists, a utility in `index.css`), `Card`,
+  `Button`/`LinkButton`, the fields, `SectionHeader` (title + tabs of a section) and the segmented
+  control and chips in `components/segmented.ts`. A new page builds on these instead of its own classes.
+- **Responsive**: from `lg` (1024 px) the navigation is a sidebar and pages use the width (grids with
+  `lg:`/`xl:` columns, forms capped at `max-w-2xl`); below it a top bar (language, logout, profile)
+  and a bottom bar with the sections. `useMediaQuery` picks between the two; for styles alone the
+  Tailwind prefixes are enough. Icons are inline SVG (`components/Icon.tsx`), no icon library.
+
 ## Structure
 
 ```
@@ -302,16 +318,16 @@ web/src/
 ├── fitness/               # Fitness hooks, schemas, training cards, progress chart, section layout
 ├── nutrition/             # Nutrition hooks, schemas, food search box, section layout
 ├── household/             # Household hooks (queries, mutations) and page sections
-├── layouts/               # AuthLayout (public pages), AppLayout (logged-in pages, navigation)
-├── lib/                   # Plain helpers: local dates, useDebouncedValue
+├── layouts/               # AuthLayout (public pages), AppLayout (sidebar on desktop, top + bottom bar on a phone)
+├── lib/                   # Plain helpers: local dates, useDebouncedValue, useMediaQuery, chart colours
 ├── pages/                 # One component per route
 ├── i18n/
 │   ├── format.ts          # useFormatters(): dates and money in the current language (Intl)
-│   ├── index.ts           # i18next setup: sr (default) + en, choice remembered in localStorage
+│   ├── index.ts           # i18next setup: en (default) + sr, choice remembered in localStorage
 │   ├── i18next.d.ts       # Makes translation keys type-checked against sr.json
 │   └── locales/           # sr.json, en.json: every key must exist in both
 ├── assets/                # Images imported from code (logo.png; hashed file names in the build)
-└── components/            # Reusable UI pieces (Brand: logo + app name in both layouts)
+└── components/            # Reusable UI pieces: Button, Card, fields, Icon, Avatar, SectionHeader, ...
 ```
 
 `public/` holds files served as they are, at the site root: `favicon.png` and `apple-touch-icon.png`.

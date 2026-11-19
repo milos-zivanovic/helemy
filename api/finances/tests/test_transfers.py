@@ -242,6 +242,28 @@ class TransferInTotalsTests(TransferTestCase):
         savings = self.client.get(TRANSACTIONS_URL, {"account": self.savings.id}).data
         self.assertEqual((savings["total_transfers"], savings["total"]), ("950.00", "930.00"))
 
+    def test_list_shows_the_incoming_leg_above_the_outgoing_one(self):
+        # Newest first, and the incoming leg is created after the outgoing one. Legs with the same
+        # created_at (transfers converted by migration 0009) are ordered by id, incoming first too.
+        transfer = self._transfer("1000", date(2026, 3, 2), self.bank, self.savings)
+        self._transfer("50", date(2026, 3, 2), self.savings, self.bank)
+        Transaction.objects.filter(pk__in=[transfer.pk, transfer.transfer_pair_id]).update(
+            created_at=timezone.now() - timezone.timedelta(days=1)
+        )
+        rows = [
+            (row["account"]["name"], row["transaction_type"], row["type_sign"], row["amount"])
+            for row in self.client.get(TRANSACTIONS_URL).data["results"]
+        ]
+        self.assertEqual(
+            rows,
+            [
+                ("Bank", "income", "+", "50.00"),
+                ("Savings", "expense", "-", "50.00"),
+                ("Savings", "income", "+", "1000.00"),
+                ("Bank", "expense", "-", "1000.00"),
+            ],
+        )
+
     def test_type_filter(self):
         expense = self._tx("10", date(2026, 3, 1))
         transfer = self._transfer("500", date(2026, 3, 2), self.bank, self.savings)

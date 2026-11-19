@@ -14,7 +14,7 @@ const LOCALES: Record<Language, string> = { sr: 'sr-Latn-RS', en: 'en-GB' }
 export function useFormatters() {
   const { i18n } = useTranslation()
   const { data: me } = useMe()
-  const locale = LOCALES[(i18n.resolvedLanguage ?? 'sr') as Language] ?? LOCALES.sr
+  const locale = LOCALES[(i18n.resolvedLanguage ?? 'en') as Language] ?? LOCALES.en
   const currency = me?.currency || 'RSD'
 
   let money: Intl.NumberFormat

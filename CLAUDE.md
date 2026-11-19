@@ -1,4 +1,4 @@
-# life_tracker — instructions for Claude Code
+# helemy — instructions for Claude Code
 
 Monorepo: Django REST API (`api/`), Docker Compose (`infrastructure/`), React web client (`web/`, in progress)
 and a planned Expo mobile app (`mobile/`). What the project is, how to run it, endpoints and env variables are
@@ -20,11 +20,13 @@ in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of d
 - The user runs Docker commands themselves; don't build or start containers unless asked.
 
 ## Checks (host, from `api/`; run before finishing any change)
-The repo root `.venv` has the deps from `api/pyproject.toml` (Python 3.14 here, project targets 3.12+).
-- `../.venv/Scripts/python.exe -m ruff format .` and `../.venv/Scripts/python.exe -m ruff check .`
-- `../.venv/Scripts/python.exe manage.py test` (Django's runner, not pytest)
-- `../.venv/Scripts/python.exe manage.py spectacular --file /dev/null --validate` (keep it warning-free)
-- `../.venv/Scripts/python.exe manage.py makemigrations --check --dry-run`
+The virtualenv is `api/.venv` (Python 3.14 here, project targets 3.12+). The user runs the app in Docker, so it may be
+empty: if `.venv/Scripts/python.exe -c "import django"` fails, say so instead of installing anything (`pip install ".[dev]"`
+from `api/` needs their OK).
+- `.venv/Scripts/python.exe -m ruff format .` and `.venv/Scripts/python.exe -m ruff check .`
+- `.venv/Scripts/python.exe manage.py test` (Django's runner, not pytest)
+- `.venv/Scripts/python.exe manage.py spectacular --file /dev/null --validate` (keep it warning-free)
+- `.venv/Scripts/python.exe manage.py makemigrations --check --dry-run`
 
 ## Checks (host, from `web/`)
 Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend

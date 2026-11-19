@@ -31,7 +31,7 @@ export function NewAccountPage() {
   const navigate = useNavigate()
 
   return (
-    <Card title={t('finances.accounts.new')}>
+    <Card className="max-w-2xl" title={t('finances.accounts.new')}>
       <AccountForm
         defaultValues={{
           name: '',
@@ -69,7 +69,7 @@ export function EditAccountPage() {
 
   const data = account.data
   return (
-    <Card title={t('finances.accounts.edit')}>
+    <Card className="max-w-2xl" title={t('finances.accounts.edit')}>
       {remove.error && (
         <div className="mb-4">
           {/* 400: the API refuses to delete an account in use; archiving is the way out. */}

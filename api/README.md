@@ -1,4 +1,4 @@
-# api — Life Tracker REST API
+# api — Helemy REST API
 
 Django REST Framework backend for personal finances, fitness and nutrition. It is the single source of
 data for the future web (`../web`) and mobile (`../mobile`) clients, which talk to it only over HTTP/JSON.
@@ -18,7 +18,7 @@ Dependencies and tool config (ruff, coverage) are in [`pyproject.toml`](pyprojec
 
 ```
 api/
-├── life_tracker/   # Django project: settings.py, urls.py, wsgi/asgi
+├── helemy/         # Django project: settings.py, urls.py, wsgi/asgi
 ├── users/          # Custom User (login by email), Household, membership endpoints
 ├── finances/       # Accounts, transfers, category groups, categories, transactions, budgets
 ├── fitness/        # Muscle groups (global), exercises, trainings, items, sets
@@ -59,13 +59,12 @@ docker compose --profile dev down
 
 ## Running on the host (without Docker)
 
-Needs Python 3.12+. The virtualenv lives in the repo root (`.venv`), dependencies come from `api/pyproject.toml`.
-From the repo root:
+Needs Python 3.12+. The virtualenv lives in this folder (`api/.venv`), dependencies come from `api/pyproject.toml`.
+From `api/`:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
-cd api
 pip install ".[dev]"
 # create api/.env with at least: DEBUG=1 and SECRET_KEY=<any string> (all variables: Configuration below)
 mkdir -p data
@@ -76,7 +75,7 @@ python manage.py runserver
 
 ## Configuration
 
-Settings are in `life_tracker/settings.py` and read from environment variables. In Docker they come from
+Settings are in `helemy/settings.py` and read from environment variables. In Docker they come from
 `environment:` in `docker-compose.yml`; on the host from `api/.env` (variables below). Real environment
 variables win over `.env`.
 
@@ -90,7 +89,7 @@ variables win over `.env`.
 | `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` | `15` | Access token lifetime |
 | `JWT_REFRESH_TOKEN_LIFETIME_DAYS` | `7` | Refresh token lifetime |
 | `EMAIL_URL` | `consolemail://` | How emails are sent; the default prints them to the server log. SMTP: `smtp+tls://user:password@host:587` |
-| `DEFAULT_FROM_EMAIL` | `Life Tracker <noreply@localhost>` | Sender of outgoing emails |
+| `DEFAULT_FROM_EMAIL` | `Helemy <noreply@localhost>` | Sender of outgoing emails |
 | `PASSWORD_RESET_URL` | `http://localhost:3000/reset-password?uid={uid}&token={token}` | Link in the reset email (a client app page); `{uid}` and `{token}` are filled in |
 
 ## Using the API
@@ -131,9 +130,9 @@ Onboarding a new user (what a client does after sign up):
 2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`:
    `en` or `sr-latn`, set at sign up from the request's `Accept-Language`), `role` (`owner`/`member`) and
    `households`. `PATCH /api/auth/me/` with `{"language": "en" | "sr-latn"}` changes the language (the only
-   preference users can change for now) and answers with the same profile. The stored language is for what
-   doesn't answer the user's own request (e.g. an email caused by another member); responses follow
-   `Accept-Language` (see Languages).
+   preference users can change for now) and answers with the same profile. The stored language is the one
+   the web client shows the user after login, and the API uses it for what doesn't answer the user's own
+   request (e.g. an email caused by another member); responses follow `Accept-Language` (see Languages).
 3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
    starts empty. Muscle groups are global and already exist:
    - finances: `POST /api/finances/category-groups/` (`name`) and `POST /api/finances/categories/`

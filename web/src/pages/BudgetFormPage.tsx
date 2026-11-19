@@ -34,7 +34,7 @@ export function NewBudgetPage() {
   const { start, end } = monthRange(currentMonth())
 
   return (
-    <Card title={t('finances.budgets.new')}>
+    <Card className="max-w-2xl" title={t('finances.budgets.new')}>
       <BudgetForm
         defaultValues={{
           category_id: '',
@@ -73,7 +73,7 @@ export function EditBudgetPage() {
 
   const data = budget.data
   return (
-    <Card title={t('finances.budgets.edit')}>
+    <Card className="max-w-2xl" title={t('finances.budgets.edit')}>
       {remove.error && (
         <div className="mb-4">
           <Alert tone="error">{errorMessage(remove.error, t)}</Alert>

@@ -35,7 +35,7 @@ export function NewCategoryPage() {
   const navigate = useNavigate()
 
   return (
-    <Card title={t('finances.categories.newCategory')}>
+    <Card className="max-w-2xl" title={t('finances.categories.newCategory')}>
       <CategoryForm
         defaultValues={{
           name: '',
@@ -83,7 +83,7 @@ export function EditCategoryPage() {
       : remove.error && errorMessage(remove.error, t)
 
   return (
-    <Card title={t('finances.categories.editCategory')}>
+    <Card className="max-w-2xl" title={t('finances.categories.editCategory')}>
       {deleteError && (
         <div className="mb-4">
           <Alert tone="error">{deleteError}</Alert>

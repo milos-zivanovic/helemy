@@ -1,8 +1,8 @@
-# mobile — Life Tracker mobile app (planned)
+# mobile — Helemy mobile app (planned)
 
 > **Status:** not started. This folder is empty apart from this README.
 
-Android and iOS app for Life Tracker, built with Expo (React Native + TypeScript). Like the web client,
+Android and iOS app for Helemy, built with Expo (React Native + TypeScript). Like the web client,
 it uses only the REST API in [`../api`](../api/README.md).
 
 ## Planned stack

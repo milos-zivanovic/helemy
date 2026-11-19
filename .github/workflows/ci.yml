@@ -37,7 +37,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: life_tracker
+          POSTGRES_DB: helemy
         ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres"
@@ -46,7 +46,7 @@ jobs:
           --health-retries 10
     env:
       SECRET_KEY: ci-only-not-a-secret-at-least-32-bytes # HS256 wants 32+
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/life_tracker
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/helemy
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -148,7 +148,7 @@ jobs:
       - name: Smoke test (Playwright)
         working-directory: web
         env:
-          E2E_PYTHON: python # setup-python's interpreter instead of the repo's .venv
+          E2E_PYTHON: python # setup-python's interpreter instead of api/.venv
         run: npm run test:e2e
       # On a failure: screenshot and trace, downloadable from the run's page (Artifacts).
       - name: Upload Playwright results
@@ -165,6 +165,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build the API image
-        run: docker build --tag life-tracker-api:ci api
+        run: docker build --tag helemy-api:ci api
       - name: Build the web image (prod target)
-        run: docker build --target prod --tag life-tracker-web:ci web
+        run: docker build --target prod --tag helemy-web:ci web

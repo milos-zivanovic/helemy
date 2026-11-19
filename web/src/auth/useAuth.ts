@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { api, publicApi } from '../api/client'
-import { API_LANGUAGES, type Language } from '../i18n'
+import { API_LANGUAGES, fromApiLanguage, type Language } from '../i18n'
 import { clearTokens, getRefreshToken, subscribe } from './tokens'
 
 export const ME_QUERY_KEY = ['me'] as const
@@ -30,27 +30,45 @@ export function useMe() {
 }
 
 /**
- * Keeps the user's saved language (User.language on the API) equal to the one the app shows: after
- * login and after every switch. The API needs it for what doesn't answer one of the user's own
- * requests (e.g. an email triggered by another member); answers to requests follow Accept-Language.
- * The device used last wins.
+ * The language is the user's own (User.language on the API), not the browser's: every user sees
+ * the app in their language, on any device, whoever used the browser before them.
+ * - The account wins when the profile loads (after login, on reload) and when it changed on
+ *   another device (the profile is fetched again, e.g. when the tab gets focus): the app switches.
+ * - A switch in the app (LanguageSwitcher) is saved on the account (PATCH /api/auth/me/).
+ * Logged out (login, sign up...) the language is the browser's: the last one picked there, else
+ * the browser's own. Sign up stores the language it was done in (Accept-Language) on the account.
+ * Used only in AppLayout, which unmounts on logout, so the next login starts over.
  */
 export function useSyncLanguage() {
   const { i18n } = useTranslation()
   const queryClient = useQueryClient()
   const { data: me } = useMe()
-  const shown = API_LANGUAGES[(i18n.resolvedLanguage ?? 'sr') as Language] ?? API_LANGUAGES.sr
+  const shown = API_LANGUAGES[(i18n.resolvedLanguage ?? 'en') as Language] ?? API_LANGUAGES.en
   const saved = me?.language
+  // The account's language as this tab last agreed on it; null until the profile first loads.
+  // useRef is a value that survives re-renders without causing one (like an instance attribute).
+  const synced = useRef<string | null>(null)
 
   // useEffect runs after React has rendered, whenever a value in the dependency list changed: the
   // place for side effects such as an API call (rendering itself must not have any).
   useEffect(() => {
-    if (saved === undefined || saved === shown) return // not loaded yet, or already in sync
+    if (saved === undefined) return // profile not loaded yet
+    const savedInApp = fromApiLanguage(saved)
+    if (savedInApp !== undefined && saved !== synced.current) {
+      // First load, or changed elsewhere: the account wins. The switch re-renders with the new
+      // `shown`, which equals `saved`, so nothing is sent back.
+      synced.current = saved
+      if (saved !== shown) void i18n.changeLanguage(savedInApp)
+      return
+    }
+    if (saved === shown) return // in sync
+    // Switched in the app (or the account has a language the app doesn't know): save it.
+    synced.current = shown
     void api.PATCH('/api/auth/me/', { body: { language: shown } }).then(({ data }) => {
       // The answer is the whole profile: put it in the cache instead of fetching it again.
       if (data) queryClient.setQueryData(ME_QUERY_KEY, data)
     })
-  }, [saved, shown, queryClient])
+  }, [saved, shown, i18n, queryClient])
 }
 
 /** Log out: forget the tokens and all cached data, then blacklist the refresh token on the API. */

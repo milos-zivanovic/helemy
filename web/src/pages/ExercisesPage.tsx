@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { LinkButton } from '../components/Button'
+import { Icon } from '../components/Icon'
 import { type ExerciseListItem, useExercises } from '../fitness/hooks'
 
 // /fitness/exercises: the household's exercises grouped by muscle group (the API already sorts them
@@ -25,17 +26,20 @@ export function ExercisesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <LinkButton to="/fitness/exercises/new">{t('fitness.exercises.new')}</LinkButton>
+        <LinkButton to="/fitness/exercises/new">
+          <Icon name="plus" className="size-4" />
+          {t('fitness.exercises.new')}
+        </LinkButton>
       </div>
       {groups.length === 0 && (
-        <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+        <p className="surface p-8 text-center text-sm text-slate-500">
           {t('fitness.exercises.empty')}
         </p>
       )}
       {groups.map(([name, items]) => (
         <section key={name}>
           <h2 className="mb-1 px-1 text-xs font-medium text-slate-500">{name}</h2>
-          <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <ul className="surface divide-y divide-slate-100 overflow-hidden">
             {items.map((exercise) => (
               <li key={exercise.id}>
                 <Link
