@@ -6,6 +6,7 @@ import type { components } from '../api/schema'
 import { Alert } from '../components/Alert'
 import { Button, LinkButton } from '../components/Button'
 import { ProgressBar } from '../components/ProgressBar'
+import { Icon } from '../components/Icon'
 import { useActiveBudgets, useBudgetsOfYear } from '../finances/hooks'
 import { useFormatters } from '../i18n/format'
 import { today } from '../lib/dates'
@@ -26,6 +27,7 @@ export function BudgetsPage() {
   return (
     <div className="flex flex-col gap-6">
       <LinkButton to="/finances/budgets/new" className="self-start">
+        <Icon name="plus" className="size-4" />
         {t('finances.budgets.new')}
       </LinkButton>
       <ActiveBudgets />
@@ -69,12 +71,12 @@ function ActiveBudgets() {
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">{t('finances.budgets.active')}</h2>
       {results.length === 0 ? (
-        <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+        <p className="surface p-8 text-center text-sm text-slate-500">
           {t('finances.budgets.noneActive')}
         </p>
       ) : (
         <>
-          <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
+          <div className="surface flex flex-col gap-2 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
               <span className="font-medium">{t('finances.budgets.total')}</span>
               <span>
@@ -112,7 +114,7 @@ function YearBudgets({
   const { results, total_pages } = budgets.data
   if (results.length === 0) {
     return (
-      <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+      <p className="surface p-8 text-center text-sm text-slate-500">
         {t('finances.budgets.noneInYear', { year })}
       </p>
     )
@@ -147,7 +149,7 @@ function BudgetList({ budgets }: { budgets: Budget[] }) {
   const { formatMoney, formatShortDate } = useFormatters()
 
   return (
-    <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <ul className="surface divide-y divide-slate-100 overflow-hidden">
       {budgets.map((budget) => {
         const percentage = Number(budget.percentage)
         const left = Number(budget.amount) - Number(budget.spent)

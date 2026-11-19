@@ -34,7 +34,7 @@ export function EditTransferPage() {
 
   const data = transfer.data
   return (
-    <Card title={t('finances.transfers.edit')}>
+    <Card className="max-w-2xl" title={t('finances.transfers.edit')}>
       {remove.error && (
         <div className="mb-4">
           <Alert tone="error">{errorMessage(remove.error, t)}</Alert>

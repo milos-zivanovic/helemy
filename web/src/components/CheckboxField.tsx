@@ -7,7 +7,11 @@ export function CheckboxField({
 }: ComponentProps<'input'> & { label: string }) {
   return (
     <label className="flex items-center gap-2 text-sm text-slate-700">
-      <input type="checkbox" className="size-4 rounded border-slate-300" {...inputProps} />
+      <input
+        type="checkbox"
+        className="accent-brand-500 size-4 rounded border-slate-300"
+        {...inputProps}
+      />
       {label}
     </label>
   )

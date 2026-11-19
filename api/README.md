@@ -131,9 +131,9 @@ Onboarding a new user (what a client does after sign up):
 2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`:
    `en` or `sr-latn`, set at sign up from the request's `Accept-Language`), `role` (`owner`/`member`) and
    `households`. `PATCH /api/auth/me/` with `{"language": "en" | "sr-latn"}` changes the language (the only
-   preference users can change for now) and answers with the same profile. The stored language is for what
-   doesn't answer the user's own request (e.g. an email caused by another member); responses follow
-   `Accept-Language` (see Languages).
+   preference users can change for now) and answers with the same profile. The stored language is the one
+   the web client shows the user after login, and the API uses it for what doesn't answer the user's own
+   request (e.g. an email caused by another member); responses follow `Accept-Language` (see Languages).
 3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
    starts empty. Muscle groups are global and already exist:
    - finances: `POST /api/finances/category-groups/` (`name`) and `POST /api/finances/categories/`

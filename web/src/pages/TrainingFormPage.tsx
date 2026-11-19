@@ -10,6 +10,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
+import { chipClasses } from '../components/segmented'
 import {
   type TrainingInput,
   useCreateTraining,
@@ -27,7 +28,7 @@ export function NewTrainingPage() {
   const navigate = useNavigate()
 
   return (
-    <Card title={t('fitness.trainings.new')}>
+    <Card className="max-w-2xl" title={t('fitness.trainings.new')}>
       <TrainingForm
         defaultValues={{ date: today(), name: '', notes: '', muscle_group_ids: [] }}
         submitLabel={t('fitness.trainings.start')}
@@ -62,7 +63,7 @@ export function EditTrainingPage() {
 
   const data = training.data
   return (
-    <Card title={t('fitness.trainings.edit')}>
+    <Card className="max-w-2xl" title={t('fitness.trainings.edit')}>
       <TrainingForm
         defaultValues={{
           date: data.date,
@@ -132,10 +133,7 @@ function TrainingForm({
         </legend>
         <div className="flex flex-wrap gap-2">
           {(muscleGroups.data ?? []).map((group) => (
-            <label
-              key={group.id}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-300 px-3 py-1 text-sm has-checked:border-slate-900 has-checked:bg-slate-900 has-checked:text-white"
-            >
+            <label key={group.id} className={chipClasses}>
               <input
                 type="checkbox"
                 value={String(group.id)}

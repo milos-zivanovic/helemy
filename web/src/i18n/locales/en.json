@@ -188,7 +188,9 @@
       "fixed": "Fixed costs",
       "fixedAll": "All",
       "fixedOnly": "Fixed only",
-      "fixedNone": "Without fixed"
+      "fixedNone": "Without fixed",
+      "toggle": "Filters",
+      "toggleCount": "Filters ({{n}})"
     },
     "totals": {
       "income": "Income",
@@ -309,8 +311,8 @@
       "hint": "Moving money between your accounts (e.g. a cash withdrawal). It makes two linked transactions, out and in: they change the two accounts' balances, but don't count as income or expenses.",
       "sameAccount": "Choose a different account.",
       "deleteConfirm": "Delete the transfer?",
-      "toAccount": "Transfer to {{name}}",
-      "fromAccount": "Transfer from {{name}}"
+      "outgoingLeg": "{{account}} → {{other}}",
+      "incomingLeg": "{{account}} ← {{other}}"
     }
   },
   "fitness": {

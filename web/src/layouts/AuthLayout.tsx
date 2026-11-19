@@ -21,13 +21,18 @@ export function AuthLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-slate-100 px-4 py-10 text-slate-900">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-between">
+    <div className="relative flex min-h-screen flex-col items-center overflow-hidden bg-white px-4 py-10 sm:py-16">
+      {/* Two blurred circles in the logo's colours behind the card: decoration only */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="bg-brand-200/50 absolute -top-32 -left-24 size-96 rounded-full blur-3xl" />
+        <div className="bg-accent-200/50 absolute -top-24 -right-24 size-96 rounded-full blur-3xl" />
+      </div>
+      <div className="relative w-full max-w-md">
+        <div className="mb-8 flex items-center justify-between">
           <Brand />
           <LanguageSwitcher />
         </div>
-        <main className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <main className="surface shadow-brand-500/5 p-6 shadow-lg sm:p-8">
           <Outlet />
         </main>
       </div>

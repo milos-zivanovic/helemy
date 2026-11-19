@@ -30,7 +30,7 @@ export function NewFoodPage() {
   const navigate = useNavigate()
 
   return (
-    <Card title={t('nutrition.foods.new')}>
+    <Card className="max-w-2xl" title={t('nutrition.foods.new')}>
       <FoodForm
         defaultValues={{ name: '', calories: '', protein: '', carbs: '', fat: '', description: '' }}
         onSubmit={async (values) => {
@@ -64,7 +64,7 @@ export function EditFoodPage() {
 
   const data = food.data
   return (
-    <Card title={t('nutrition.foods.edit')}>
+    <Card className="max-w-2xl" title={t('nutrition.foods.edit')}>
       {remove.error && (
         <div className="mb-4">
           <Alert tone="error">

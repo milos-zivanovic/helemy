@@ -21,8 +21,8 @@ export const api = createClient<paths>({ baseUrl: API_URL, fetch: authFetch })
 // to the very next call.
 const languageHeader: Middleware = {
   onRequest({ request }) {
-    const language = (i18n.resolvedLanguage ?? 'sr') as Language
-    request.headers.set('Accept-Language', API_LANGUAGES[language] ?? API_LANGUAGES.sr)
+    const language = (i18n.resolvedLanguage ?? 'en') as Language
+    request.headers.set('Accept-Language', API_LANGUAGES[language] ?? API_LANGUAGES.en)
     return request
   },
 }

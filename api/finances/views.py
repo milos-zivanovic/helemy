@@ -149,7 +149,7 @@ class TransactionViewSet(HouseholdModelViewSet):
     serializer_class = TransactionSerializer
     permission_classes = [IsHouseholdMember]
     pagination_class = TransactionPagination
-    ordering = ["-date", "-created_at"]
+    ordering = ["-date", "-created_at", "-id"]
     ordering_fields = ["amount", "date", "created_at"]
     filterset_class = TransactionFilter
     search_fields = ["title", "description"]
@@ -488,7 +488,7 @@ class TransferViewSet(HouseholdModelViewSet):
     permission_classes = [IsHouseholdMember]
     pagination_class = StandardResultsSetPagination
     filterset_class = TransferFilter
-    ordering = ["-date", "-created_at"]
+    ordering = ["-date", "-created_at", "-id"]
     ordering_fields = ["amount", "date", "created_at"]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 

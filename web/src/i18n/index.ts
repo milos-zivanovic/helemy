@@ -29,7 +29,7 @@ void i18n
     resources: { sr: { translation: sr }, en: { translation: en } },
     supportedLngs: Object.keys(LANGUAGES),
     nonExplicitSupportedLngs: true, // the browser's "sr-Latn-RS" or "en-US" maps to "sr" / "en"
-    fallbackLng: 'sr',
+    fallbackLng: 'en', // like the API (LANGUAGE_CODE, User.language)
     detection: {
       // A choice made in the app wins over the browser's language and is remembered.
       order: ['localStorage', 'navigator'],
@@ -43,7 +43,7 @@ void i18n
 const syncHtmlLang = (lng: string) => {
   document.documentElement.lang = lng
 }
-syncHtmlLang(i18n.resolvedLanguage ?? 'sr')
+syncHtmlLang(i18n.resolvedLanguage ?? 'en')
 i18n.on('languageChanged', syncHtmlLang)
 
 export default i18n

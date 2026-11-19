@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { LinkButton } from '../components/Button'
+import { Icon } from '../components/Icon'
 import { type Account, useAccounts } from '../finances/hooks'
 import { useFormatters } from '../i18n/format'
 
@@ -37,7 +38,10 @@ export function AccountsPage() {
           <LinkButton to="/finances/transactions/new?type=transfer" variant="secondary">
             {t('finances.transfers.new')}
           </LinkButton>
-          <LinkButton to="/finances/accounts/new">{t('finances.accounts.new')}</LinkButton>
+          <LinkButton to="/finances/accounts/new">
+            <Icon name="plus" className="size-4" />
+            {t('finances.accounts.new')}
+          </LinkButton>
         </div>
       </div>
 
@@ -60,7 +64,7 @@ function AccountList({ accounts }: { accounts: Account[] }) {
   if (accounts.length === 0) return null
 
   return (
-    <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <ul className="surface divide-y divide-slate-100 overflow-hidden">
       {accounts.map((account) => (
         <li key={account.id}>
           <Link

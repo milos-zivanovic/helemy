@@ -60,6 +60,7 @@ export function NewTransactionPage() {
 
   return (
     <Card
+      className="max-w-2xl"
       title={t(entry.kind === 'transfer' ? 'finances.transfers.new' : 'finances.transactions.new')}
     >
       {entry.kind === 'transfer' ? (
@@ -134,7 +135,7 @@ export function EditTransactionPage() {
   }
 
   return (
-    <Card title={t('finances.transactions.edit')}>
+    <Card className="max-w-2xl" title={t('finances.transactions.edit')}>
       {remove.error && (
         <div className="mb-4">
           <Alert tone="error">{errorMessage(remove.error, t)}</Alert>
