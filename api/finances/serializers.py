@@ -2,6 +2,8 @@ import calendar
 from decimal import Decimal
 
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
@@ -84,7 +86,7 @@ class CategorySerializer(serializers.ModelSerializer):
             and attrs.get("is_active") is False
         ):
             raise serializers.ValidationError(
-                {"is_active": "The transfer category can't be switched off."}
+                {"is_active": _("The transfer category can't be switched off.")}
             )
 
         def current(field):
@@ -93,19 +95,25 @@ class CategorySerializer(serializers.ModelSerializer):
         start_date, end_date = current("start_date"), current("end_date")
         if start_date and end_date and start_date > end_date:
             raise serializers.ValidationError(
-                {"end_date": "End date must be on or after start date."}
+                {"end_date": _("End date must be on or after start date.")}
             )
 
         for prefix in ("start", "end"):
             month, day = current(f"{prefix}_month"), current(f"{prefix}_day")
             if (month is None) != (day is None):
                 raise serializers.ValidationError(
-                    {f"{prefix}_day": f"Set both {prefix}_month and {prefix}_day, or neither."}
+                    {
+                        f"{prefix}_day": _("Set both %(month)s and %(day)s, or neither.")
+                        % {"month": f"{prefix}_month", "day": f"{prefix}_day"}
+                    }
                 )
             # 2024 is a leap year, so 29 February is allowed.
             if month is not None and day > calendar.monthrange(2024, month)[1]:
                 raise serializers.ValidationError(
-                    {f"{prefix}_day": f"Month {month} has no day {day}."}
+                    {
+                        f"{prefix}_day": _("Month %(month)s has no day %(day)s.")
+                        % {"month": month, "day": day}
+                    }
                 )
         return attrs
 
@@ -204,7 +212,9 @@ def validate_active_account(serializer, attrs, field, source):
         return
     if serializer.instance is not None and getattr(serializer.instance, source) == account:
         return  # editing something else on an old record of an archived account
-    raise serializers.ValidationError({field: f'Account "{account.name}" is archived.'})
+    raise serializers.ValidationError(
+        {field: _('Account "%(name)s" is archived.') % {"name": account.name}}
+    )
 
 
 class ActiveCategoryValidationMixin:
@@ -218,12 +228,12 @@ class ActiveCategoryValidationMixin:
         attrs = super().validate(attrs)
         if self.instance is not None and self.instance.transfer_pair_id:
             raise serializers.ValidationError(
-                "This transaction is part of a transfer: change it through transfers/."
+                _("This transaction is part of a transfer: change it through transfers/.")
             )
         validate_active_account(self, attrs, "account_id", "account")
         if attrs.get("category") is not None and attrs["category"].is_transfer:
             raise serializers.ValidationError(
-                {"category_id": "This category is for transfers: use transfers/."}
+                {"category_id": _("This category is for transfers: use transfers/.")}
             )
         if self.instance is not None and "category" not in attrs and "date" not in attrs:
             return attrs  # editing e.g. the title of an old transaction in an archived category
@@ -237,7 +247,10 @@ class ActiveCategoryValidationMixin:
             and not Category.objects.active(transaction_date).filter(pk=category.pk).exists()
         ):
             raise serializers.ValidationError(
-                {"category_id": f'Category "{category.name}" is not active on {transaction_date}.'}
+                {
+                    "category_id": _('Category "%(name)s" is not active on %(date)s.')
+                    % {"name": category.name, "date": date_format(transaction_date)}
+                }
             )
         return attrs
 
@@ -358,7 +371,7 @@ class BudgetSerializer(serializers.ModelSerializer):
 
         if start_date and end_date and start_date > end_date:
             raise serializers.ValidationError(
-                {"end_date": "End date must be on or after start date."}
+                {"end_date": _("End date must be on or after start date.")}
             )
 
         if category and start_date and end_date:
@@ -371,7 +384,7 @@ class BudgetSerializer(serializers.ModelSerializer):
                 overlapping = overlapping.exclude(pk=instance.pk)
             if overlapping.exists():
                 raise serializers.ValidationError(
-                    "This category already has a budget that overlaps the given period."
+                    _("This category already has a budget that overlaps the given period.")
                 )
         return attrs
 
@@ -492,13 +505,13 @@ class TransferSerializer(serializers.Serializer):
             new = attrs.get(source)
             if new is not None and not new.is_active and new != account:
                 raise serializers.ValidationError(
-                    {f"{source}_id": f'Account "{new.name}" is archived.'}
+                    {f"{source}_id": _('Account "%(name)s" is archived.') % {"name": new.name}}
                 )
         source = attrs.get("from_account", current["from_account"])
         target = attrs.get("to_account", current["to_account"])
         if source is not None and source == target:
             raise serializers.ValidationError(
-                {"to_account_id": "Choose an account other than the source account."}
+                {"to_account_id": _("Choose an account other than the source account.")}
             )
         return attrs
 

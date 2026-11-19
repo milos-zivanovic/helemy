@@ -60,6 +60,10 @@ Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
 - Pagination: `common.pagination.StandardResultsSetPagination` (50) by default, `SmallResultsSetPagination` (20).
   Permissions: `IsHouseholdMember` on all domain endpoints. URLs under `/api/`.
 - TIME_ZONE `Europe/Belgrade`, `USE_TZ = True`: use `timezone.localdate()`, not `now().date()`.
+- User-facing API text (error messages, emails) goes through `gettext` with named placeholders, never a plain
+  string or f-string, and gets a Serbian translation in `api/locale/sr_Latn/LC_MESSAGES/django.po` + a
+  recompiled `django.mo` (see `api/README.md`, Languages). No GNU gettext on this machine: if it's still
+  missing, say so instead of hand-editing the `.mo`.
 
 ## Repo rules
 - No `.env.example` files. A new env variable goes into the table in `api/README.md` (Configuration) and,

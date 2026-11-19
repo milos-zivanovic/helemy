@@ -30,7 +30,7 @@ rmSync(database, { force: true })
 const env = {
   ...process.env,
   DATABASE_URL: `sqlite:///${database.replaceAll('\\', '/')}`,
-  SECRET_KEY: 'e2e-tests-only-not-a-secret',
+  SECRET_KEY: 'e2e-tests-only-not-a-secret-at-least-32-bytes', // HS256 wants 32+
   DEBUG: 'True',
   ALLOWED_HOSTS: '127.0.0.1,localhost',
   CORS_ALLOWED_ORIGINS: webOrigin,

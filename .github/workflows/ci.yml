@@ -1,6 +1,6 @@
 # The checks from CLAUDE.md / the READMEs, on every push to master and every pull request.
 # Four jobs run in parallel; each one starts on a clean Ubuntu machine.
-#   api     lint, migrations, OpenAPI schema and tests (on PostgreSQL, like production)
+#   api     lint, migrations, OpenAPI schema, tests (on PostgreSQL, like production), translations
 #   web     format, types, lint, unit tests and the production build
 #   e2e     generated API types up to date, then the Playwright smoke test (real API + browser)
 #   docker  the production images still build
@@ -45,7 +45,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      SECRET_KEY: ci-only-not-a-secret
+      SECRET_KEY: ci-only-not-a-secret-at-least-32-bytes # HS256 wants 32+
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/life_tracker
     steps:
       - uses: actions/checkout@v7
@@ -66,6 +66,21 @@ jobs:
         run: python manage.py spectacular --file /dev/null --validate --fail-on-warn
       - name: Tests
         run: python manage.py test
+      # After the tests on purpose: they check that the committed django.mo matches django.po,
+      # and compilemessages below rewrites django.mo.
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends gettext
+      - name: Every message has a Serbian translation
+        run: |
+          python manage.py makemessages --locale sr_Latn --no-obsolete
+          po=locale/sr_Latn/LC_MESSAGES/django.po
+          missing=$(msgattrib --untranslated "$po"; msgattrib --only-fuzzy "$po")
+          if [ -n "$missing" ]; then
+            echo "$missing"
+            echo "::error::Untranslated or fuzzy messages: run makemessages, translate them in $po, then compilemessages"
+            exit 1
+          fi
+          python manage.py compilemessages --locale sr_Latn
 
   web:
     runs-on: ubuntu-latest
@@ -97,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SECRET_KEY: ci-only-not-a-secret
+      SECRET_KEY: ci-only-not-a-secret-at-least-32-bytes # HS256 wants 32+
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

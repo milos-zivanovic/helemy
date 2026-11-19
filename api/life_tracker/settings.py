@@ -68,6 +68,9 @@ MIDDLEWARE = [
     # Serves collected static files (admin CSS/JS) when DEBUG=0, e.g. under gunicorn
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Picks the language of each request from its Accept-Language header (after sessions, before
+    # common, as Django requires); error messages and emails then come in that language.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -112,7 +115,14 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = "en-us"
+# The API answers in the client's language (Accept-Language, see LocaleMiddleware), English when
+# it sends none or an unsupported one. "sr-latn" is Serbian in Latin script: Django's plain "sr"
+# translations are Cyrillic. A client that asks for "sr" gets sr-latn too (the only Serbian here).
+LANGUAGE_CODE = "en"
+LANGUAGES = [("en", "English"), ("sr-latn", "Srpski")]
+# Our translations (locale/sr_Latn/LC_MESSAGES/django.po): our own messages plus Serbian for the
+# DRF and SimpleJWT messages, which ship without it. Takes priority over Django's own catalogs.
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Europe/Belgrade"
 USE_I18N = True
 USE_TZ = True

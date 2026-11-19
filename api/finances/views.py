@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import action
@@ -87,7 +88,7 @@ class CategoryGroupViewSet(HouseholdModelViewSet):
         # them is in use, so a click can't wipe out history. Switching the group off hides it instead.
         if Transaction.objects.filter(category__category_group=instance, is_deleted=False).exists():
             raise ValidationError(
-                {"detail": "This group has categories with transactions. Switch it off instead."}
+                {"detail": _("This group has categories with transactions. Switch it off instead.")}
             )
         instance.delete()
 
@@ -129,7 +130,7 @@ class CategoryViewSet(HouseholdModelViewSet):
         # The category's transactions would be deleted with it (CASCADE): refuse, see above.
         if instance.transactions.filter(is_deleted=False).exists():
             raise ValidationError(
-                {"detail": "This category has transactions. Switch it off instead."}
+                {"detail": _("This category has transactions. Switch it off instead.")}
             )
         instance.delete()
 
@@ -346,10 +347,13 @@ class TransactionViewSet(HouseholdModelViewSet):
                 BalanceHistorySerializer({"start_date": None, "end_date": end, "results": []}).data
             )
         if start > end:
-            raise ValidationError({"end_date": "End date must be on or after start date."})
+            raise ValidationError({"end_date": _("End date must be on or after start date.")})
         if (end - start).days > MAX_BALANCE_HISTORY_DAYS:
             raise ValidationError(
-                {"start_date": f"Range is limited to {MAX_BALANCE_HISTORY_DAYS} days."}
+                {
+                    "start_date": _("Range is limited to %(days)s days.")
+                    % {"days": MAX_BALANCE_HISTORY_DAYS}
+                }
             )
         data = {
             "start_date": start,
@@ -456,7 +460,9 @@ class AccountViewSet(HouseholdModelViewSet):
         # transactions are hidden history: they go with it (the database protects accounts that
         # still have any transaction).
         if instance.transactions.filter(is_deleted=False).exists():
-            raise ValidationError({"detail": "This account has transactions. Archive it instead."})
+            raise ValidationError(
+                {"detail": _("This account has transactions. Archive it instead.")}
+            )
         instance.transactions.all().delete()
         instance.delete()
 

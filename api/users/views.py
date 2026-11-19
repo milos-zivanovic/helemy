@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
@@ -25,6 +26,7 @@ from users.serializers import (
     RegisterSerializer,
     TokenPairSerializer,
     UserDetailSerializer,
+    UserPreferencesSerializer,
     UserSerializer,
 )
 from users.services import (
@@ -153,6 +155,16 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
         serializer = UserDetailSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["Users"], request=UserPreferencesSerializer, responses={200: UserDetailSerializer}
+    )
+    def update_me(self, request):
+        """Change your own preferences (the language); answers with the whole profile, like GET."""
+        serializer = UserPreferencesSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return self.me(request)
+
 
 @extend_schema_view(
     list=extend_schema(tags=["Households"]),
@@ -214,7 +226,7 @@ class HouseholdViewSet(
         # Check permission - only owner can invite
         if not request.user.is_household_owner(household):
             return Response(
-                {"detail": "Only the household owner can invite members."},
+                {"detail": _("Only the household owner can invite members.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -235,7 +247,7 @@ class HouseholdViewSet(
         household = self.get_object()
         if household.owner_id == request.user.pk:
             return Response(
-                {"detail": "The owner can't leave their own household."},
+                {"detail": _("The owner can't leave their own household.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         remove_from_household(request.user, household)
@@ -250,21 +262,22 @@ class HouseholdViewSet(
         # Check permission - only owner can remove
         if not request.user.is_household_owner(household):
             return Response(
-                {"detail": "Only the household owner can remove members."},
+                {"detail": _("Only the household owner can remove members.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         # Cannot remove owner
         if household.owner_id == int(user_id):
             return Response(
-                {"detail": "Cannot remove the household owner."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": _("Cannot remove the household owner.")},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = get_object_or_404(User, id=user_id)
 
         if not household.members.filter(id=user.id).exists():
             return Response(
-                {"detail": "User is not a member of this household."},
+                {"detail": _("User is not a member of this household.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -309,7 +322,7 @@ class HouseholdInvitationViewSet(
         invitation = self.get_object()
         if invitation.household.owner_id != request.user.pk:
             return Response(
-                {"detail": "Only the household owner can cancel an invitation."},
+                {"detail": _("Only the household owner can cancel an invitation.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
         invitation.delete()
@@ -320,7 +333,7 @@ class HouseholdInvitationViewSet(
         invitation = self.get_object()
         if invitation.invited_user_id != request.user.pk:
             return Response(
-                {"detail": "Only the invited user can respond to an invitation."},
+                {"detail": _("Only the invited user can respond to an invitation.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
         try:

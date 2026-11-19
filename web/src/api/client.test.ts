@@ -4,7 +4,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../auth/tokens'
-import { api } from './client'
+import i18n from '../i18n'
+import { api, publicApi } from './client'
 
 // The API is replaced by a fake server behind a mocked fetch(). It behaves like SimpleJWT with
 // ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION: every refresh returns a new pair and the old
@@ -156,5 +157,20 @@ describe('api client', () => {
     expect(response.status).toBe(401)
     expect(refreshCalls()).toHaveLength(0)
     expect(dataCalls()[0].headers.get('Authorization')).toBeNull()
+  })
+
+  it.each([
+    ['sr', 'sr-latn'],
+    ['en', 'en'],
+  ])('asks for API messages in the app language (%s → %s)', async (language, header) => {
+    await i18n.changeLanguage(language)
+
+    await listAccounts() // the authenticated client
+    await publicApi.POST('/api/auth/token/', { body: { email: 'a@example.com', password: 'x' } })
+
+    expect(requests().map((request) => request.headers.get('Accept-Language'))).toEqual([
+      header,
+      header,
+    ])
   })
 })

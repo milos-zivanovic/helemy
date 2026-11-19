@@ -31,7 +31,7 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     # User endpoints
-    path("me/", UserViewSet.as_view({"get": "me"}), name="user-me"),
+    path("me/", UserViewSet.as_view({"get": "me", "patch": "update_me"}), name="user-me"),
     # Router endpoints
     path("", include(router.urls)),
 ]

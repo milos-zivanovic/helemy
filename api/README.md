@@ -24,6 +24,7 @@ api/
 ├── fitness/        # Muscle groups (global), exercises, trainings, items, sets
 ├── nutrition/      # Foods, consumptions, weekly summary
 ├── common/         # Household mixins, permissions, pagination, scoped FK field, test helpers
+├── locale/         # Serbian translations of the API's messages (sr_Latn/LC_MESSAGES/django.po + .mo)
 ├── data/           # SQLite for `runserver` on the host; create it with `mkdir data` before `migrate`, gitignored (Docker uses ../infrastructure/data/)
 ├── .env            # Your local settings for `runserver` on the host (gitignored, create it yourself)
 ├── .dockerignore   # Keeps .env, local data and caches out of the Docker image
@@ -127,8 +128,12 @@ Onboarding a new user (what a client does after sign up):
    seeded with default finance category groups and categories (`finances.services.DEFAULT_CATEGORIES`)
    and one account, "Tekući račun", with balance 0 from today (`create_default_finances`).
    A user always belongs to exactly one household, and all domain data is stored there.
-2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`
-   default `en`; users can't change these yet), `role` (`owner`/`member`) and `households`.
+2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`:
+   `en` or `sr-latn`, set at sign up from the request's `Accept-Language`), `role` (`owner`/`member`) and
+   `households`. `PATCH /api/auth/me/` with `{"language": "en" | "sr-latn"}` changes the language (the only
+   preference users can change for now) and answers with the same profile. The stored language is for what
+   doesn't answer the user's own request (e.g. an email caused by another member); responses follow
+   `Accept-Language` (see Languages).
 3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
    starts empty. Muscle groups are global and already exist:
    - finances: `POST /api/finances/category-groups/` (`name`) and `POST /api/finances/categories/`
@@ -242,6 +247,36 @@ the user's active household:
 - Writable foreign keys use `common.fields.HouseholdPrimaryKeyRelatedField`, so IDs from another household
   are rejected with 400.
 - Objects from another household return 404.
+
+## Languages (error messages and emails)
+
+The API answers in the language of the request's `Accept-Language` header (Django's
+`LocaleMiddleware`): English (`en`, the default, also for unsupported languages) or Serbian in Latin
+script (`sr-Latn`; plain `sr` gets Latin too). The web client sends the language the user has chosen.
+Translated are error messages (ours, Django's, DRF's and SimpleJWT's) and emails such as the password
+reset; field names and descriptions in the OpenAPI schema stay English.
+
+- New user-facing text in Python: wrap it in `gettext` (`from django.utils.translation import gettext
+  as _`; `gettext_lazy` for module or class level constants). Put values in with named placeholders,
+  never an f-string, so the translator sees the whole sentence:
+  `_('Account "%(name)s" is archived.') % {"name": account.name}`.
+- Translations live in `locale/sr_Latn/LC_MESSAGES/django.po`; `django.mo` is its compiled form, which
+  Django reads. Both are committed. After adding or changing a message, from `api/`:
+
+  ```bash
+  python manage.py makemessages -l sr_Latn   # adds new msgids to django.po
+  # translate the new entries (empty msgstr, or marked "#, fuzzy") in django.po
+  python manage.py compilemessages           # django.po → django.mo
+  ```
+
+  Both need GNU gettext. On Windows: the installer from
+  [gettext-iconv-windows](https://mlocati.github.io/articles/gettext-iconv-windows.html), as the Django docs
+  suggest; in Docker: `apt-get install gettext` in the container.
+- DRF and SimpleJWT ship no Serbian. Their messages a user can see are listed in
+  `common/third_party_messages.py` (never imported, only there so `makemessages` keeps their translations).
+- Checks: `common/tests/test_translations.py` (responses per language, every entry translated, `.mo` in
+  sync with `.po`, placeholders kept, third-party msgids still in the installed packages); CI also runs
+  `makemessages` and fails on untranslated or fuzzy entries.
 
 ## Tests
 

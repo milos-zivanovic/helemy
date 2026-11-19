@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Count, Q
+from django.utils.translation import gettext as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
@@ -74,7 +75,7 @@ class ExerciseViewSet(HouseholdModelViewSet):
         # Deleting would cascade into every training that has this exercise (its whole history).
         if instance.training_items.exists():
             raise ValidationError(
-                {"detail": "This exercise is used in trainings and can't be deleted."}
+                {"detail": _("This exercise is used in trainings and can't be deleted.")}
             )
         instance.delete()
 
@@ -108,7 +109,7 @@ class ExerciseViewSet(HouseholdModelViewSet):
         user = request.query_params.get("user")
         if user:
             if not user.isdigit():
-                raise ValidationError({"user": "A user id is a number."})
+                raise ValidationError({"user": _("A user id is a number.")})
             items = items.filter(training__user_id=int(user))
 
         entries = []

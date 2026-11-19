@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
@@ -5,6 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.utils.translation import get_language, gettext_lazy
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -69,6 +72,18 @@ class HouseholdSerializer(serializers.ModelSerializer):
         return None
 
 
+class UserPreferencesSerializer(serializers.ModelSerializer):
+    """What users change about themselves with PATCH /api/auth/me/ (for now only the language)."""
+
+    # One of settings.LANGUAGES ("en", "sr-latn"): the language of emails and messages that don't
+    # come from one of the user's own requests (those follow Accept-Language).
+    language = serializers.ChoiceField(choices=settings.LANGUAGES)
+
+    class Meta:
+        model = User
+        fields = ["language"]
+
+
 class UserDetailSerializer(UserSerializer):
     # Nested serializer instead of a method field: same output, and the schema gets the real type.
     households = HouseholdSerializer(many=True, read_only=True)
@@ -87,7 +102,7 @@ class HouseholdCreateSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         # Every user is in exactly one household (the personal one is created at sign up).
         if user.households.exists():
-            raise serializers.ValidationError("You already belong to a household.")
+            raise serializers.ValidationError(_("You already belong to a household."))
         return attrs
 
     def create(self, validated_data):
@@ -110,15 +125,15 @@ class InviteMemberSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email__iexact=User.objects.normalize_email(value))
         except User.DoesNotExist:
-            raise serializers.ValidationError("User with this email does not exist.") from None
+            raise serializers.ValidationError(_("User with this email does not exist.")) from None
 
         household = self.context["household"]
         if household.members.filter(pk=user.pk).exists():
-            raise serializers.ValidationError("User is already a member of this household.")
+            raise serializers.ValidationError(_("User is already a member of this household."))
         if household.invitations.filter(
             invited_user=user, status=HouseholdInvitation.PENDING
         ).exists():
-            raise serializers.ValidationError("User already has a pending invitation.")
+            raise serializers.ValidationError(_("User already has a pending invitation."))
 
         self.context["user"] = user
         return user.email
@@ -172,7 +187,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         email = User.objects.normalize_email(value)
         if User.objects.filter(email__iexact=email).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
+            raise serializers.ValidationError(_("A user with this email already exists."))
         return email
 
     def validate(self, attrs):
@@ -183,7 +198,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         # The post_save signal creates the user's personal household; sign up also seeds it.
-        user = User.objects.create_user(**validated_data)
+        # The language of the sign up request (LocaleMiddleware, from Accept-Language) becomes the
+        # user's language; the web client keeps it in sync when the user switches it later.
+        language = get_language() or settings.LANGUAGE_CODE
+        user = User.objects.create_user(**validated_data, language=language)
         create_default_finances(user.get_active_household())
         return user
 
@@ -205,7 +223,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
     def validate_old_password(self, value):
         if not self.context["request"].user.check_password(value):
-            raise serializers.ValidationError("The current password is incorrect.")
+            raise serializers.ValidationError(_("The current password is incorrect."))
         return value
 
     def validate(self, attrs):
@@ -222,7 +240,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True, style={"input_type": "password"})
 
-    INVALID_LINK = "The reset link is invalid or has expired."
+    INVALID_LINK = gettext_lazy("The reset link is invalid or has expired.")
 
     def validate(self, attrs):
         try:

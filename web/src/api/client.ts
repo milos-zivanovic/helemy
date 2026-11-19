@@ -1,7 +1,8 @@
-import createClient from 'openapi-fetch'
+import createClient, { type Middleware } from 'openapi-fetch'
 
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../auth/tokens'
 import { API_URL } from '../config'
+import i18n, { API_LANGUAGES, type Language } from '../i18n'
 import type { paths } from './schema'
 
 // Two typed clients built from the API's OpenAPI schema (src/api/schema.d.ts): a call that doesn't match
@@ -12,6 +13,21 @@ import type { paths } from './schema'
 // - api: everything else. Its fetch adds the access token and transparently refreshes it on a 401.
 export const publicApi = createClient<paths>({ baseUrl: API_URL })
 export const api = createClient<paths>({ baseUrl: API_URL, fetch: authFetch })
+
+// The API's error messages (and emails, e.g. the password reset) come in the language of the
+// request's Accept-Language header, picked by Django's LocaleMiddleware (see API_LANGUAGES).
+// A middleware runs on every request of a client before it is sent (onRequest) and can change it,
+// like a Django middleware's process_request. Read at request time, so a language switch applies
+// to the very next call.
+const languageHeader: Middleware = {
+  onRequest({ request }) {
+    const language = (i18n.resolvedLanguage ?? 'sr') as Language
+    request.headers.set('Accept-Language', API_LANGUAGES[language] ?? API_LANGUAGES.sr)
+    return request
+  },
+}
+publicApi.use(languageHeader)
+api.use(languageHeader)
 
 // openapi-fetch builds a standard Request and hands it to this function instead of window.fetch, much
 // like a Django middleware wraps get_response(request): code before and after the real call.

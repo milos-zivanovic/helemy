@@ -1,3 +1,4 @@
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from common.fields import HouseholdPrimaryKeyRelatedField
@@ -20,7 +21,7 @@ class UniqueFoodNameMixin:
         if self.instance is not None:
             duplicates = duplicates.exclude(pk=self.instance.pk)
         if duplicates.exists():
-            raise serializers.ValidationError("A food with this name already exists.")
+            raise serializers.ValidationError(_("A food with this name already exists."))
         return value
 
 

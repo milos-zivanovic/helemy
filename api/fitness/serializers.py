@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from common.fields import HouseholdPrimaryKeyRelatedField
@@ -185,7 +186,7 @@ class UniqueTrainingDateMixin:
         if self.instance is not None:
             duplicates = duplicates.exclude(pk=self.instance.pk)
         if duplicates.exists():
-            raise serializers.ValidationError("You already have a training on this date.")
+            raise serializers.ValidationError(_("You already have a training on this date."))
         return value
 
 
@@ -249,7 +250,7 @@ class AppendSetSerializer(serializers.Serializer):
             allowed = {group.id for group in training.muscle_groups.all()}
             if allowed and attrs["exercise"].muscle_group_id not in allowed:
                 raise serializers.ValidationError(
-                    {"exercise_id": "The exercise's muscle group is not part of this training."}
+                    {"exercise_id": _("The exercise's muscle group is not part of this training.")}
                 )
         return attrs
 

@@ -152,7 +152,9 @@ class TrainingItem(models.Model):
 
         if self.training_id and self.exercise_id:
             if self.training.household_id != self.exercise.household_id:
-                raise ValidationError("Exercise must belong to the same household as the training.")
+                raise ValidationError(
+                    _("Exercise must belong to the same household as the training.")
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()

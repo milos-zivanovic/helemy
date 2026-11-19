@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from django.utils.translation import gettext as _
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -39,12 +40,14 @@ def send_password_reset_email(user):
     link = settings.PASSWORD_RESET_URL.format(uid=uid, token=token)
     minutes = settings.PASSWORD_RESET_TIMEOUT // 60
     send_mail(
-        subject="Life Tracker: reset your password",
-        message=(
-            f"Someone asked to reset the password for {user.email}.\n\n"
-            f"Open this link to choose a new password (valid for {minutes} minutes):\n{link}\n\n"
+        subject=_("Life Tracker: reset your password"),
+        message=_(
+            "Someone asked to reset the password for %(email)s.\n\n"
+            "Open this link to choose a new password (valid for %(minutes)s minutes):\n"
+            "%(link)s\n\n"
             "If it wasn't you, ignore this email; your password stays the same."
-        ),
+        )
+        % {"email": user.email, "minutes": minutes, "link": link},
         from_email=None,  # DEFAULT_FROM_EMAIL
         recipient_list=[user.email],
     )
@@ -70,13 +73,13 @@ def accept_invitation(invitation):
     """
     user, household = invitation.invited_user, invitation.household
     if invitation.status != HouseholdInvitation.PENDING:
-        raise HouseholdError("This invitation is no longer pending.")
+        raise HouseholdError(_("This invitation is no longer pending."))
     current = user.get_active_household()
     if current is not None:
         if current.owner_id != user.pk:
-            raise HouseholdError("You already belong to another household.")
+            raise HouseholdError(_("You already belong to another household."))
         if current.members.exclude(pk=user.pk).exists():
-            raise HouseholdError("Remove the members of your household first.")
+            raise HouseholdError(_("Remove the members of your household first."))
         current.members.remove(user)
     household.add_member(user)
     invitation.status = HouseholdInvitation.ACCEPTED
@@ -87,7 +90,7 @@ def accept_invitation(invitation):
 
 def decline_invitation(invitation):
     if invitation.status != HouseholdInvitation.PENDING:
-        raise HouseholdError("This invitation is no longer pending.")
+        raise HouseholdError(_("This invitation is no longer pending."))
     invitation.status = HouseholdInvitation.DECLINED
     invitation.responded_at = timezone.now()
     invitation.save(update_fields=["status", "responded_at"])

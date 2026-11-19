@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 
 import { tr } from './i18n.ts'
 
@@ -41,6 +41,16 @@ const statTile = (page: Page, labelKey: string) =>
 /** A link in a navigation bar (main menu, finance tabs); the logo also links home, hence the scope. */
 const navLink = (page: Page, key: string) =>
   page.getByRole('navigation').getByRole('link', { name: tr(key), exact: true })
+
+/**
+ * Opens a page from the navigation and waits for something only that page has. React Router renders
+ * the new page in a transition, so for a moment the old one is still on screen: a check that holds on
+ * both (the same total balance) would pass too early, on the old page, and the next one fails there.
+ */
+async function openFromNav(page: Page, key: string, landmark: Locator) {
+  await navLink(page, key).click()
+  await expect(landmark).toBeVisible()
+}
 
 /** A row in a list (transactions, accounts): every row is a link to its detail page. */
 const row = (page: Page, text: string) => page.getByRole('link').filter({ hasText: text })
@@ -106,7 +116,11 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
   })
 
   await test.step('add an income', async () => {
-    await navLink(page, 'finances.tabs.transactions').click()
+    await openFromNav(
+      page,
+      'finances.tabs.transactions',
+      page.getByRole('link', { name: tr('finances.transactions.new') }),
+    )
     await addTransaction(page, {
       kind: 'income',
       title: 'Plata',
@@ -163,14 +177,22 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
   })
 
   await test.step('account balances include the transfer', async () => {
-    await navLink(page, 'finances.tabs.settings').click()
+    await openFromNav(
+      page,
+      'finances.tabs.settings',
+      page.getByRole('link', { name: tr('finances.accounts.new') }),
+    )
     await expect(totalBalance(page)).toHaveText(total)
     await expect(row(page, DEFAULT_ACCOUNT)).toContainText(await money(page, 67499.5))
     await expect(row(page, SAVINGS)).toContainText(await money(page, 30000))
   })
 
   await test.step('home page summary', async () => {
-    await navLink(page, 'nav.home').click()
+    await openFromNav(
+      page,
+      'nav.home',
+      page.getByRole('heading', { name: tr('home.greeting', { name: 'Smoke' }) }),
+    )
     await expect(totalBalance(page)).toHaveText(total)
     const accounts = page.getByRole('listitem')
     await expect(accounts.filter({ hasText: DEFAULT_ACCOUNT })).toContainText(
@@ -182,15 +204,47 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     await expect(statTile(page, 'finances.totals.expense')).toHaveText(await money(page, 2500.5))
   })
 
-  await test.step('log out and back in: the data is still there', async () => {
+  await test.step('log out, a Serbian API error, back in: the data is still there', async () => {
     await page.getByRole('button', { name: tr('auth.logout') }).click()
     await expect(page).toHaveURL('/login')
 
+    // On the way: signing up again with the same email. The error comes from the API, in the
+    // app's language (Accept-Language → Django's LocaleMiddleware → api/locale/sr_Latn).
+    await page.goto('/register')
+    await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
+    await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
+    await page.getByLabel(tr('auth.fields.passwordConfirm'), { exact: true }).fill(PASSWORD)
+    await page.getByRole('button', { name: tr('auth.register.submit') }).click()
+    await expect(page.getByText('Korisnik sa ovom email adresom već postoji.')).toBeVisible()
+
+    await page.goto('/login')
     await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
     await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
     await page.getByRole('button', { name: tr('auth.login.submit') }).click()
 
     await expect(page).toHaveURL('/')
     await expect(totalBalance(page)).toHaveText(total)
+  })
+
+  await test.step('the chosen language is saved on the account', async () => {
+    // Signed up in Serbian: the API stored the language of that request.
+    await openFromNav(page, 'nav.profile', page.getByRole('heading', { name: tr('profile.title') }))
+    const savedLanguage = (language: 'sr' | 'en') =>
+      page
+        .locator('dt')
+        .getByText(tr('profile.language', {}, language), { exact: true })
+        .locator('xpath=following-sibling::dd[1]')
+    await expect(savedLanguage('sr')).toHaveText('Srpski')
+
+    // Switching the app to English saves it on the account too (PATCH /api/auth/me/).
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/auth/me/') && response.request().method() === 'PATCH',
+    )
+    await page.getByLabel(tr('language.label')).selectOption('en')
+    const response = await saved
+    expect(response.status()).toBe(200)
+    expect((await response.json()).language).toBe('en')
+    await expect(savedLanguage('en')).toHaveText('English') // the page is in English now, too
   })
 })
