@@ -5,8 +5,8 @@ Personal finance, fitness and nutrition tracker. One REST API serves a web clien
 | Part | Folder | Status | Details |
 |---|---|---|---|
 | REST API (Django + DRF) | [`api/`](api/) | Working | [api/README.md](api/README.md) |
-| Docker Compose | [`infrastructure/`](infrastructure/) | Working for development | [infrastructure/README.md](infrastructure/README.md) |
-| Web client (React + TypeScript, Vite) | [`web/`](web/) | In progress (auth, household, finances, fitness, Docker done) | [web/README.md](web/README.md) |
+| Docker Compose | [`infrastructure/`](infrastructure/) | Working locally (dev and prod profiles); real deployment not set up yet | [infrastructure/README.md](infrastructure/README.md) |
+| Web client (React + TypeScript, Vite) | [`web/`](web/) | Working (auth, household, finances, fitness, nutrition, Docker) | [web/README.md](web/README.md) |
 | Mobile app (Expo / React Native) | [`mobile/`](mobile/) | Planned | [mobile/README.md](mobile/README.md) |
 
 ## Project structure
