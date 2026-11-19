@@ -17,14 +17,14 @@ env = environ.Env(
     JWT_REFRESH_TOKEN_LIFETIME_DAYS=(int, 7),
     JWT_ROTATE_REFRESH_TOKENS=(bool, True),
     JWT_BLACKLIST_AFTER_ROTATION=(bool, True),
-    SPECTACULAR_TITLE=(str, "Life Tracker API"),
+    SPECTACULAR_TITLE=(str, "Helemy API"),
     SPECTACULAR_DESCRIPTION=(
         str,
-        "API for Life Tracker - Personal finance, fitness, and nutrition tracking",
+        "API for Helemy - Personal finance, fitness, and nutrition tracking",
     ),
     SPECTACULAR_VERSION=(str, "1.0.0"),
     EMAIL_URL=(str, "consolemail://"),
-    DEFAULT_FROM_EMAIL=(str, "Life Tracker <noreply@localhost>"),
+    DEFAULT_FROM_EMAIL=(str, "Helemy <noreply@localhost>"),
     PASSWORD_RESET_URL=(str, "http://localhost:3000/reset-password?uid={uid}&token={token}"),
 )
 
@@ -78,7 +78,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "life_tracker.urls"
+ROOT_URLCONF = "helemy.urls"
 
 TEMPLATES = [
     {
@@ -96,7 +96,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "life_tracker.wsgi.application"
+WSGI_APPLICATION = "helemy.wsgi.application"
 
 # Database
 DATABASES = {

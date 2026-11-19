@@ -1,11 +1,11 @@
-# Serbian (Latin script) translations of the Life Tracker API.
+# Serbian (Latin script) translations of the Helemy API.
 #
 # Our own messages plus DRF / SimpleJWT ones (see common/third_party_messages.py).
 # Update with: python manage.py makemessages -l sr_Latn, then compilemessages.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: life_tracker\n"
+"Project-Id-Version: helemy\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-19 12:00+0100\n"
 "PO-Revision-Date: 2026-11-19 12:00+0100\n"
@@ -637,8 +637,8 @@ msgid "User with this email does not exist."
 msgstr "Korisnik sa ovom email adresom ne postoji."
 
 #: users/services.py:43
-msgid "Life Tracker: reset your password"
-msgstr "Life Tracker: promena lozinke"
+msgid "Helemy: reset your password"
+msgstr "Helemy: promena lozinke"
 
 #: users/services.py:76
 #: users/services.py:93

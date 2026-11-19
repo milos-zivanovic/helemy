@@ -1,4 +1,4 @@
-# Life Tracker
+# Helemy
 
 Personal finance, fitness and nutrition tracker. One REST API serves a web client and a mobile app.
 
@@ -12,7 +12,7 @@ Personal finance, fitness and nutrition tracker. One REST API serves a web clien
 ## Project structure
 
 ```
-life_tracker/
+helemy/
 ├── api/                    # Django REST API (users, finances, fitness, nutrition); has its own pyproject.toml
 ├── infrastructure/         # docker-compose.yml with dev / dev-pg / prod profiles
 ├── web/                    # React + TypeScript web client (Vite)

@@ -1,8 +1,8 @@
-# web — Life Tracker web client
+# web — Helemy web client
 
 > **Status:** phases 1-5 (auth, household, finances, fitness, nutrition, Docker) done.
 
-Browser client for Life Tracker. It uses only the REST API in [`../api`](../api/README.md) and never touches
+Browser client for Helemy. It uses only the REST API in [`../api`](../api/README.md) and never touches
 the database directly.
 
 ## Stack

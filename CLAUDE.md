@@ -1,4 +1,4 @@
-# life_tracker — instructions for Claude Code
+# helemy — instructions for Claude Code
 
 Monorepo: Django REST API (`api/`), Docker Compose (`infrastructure/`), React web client (`web/`, in progress)
 and a planned Expo mobile app (`mobile/`). What the project is, how to run it, endpoints and env variables are

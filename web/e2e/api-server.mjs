@@ -22,7 +22,7 @@ const python =
   resolve(apiDir, '../.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
 
 // Outside the repo, and never api/data/: the tests must not touch a real database.
-const database = join(tmpdir(), 'life-tracker-e2e.sqlite3')
+const database = join(tmpdir(), 'helemy-e2e.sqlite3')
 rmSync(database, { force: true })
 
 // Set explicitly, so these win over anything in api/.env (django-environ only fills in variables

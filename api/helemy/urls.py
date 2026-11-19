@@ -1,5 +1,5 @@
 """
-URL configuration for life_tracker project.
+URL configuration for helemy project.
 """
 
 from django.conf import settings

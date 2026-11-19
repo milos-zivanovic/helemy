@@ -1,4 +1,4 @@
-# Life Tracker API image.
+# Helemy API image.
 # Build context is api/ (this folder), see infrastructure/docker-compose.yml.
 
 # ---- Build stage: install dependencies into an isolated virtualenv ----
@@ -20,7 +20,7 @@ FROM python:3.12-slim
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=life_tracker.settings
+    DJANGO_SETTINGS_MODULE=helemy.settings
 
 # Non-root user that owns the app and its writable folders
 RUN useradd --create-home --shell /bin/bash app
@@ -40,4 +40,4 @@ USER app
 EXPOSE 8000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "life_tracker.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "helemy.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

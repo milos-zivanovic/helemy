@@ -71,15 +71,15 @@ indent-style = "space"
 # Tests run with Django's runner. Coverage, from api/:
 #   ../.venv/Scripts/python.exe -m coverage run manage.py test && ../.venv/Scripts/python.exe -m coverage report
 [tool.coverage.run]
-source = ["life_tracker", "users", "finances", "fitness", "nutrition", "common"]
+source = ["helemy", "users", "finances", "fitness", "nutrition", "common"]
 omit = [
     "*/migrations/*",
     "*/tests/*",
     "*/test_*.py",
     "*_test.py",
     "manage.py",
-    "life_tracker/wsgi.py",
-    "life_tracker/asgi.py",
+    "helemy/wsgi.py",
+    "helemy/asgi.py",
 ]
 
 [tool.coverage.report]
