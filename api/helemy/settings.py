@@ -13,6 +13,17 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DATABASE_URL=(str, f'sqlite:///{BASE_DIR / "data" / "db.sqlite3"}'),
     CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000", "http://127.0.0.1:3000"]),
+    CORS_ALLOWED_ORIGIN_REGEXES=(list, []),
+    CSRF_TRUSTED_ORIGINS=(list, []),
+    HTTPS=(bool, False),
+    SECURE_HSTS_SECONDS=(int, 0),
+    DB_CONN_MAX_AGE=(int, 0),
+    NUM_PROXIES=(int, None),
+    MEDIA_BUCKET_NAME=(str, ""),
+    MEDIA_ENDPOINT_URL=(str, ""),
+    MEDIA_ACCESS_KEY_ID=(str, ""),
+    MEDIA_SECRET_ACCESS_KEY=(str, ""),
+    MEDIA_CUSTOM_DOMAIN=(str, ""),
     JWT_ACCESS_TOKEN_LIFETIME_MINUTES=(int, 15),
     JWT_REFRESH_TOKEN_LIFETIME_DAYS=(int, 7),
     JWT_ROTATE_REFRESH_TOKENS=(bool, True),
@@ -38,6 +49,19 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+
+# Behind an HTTPS proxy (Cloud Run / Cloudflare in production). The proxy ends TLS and talks plain HTTP
+# to gunicorn, so Django learns the original scheme from X-Forwarded-Proto. Without it every request
+# looks like http and the admin login fails the CSRF origin check. Only turn it on behind a proxy
+# that sets this header itself, otherwise a client could fake it.
+if env("HTTPS"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = env("SECURE_HSTS_SECONDS")
+
+# Origins whose POSTs the admin accepts when they differ from the API's own host (rarely needed)
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 # Application definition
 INSTALLED_APPS = [
@@ -102,6 +126,10 @@ WSGI_APPLICATION = "helemy.wsgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
+# Seconds a connection is reused between requests (0 = a new one per request). A pooler (Supabase)
+# in front of PostgreSQL makes new connections cheap; health checks drop a connection it closed.
+DATABASES["default"]["CONN_MAX_AGE"] = env("DB_CONN_MAX_AGE")
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 # Tests: same runner as Django default, plus a fast password hasher (see common/test_runner.py)
 TEST_RUNNER = "common.test_runner.FastPasswordTestRunner"
@@ -139,6 +167,26 @@ STORAGES = {
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Uploaded files on S3-compatible storage (Cloudflare R2 in production) when a bucket is set,
+# otherwise on the local disk (MEDIA_ROOT). Cloud Run has no persistent disk, so production needs
+# the bucket. Files are then served from MEDIA_CUSTOM_DOMAIN (the bucket's public domain).
+if env("MEDIA_BUCKET_NAME"):
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": env("MEDIA_BUCKET_NAME"),
+            "endpoint_url": env("MEDIA_ENDPOINT_URL"),
+            "access_key": env("MEDIA_ACCESS_KEY_ID"),
+            "secret_key": env("MEDIA_SECRET_ACCESS_KEY"),
+            "custom_domain": env("MEDIA_CUSTOM_DOMAIN") or None,
+            "region_name": "auto",  # R2 has no regions
+            "signature_version": "s3v4",
+            "default_acl": None,  # R2 has no per-object ACLs; access is set on the bucket
+            "querystring_auth": False,  # public bucket: plain URLs, no expiring signatures
+            "file_overwrite": False,  # same name uploaded twice gets a suffix, not replaced
+        },
+    }
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -170,6 +218,9 @@ REST_FRAMEWORK = {
         "password_reset": "5/hour",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Proxies in front of the API: throttling then takes the client IP from X-Forwarded-For,
+    # counting this many entries from the right. None = no proxy count, the whole header is used.
+    "NUM_PROXIES": env("NUM_PROXIES"),
 }
 
 # SimpleJWT
@@ -202,6 +253,8 @@ SIMPLE_JWT = {
 
 # CORS
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+# Regexes for origins that can't be listed, e.g. Cloudflare Pages previews (<id>.helemy.pages.dev)
+CORS_ALLOWED_ORIGIN_REGEXES = env("CORS_ALLOWED_ORIGIN_REGEXES")
 CORS_ALLOW_CREDENTIALS = True
 
 # DRF Spectacular

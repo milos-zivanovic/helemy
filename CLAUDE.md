@@ -76,5 +76,8 @@ Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
   containers with CRLF).
 - Dependencies only in `api/pyproject.toml` (hatchling, runtime deps pinned exactly); no requirements.txt.
 - When something documented changes (endpoints, env variables, commands), update the README that owns it.
+- Production: web on Cloudflare Pages, API on Cloud Run (`deploy.yml`), PostgreSQL on Supabase, media on R2;
+  setup in `infrastructure/DEPLOYMENT.md`. A new env variable prod needs also goes into its `env.yaml`
+  (step 7) and the user must add it on Cloud Run; nothing may write to the container's disk (no persistent disk).
 - `.github/workflows/ci.yml` runs the Checks above (API tests on PostgreSQL 16) plus the e2e test, a
   `schema.d.ts` drift check and the Docker builds: a new check or a Python/Node version bump goes there too.
