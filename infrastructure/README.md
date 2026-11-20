@@ -17,7 +17,8 @@ Related files outside this folder:
 
 - [`../api/Dockerfile`](../api/Dockerfile): API image (Python 3.12, dependencies in `/opt/venv`, non-root user `app`)
 - [`../api/docker-entrypoint.sh`](../api/docker-entrypoint.sh): runs `migrate` / `collectstatic` before the command,
-  controlled by `DJANGO_MIGRATE=1` and `DJANGO_COLLECTSTATIC=1`
+  controlled by `DJANGO_MIGRATE=1` and `DJANGO_COLLECTSTATIC=1` (static files are already collected into the
+  image at build time, so no profile sets the second one)
 - [`../api/.dockerignore`](../api/.dockerignore): keeps `.env`, local databases and caches out of the image
 
 - [`../web/Dockerfile`](../web/Dockerfile): web image, targets `dev` (Vite dev server) and `prod` (build
@@ -41,8 +42,8 @@ Nothing starts without `--profile`.
 | `dev-pg` | `api-dev-pg`, `web-dev-pg`, `db` | API http://localhost:8001, web http://localhost:3000 | PostgreSQL 16 on `localhost:5432` | mounted, auto-reload | Checking against Postgres |
 | `prod` | `web-prod`, `api-prod`, `db` | http://localhost:8080 (web + API through nginx); API alone on 8002 | PostgreSQL 16 | baked into the image | Production-like run (nginx, gunicorn, `DEBUG=0`) |
 
-All profiles apply migrations automatically on start. `prod` also runs `collectstatic`, and WhiteNoise
-serves the static files (admin CSS/JS).
+All profiles apply migrations automatically on start. In `prod` WhiteNoise serves the static files
+(admin CSS/JS), collected into the API image when it's built.
 
 Rebuild (`--build`) after changing `pyproject.toml`, `package.json`, a `Dockerfile` or the entrypoint.
 In `dev` / `dev-pg`, code changes (Python and web) don't need a rebuild. `web-dev` keeps its
@@ -96,8 +97,8 @@ code is baked into the images.
 
 Without `SECRET_KEY` the container refuses to start (Django error in `docker compose logs api-prod`).
 Keep `127.0.0.1` in `ALLOWED_HOSTS`, because the container health check calls the API on that address.
-This profile is for running the built images locally. Real deployment (HTTPS, a domain, backups) is not
-set up yet.
+This profile is for running the built images locally. The real production setup (Cloud Run, Supabase,
+Cloudflare Pages and R2) is in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Configuration
 

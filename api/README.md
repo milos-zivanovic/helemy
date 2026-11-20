@@ -91,6 +91,19 @@ variables win over `.env`.
 | `EMAIL_URL` | `consolemail://` | How emails are sent; the default prints them to the server log. SMTP: `smtp+tls://user:password@host:587` |
 | `DEFAULT_FROM_EMAIL` | `Helemy <noreply@localhost>` | Sender of outgoing emails |
 | `PASSWORD_RESET_URL` | `http://localhost:3000/reset-password?uid={uid}&token={token}` | Link in the reset email (a client app page); `{uid}` and `{token}` are filled in |
+| `CORS_ALLOWED_ORIGIN_REGEXES` | empty | Comma-separated regexes for allowed origins that can't be listed (Cloudflare Pages previews) |
+| `CSRF_TRUSTED_ORIGINS` | empty | Extra origins the admin accepts POSTs from (rarely needed) |
+| `HTTPS` | `False` | `1` behind an HTTPS proxy that sets `X-Forwarded-Proto` (Cloud Run): trusts that header, secure cookies, HSTS |
+| `SECURE_HSTS_SECONDS` | `0` | HSTS max-age when `HTTPS=1` (0 = no HSTS header) |
+| `DB_CONN_MAX_AGE` | `0` | Seconds a database connection is reused (0 = new one per request) |
+| `NUM_PROXIES` | unset | Number of proxies in front of the API, for the client IP in throttling (DRF `NUM_PROXIES`) |
+| `MEDIA_BUCKET_NAME` | empty | S3-compatible bucket for uploaded files (R2 in production); empty = local disk `media/` |
+| `MEDIA_ENDPOINT_URL` | empty | The storage's S3 endpoint, e.g. `https://<account-id>.r2.cloudflarestorage.com` |
+| `MEDIA_ACCESS_KEY_ID`, `MEDIA_SECRET_ACCESS_KEY` | empty | Access key of the bucket |
+| `MEDIA_CUSTOM_DOMAIN` | empty | Public domain the files are served from, e.g. `media.helemy.com` |
+| `WEB_CONCURRENCY` | `3` (Docker image) | gunicorn worker processes |
+
+Production values: [infrastructure/DEPLOYMENT.md](../infrastructure/DEPLOYMENT.md).
 
 ## Using the API
 

@@ -1,0 +1,38 @@
+# Weekly backup of the production database (Supabase) into a private Cloudflare R2 bucket.
+# Supabase's free plan has no downloadable backups, and a free project with no activity for a week
+# gets paused: this job covers both. Old dumps are deleted by the bucket's lifecycle rule.
+# Setup and restore: infrastructure/DEPLOYMENT.md.
+name: Database backup
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # Mondays 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+    steps:
+      - name: Dump the database
+        # pg_dump from the postgres image: its version must be at least the server's.
+        # Only the public schema: Supabase's own schemas (auth, storage, ...) aren't ours.
+        # The URL is expanded inside the container (single quotes), so it isn't in any command line.
+        run: |
+          echo "FILE=helemy-$(date -u +%Y-%m-%dT%H%MZ).dump" >> "$GITHUB_ENV"
+          docker run --rm -e DATABASE_URL postgres:17-alpine \
+            sh -c 'pg_dump --format=custom --schema=public --no-owner --no-privileges "$DATABASE_URL"' \
+            > db.dump
+          test -s db.dump
+      - name: Upload to R2
+        run: |
+          aws s3 cp db.dump "s3://${{ vars.R2_BACKUP_BUCKET }}/$FILE" \
+            --endpoint-url "${{ vars.R2_ENDPOINT_URL }}"

@@ -1,0 +1,6 @@
+# Cloudflare Pages response headers (production web, see infrastructure/DEPLOYMENT.md).
+# Same rule as /assets/ in nginx.conf: Vite puts a content hash in every file name there, so they
+# can be cached forever. index.html keeps Pages' default (always revalidated), so a new build shows
+# up on the next load. Pages serves index.html for unknown paths itself (single-page app).
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

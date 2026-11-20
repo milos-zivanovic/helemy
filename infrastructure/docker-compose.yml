@@ -117,7 +117,6 @@ services:
     image: helemy-api:prod
     volumes:
       - media_files:/app/media
-      - static_files:/app/staticfiles
     ports:
       - "8002:8000"
     environment:
@@ -131,7 +130,6 @@ services:
       PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:8080/reset-password?uid={uid}&token={token}}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/helemy
       DJANGO_MIGRATE: "1"
-      DJANGO_COLLECTSTATIC: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -164,4 +162,3 @@ services:
 volumes:
   postgres_data:
   media_files:
-  static_files:

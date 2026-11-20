@@ -23,6 +23,8 @@ dependencies = [
     "Pillow==13.0.0",
     "gunicorn==27.0.1",
     "whitenoise==6.12.0",
+    "django-storages[s3]==1.14.6",  # media on S3-compatible storage (Cloudflare R2 in production)
+    "boto3==1.44.7",
 ]
 
 [project.optional-dependencies]

@@ -37,7 +37,15 @@ RUN mkdir -p /app/data /app/media /app/staticfiles \
 
 USER app
 
+# Static files (admin CSS/JS) are collected into the image at build time, so a container doesn't
+# spend its start on it (Cloud Run starts new instances on demand). The key is only for this step.
+RUN SECRET_KEY=collectstatic-only python manage.py collectstatic --noinput
+
+# gunicorn worker processes; gunicorn reads this variable itself. Override it per environment
+# (Cloud Run: 2, see infrastructure/DEPLOYMENT.md).
+ENV WEB_CONCURRENCY=3
+
 EXPOSE 8000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "helemy.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "helemy.wsgi:application", "--bind", "0.0.0.0:8000"]

@@ -1,0 +1,56 @@
+# Deploys the API to Google Cloud Run after CI passes on master (or by hand: Actions → Deploy API →
+# Run workflow). The web app isn't deployed here: Cloudflare Pages builds it from the repo itself.
+# Setup (GCP project, repository variables): infrastructure/DEPLOYMENT.md.
+#   1. build the API image and push it to Artifact Registry, tagged with the commit
+#   2. run the migrations as a Cloud Run job (once, not in every API instance)
+#   3. switch the Cloud Run service to the new image
+# Only the image changes: env variables and secrets of the service and the job stay as set up.
+name: Deploy API
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+# One deploy at a time; a newer one waits instead of cancelling one that's halfway through.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # lets the job log in to Google Cloud (Workload Identity Federation, no stored key)
+
+jobs:
+  deploy:
+    # After CI: only when it passed, and only for a push to master (not a pull request).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REGION: ${{ vars.GCP_REGION }}
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/helemy/api:${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build --tag "$IMAGE" api
+          docker push "$IMAGE"
+      - name: Migrate
+        run: |
+          gcloud run jobs update helemy-migrate --image "$IMAGE" --region "$REGION"
+          gcloud run jobs execute helemy-migrate --region "$REGION" --wait
+      - name: Deploy the API
+        run: gcloud run deploy helemy-api --image "$IMAGE" --region "$REGION"
