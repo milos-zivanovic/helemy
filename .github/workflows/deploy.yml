@@ -1,13 +1,14 @@
-# Deploys production after CI passes on master (or by hand: Actions → Deploy → Run workflow):
-# first the API to Google Cloud Run, then the web app to Cloudflare Pages, so a new web app never
-# calls an API that isn't out yet. Setup (GCP project, Cloudflare token, repository variables):
-# infrastructure/DEPLOYMENT.md.
+# Deploys production after CI passes on master, i.e. after a merged pull request's tests ran once more
+# on master. Or by hand: Actions → Deploy → Run workflow (deploys the current master, without CI).
+# First the API to Google Cloud Run, then the web app to Cloudflare Pages, so a new web app never
+# calls an API that isn't out yet. Setup (GCP project, Cloudflare token, repository variables,
+# the ruleset): infrastructure/DEPLOYMENT.md.
 #   api  1. build the API image and push it to Artifact Registry, tagged with the commit
 #        2. run the migrations as a Cloud Run job (once, not in every API instance)
 #        3. switch the Cloud Run service to the new image
 #        Only the image changes: env variables and secrets of the service and the job stay as set up.
 #   web  build web/ and upload it to the Pages project as the production deployment. Pages itself
-#        only builds the previews of other branches (its automatic production builds are off).
+#        builds nothing (its automatic production builds and branch previews are off).
 name: Deploy
 
 on:
@@ -26,6 +27,7 @@ permissions:
   contents: read
 
 env:
+  # The commit CI tested (a workflow_run event's own SHA is master's latest, which may be newer)
   SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
@@ -74,7 +76,7 @@ jobs:
         working-directory: web
     env:
       NODE_VERSION: '26.13.1' # same as ci.yml and web/Dockerfile
-      VITE_API_URL: https://api.helemy.com # built into the JS; the previews get it from Pages' settings
+      VITE_API_URL: https://api.helemy.com # built into the JS
     steps:
       - uses: actions/checkout@v7
         with:

@@ -7,7 +7,7 @@ How Helemy runs in production and how to set it up from scratch. Local Docker pr
 
 | What | Where | Address |
 |---|---|---|
-| Web (React build) | Cloudflare Pages: production uploaded by `deploy.yml` after the API, previews built by Pages from every other branch | https://helemy.com (previews: `<id>.helemy.pages.dev`) |
+| Web (React build) | Cloudflare Pages, uploaded by `deploy.yml` after the API (Pages builds nothing itself) | https://helemy.com |
 | API (Django, gunicorn) | Google Cloud Run, region `europe-west1` (Belgium), 0–2 instances | https://api.helemy.com (also `helemy-api-<project-number>.europe-west1.run.app`) |
 | Migrations | Cloud Run job `helemy-migrate`, run by the deploy workflow | |
 | Database | Supabase PostgreSQL, `eu-west-1` (Ireland), session pooler | |
@@ -21,9 +21,8 @@ helemy.com ───────> Cloudflare Pages
                        │ fetch, Authorization: Bearer <JWT>
 api.helemy.com ───> Cloud Run: helemy-api ──> Supabase PostgreSQL
                                          └──> Cloudflare R2 (helemy-media) <── media.helemy.com
-GitHub Actions: CI → deploy.yml (image → Artifact Registry → migrate job → API → web to Pages)
+GitHub Actions: CI (pull requests, master) → on master: deploy.yml (image → Artifact Registry → migrate job → API → web to Pages)
                      backup.yml (weekly pg_dump → R2 helemy-backups)
-Cloudflare Pages: previews of non-master branches (its own builds)
 ```
 
 Why `europe-west1` and not Frankfurt: Cloud Run maps a custom domain (`api.helemy.com`) only in some
@@ -36,12 +35,15 @@ Worker or Firebase Hosting in front of the `*.run.app` URL instead.
 
 Deploys:
 
-- **Production**: merge into `master` → CI → [`deploy.yml`](../.github/workflows/deploy.yml): the API
-  first, then the web app, so the web never goes out untested or before the API it calls. Or by hand:
-  Actions → Deploy → Run workflow. The API part only replaces the image; env variables and secrets stay
-  as set below. `master` only accepts pull requests whose CI passed (step 11).
-- **Previews**: Cloudflare Pages builds every other branch into `<id>.helemy.pages.dev` on push, without
-  waiting for CI. Previews use the **production API** (and its data), with code that isn't tested yet.
+- **Tests**: CI runs on every pull request, again on each new commit; `master` only accepts pull
+  requests whose CI passed (step 11). After the merge CI runs once more on `master`.
+- **Production**: CI passed on `master` → [`deploy.yml`](../.github/workflows/deploy.yml): the API first,
+  then the web app, so the web never goes out untested or before the API it calls. Or by hand: Actions
+  → Deploy → Run workflow (the current `master`, without CI). The API part only replaces the image; env
+  variables and secrets stay as set below.
+- **No previews**: Pages' own builds (production and branch previews) are off (step 9, item 6). A branch
+  preview would run untested code against the production API and its data; web changes are checked
+  locally and by CI's e2e test instead.
 
 ## Costs and limits
 
@@ -227,8 +229,8 @@ Changing a secret later: `printf '%s' "$NEW_VALUE" | gcloud secrets versions add
 
 ### 7. Google Cloud: the API service and the migrate job
 
-Settings that aren't secret go into a file. The heredoc is quoted (`'EOF'`), so the backslashes of the
-regex stay as they are; the placeholders in capitals are filled in by `sed` afterwards:
+Settings that aren't secret go into a file. The placeholders in capitals are filled in by `sed`
+afterwards:
 
 ```bash
 read -r R2_ACCOUNT_ID     # step 3, only the ID
@@ -240,7 +242,6 @@ HTTPS: "1"
 SECURE_HSTS_SECONDS: "3600"
 ALLOWED_HOSTS: "api.helemy.com,RUN_HOST"
 CORS_ALLOWED_ORIGINS: "https://helemy.com"
-CORS_ALLOWED_ORIGIN_REGEXES: "^https://[a-z0-9-]+\\.helemy\\.pages\\.dev$"
 DEFAULT_FROM_EMAIL: "Helemy <noreply@helemy.com>"
 PASSWORD_RESET_URL: "https://helemy.com/reset-password?uid={uid}&token={token}"
 MEDIA_BUCKET_NAME: "helemy-media"
@@ -286,8 +287,7 @@ Django's default local-memory cache.)
 
 **Adding a setting later.** `--update-env-vars` and `--update-secrets` add or change only the variables
 given and keep the rest; do the same for the service and the job, and add the line to `env.yaml` too,
-so the file stays complete. The Pages project name in `CORS_ALLOWED_ORIGIN_REGEXES` must match step 9
-(if `helemy` is taken there, Cloudflare gives a name like `helemy-abc`): that's a change like this one.
+so the file stays complete. `--remove-env-vars=NAME` takes one away (and the line out of `env.yaml`).
 
 ```bash
 gcloud run services update helemy-api --region=$REGION --update-env-vars=NAME=value
@@ -393,27 +393,28 @@ Then Actions → **Database backup** → Run workflow, and check that a `helemy-
    Pages → Create → **Pages** tab, or "Looking to deploy Pages? Get started") → Import an existing Git
    repository → GitHub. Install Cloudflare's GitHub app for **only selected repositories** → `helemy`.
 2. Build settings:
-   - Project name: `helemy` (it's in the preview URLs and so in `CORS_ALLOWED_ORIGIN_REGEXES`, step 7)
+   - Project name: `helemy` (`--project-name` in `deploy.yml`)
    - Production branch: `master`
    - Framework preset: React (Vite) (or None)
    - Root directory (advanced): `web`
    - Build command: `npm run build`
    - Build output directory: `dist`
-3. Environment variables (Production **and** Preview; once item 6 is done only the previews use them,
-   production is built by `deploy.yml`, which sets the same two values itself):
+3. Environment variables, for this first build only (after item 6 Pages builds nothing; `deploy.yml`
+   sets the same two values itself):
    - `VITE_API_URL` = `https://api.helemy.com`
    - `NODE_VERSION` = the `NODE_VERSION` from `.github/workflows/ci.yml`
 4. Save and Deploy. The web then runs on `https://helemy.pages.dev`, but logging in there fails with a
-   CORS error: the API only accepts `helemy.com` and the previews.
+   CORS error: the API only accepts `helemy.com`.
 5. Project → Custom domains → `helemy.com` → Activate domain (Cloudflare adds the DNS record, proxied;
    Active within minutes). Then the same for `www.helemy.com`, and a redirect: the domain's Rules →
    Redirect Rules → template "Redirect from WWW to Root" (or by hand: hostname equals `www.helemy.com`
    → dynamic `concat("https://helemy.com", http.request.uri.path)`, 301, preserve query string).
 6. **Production goes through GitHub Actions**, after CI and the API (so Pages' own build of `master`
-   can't publish a web app whose tests fail, or one that's out before its API). Pages project →
-   Settings → Builds → Branch control: untick **Enable automatic production branch deployments**;
-   Preview branches: All non-production branches. Same page, **Build watch paths**: include `web/*`
-   (no preview builds for branches that only change the API or docs).
+   can't publish a web app whose tests fail, or one that's out before its API), and **no branch
+   previews** (they'd run untested code against the production API). Do this after the first
+   successful `web` job (item 8). Pages project → Settings → Builds → Branch control: untick **Enable
+   automatic production branch deployments**; Preview branches: **None**. Pages then builds nothing
+   itself; the Git connection only stays for the project's settings.
 7. Cloudflare API token for the workflow: My Profile → API Tokens → Create Token → **Create Custom
    Token**: name `github-pages-deploy`, permission **Account → Cloudflare Pages → Edit**, account
    resources: include your account, no IP filter, no TTL → copy the token (shown once).
@@ -459,9 +460,10 @@ default).
 
 ### 11. Protect `master` (GitHub)
 
-Every push to `master` goes to production (`deploy.yml`, after CI). A ruleset makes `master` accept only
-pull requests whose CI passed (free for a public repository): GitHub → repository → Settings → Rules →
-Rulesets → New ruleset → **New branch ruleset**:
+Every push to `master` goes to production once CI passes on it (`deploy.yml`). A ruleset makes `master`
+accept only pull requests whose CI passed, so a failure shows up in the PR, not after the merge (free
+for a public repository): GitHub → repository → Settings → Rules → Rulesets → New ruleset → **New branch
+ruleset**:
 
 - Ruleset name: `master`, Enforcement status: **Active**
 - Target branches: Add target → **Include default branch**
@@ -470,10 +472,12 @@ Rulesets → New ruleset → **New branch ruleset**:
   - **Require a pull request before merging**, required approvals `0` (a solo project; it's there so
     nothing reaches `master` without going through CI)
   - **Require status checks to pass** → Add checks → `api`, `web`, `e2e`, `docker` (the jobs of
-    `ci.yml`; GitHub suggests them once CI has run). Also tick "Require branches to be up to date before
-    merging", so CI has run on what is actually merged.
-- Bypass list: leave empty, or add Repository admin for emergencies (then a direct push is possible,
-  but deliberate).
+    `ci.yml`; GitHub suggests them once CI has run). Optionally **Require branches to be up to date
+    before merging**: if `master` moved on since the PR's last CI run, GitHub shows "Update branch"
+    and CI runs again on what will actually be merged (otherwise CI on `master` catches it, after the
+    merge).
+- Bypass list: leave empty, or add Repository admin for emergencies (a direct push still goes
+  through CI on `master` before it's deployed).
 
 When a CI job is renamed or added, update the ruleset's checks; a required check that no longer runs
 blocks every pull request.
@@ -498,7 +502,7 @@ docker run --rm -v "$PWD:/backup" -e DATABASE_URL='<target DATABASE_URL>' postgr
 | `password authentication failed for user "postgres"` (`psql`, `createsuperuser`, backup) | The URL used differs from the one that works: copy it from the secret (end of step 2) instead of retyping it. The message says `postgres` even when the user is `postgres.<ref>` |
 | `Tenant or user not found` | Not the session pooler URI, or the user isn't `postgres.<ref>` |
 | API answers `400 Bad Request` | The host isn't in `ALLOWED_HOSTS` |
-| Web: requests blocked by CORS | The web's origin isn't in `CORS_ALLOWED_ORIGINS` / `CORS_ALLOWED_ORIGIN_REGEXES` (e.g. a different Pages project name, or `helemy.pages.dev` itself) |
+| Web: requests blocked by CORS | The web's origin isn't in `CORS_ALLOWED_ORIGINS` (only `https://helemy.com`; not `helemy.pages.dev` or `www`, which redirects) |
 | Admin login: `CSRF verification failed` | `HTTPS` must be `1` on Cloud Run |
 | `api.helemy.com` certificate stays `Unknown`/`False` for hours | Orange cloud on the `api` record, a typo in the CNAME, or a CAA record that excludes Google. Details: `gcloud beta run domain-mappings describe --domain=api.helemy.com --region=europe-west1 --format="yaml(status.conditions)"` |
 | Image upload fails with an R2 checksum error | Add `AWS_REQUEST_CHECKSUM_CALCULATION=when_required` and `AWS_RESPONSE_CHECKSUM_VALIDATION=when_required` (step 7, "Adding a setting later") |

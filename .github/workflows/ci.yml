@@ -1,4 +1,6 @@
-# The checks from CLAUDE.md / the READMEs, on every push to master and every pull request.
+# The checks from CLAUDE.md / the READMEs, on every pull request (each new commit runs them again;
+# the master ruleset merges only when they pass) and once more on master after the merge, where a pass
+# starts the deploy (deploy.yml).
 # Four jobs run in parallel; each one starts on a clean Ubuntu machine.
 #   api     lint, migrations, OpenAPI schema, tests (on PostgreSQL, like production), translations
 #   web     format, types, lint, unit tests and the production build
