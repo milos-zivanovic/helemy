@@ -130,6 +130,7 @@ services:
       PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:8080/reset-password?uid={uid}&token={token}}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/helemy
       DJANGO_MIGRATE: "1"
+      NUM_PROXIES: "1"  # web-prod's nginx in front (X-Forwarded-For), as Google's front end on Cloud Run
     depends_on:
       db:
         condition: service_healthy
