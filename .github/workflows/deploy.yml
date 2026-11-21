@@ -1,11 +1,14 @@
-# Deploys the API to Google Cloud Run after CI passes on master (or by hand: Actions → Deploy API →
-# Run workflow). The web app isn't deployed here: Cloudflare Pages builds it from the repo itself.
-# Setup (GCP project, repository variables): infrastructure/DEPLOYMENT.md.
-#   1. build the API image and push it to Artifact Registry, tagged with the commit
-#   2. run the migrations as a Cloud Run job (once, not in every API instance)
-#   3. switch the Cloud Run service to the new image
-# Only the image changes: env variables and secrets of the service and the job stay as set up.
-name: Deploy API
+# Deploys production after CI passes on master (or by hand: Actions → Deploy → Run workflow):
+# first the API to Google Cloud Run, then the web app to Cloudflare Pages, so a new web app never
+# calls an API that isn't out yet. Setup (GCP project, Cloudflare token, repository variables):
+# infrastructure/DEPLOYMENT.md.
+#   api  1. build the API image and push it to Artifact Registry, tagged with the commit
+#        2. run the migrations as a Cloud Run job (once, not in every API instance)
+#        3. switch the Cloud Run service to the new image
+#        Only the image changes: env variables and secrets of the service and the job stay as set up.
+#   web  build web/ and upload it to the Pages project as the production deployment. Pages itself
+#        only builds the previews of other branches (its automatic production builds are off).
+name: Deploy
 
 on:
   workflow_run:
@@ -16,28 +19,33 @@ on:
 
 # One deploy at a time; a newer one waits instead of cancelling one that's halfway through.
 concurrency:
-  group: deploy-api
+  group: deploy
   cancel-in-progress: false
 
 permissions:
   contents: read
-  id-token: write # lets the job log in to Google Cloud (Workload Identity Federation, no stored key)
+
+env:
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
-  deploy:
+  api:
     # After CI: only when it passed, and only for a push to master (not a pull request).
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # lets the job log in to Google Cloud (Workload Identity Federation, no stored key)
     env:
       REGION: ${{ vars.GCP_REGION }}
       IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/helemy/api:${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ env.SHA }}
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -54,3 +62,38 @@ jobs:
           gcloud run jobs execute helemy-migrate --region "$REGION" --wait
       - name: Deploy the API
         run: gcloud run deploy helemy-api --image "$IMAGE" --region "$REGION"
+
+  web:
+    needs: api # skipped too when the API deploy fails or doesn't run
+    # Skipped until the Cloudflare part of the setup exists (DEPLOYMENT.md step 9).
+    if: vars.CLOUDFLARE_ACCOUNT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      NODE_VERSION: '26.13.1' # same as ci.yml and web/Dockerfile
+      VITE_API_URL: https://api.helemy.com # built into the JS; the previews get it from Pages' settings
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      # --branch=master: the Pages project's production branch, so this becomes the production
+      # deployment (helemy.com). The token may only deploy Pages projects of this account.
+      - name: Upload to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          npx --yes wrangler@4.158.0 pages deploy dist
+          --project-name=helemy --branch=master --commit-hash="$SHA"

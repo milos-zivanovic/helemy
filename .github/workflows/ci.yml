@@ -22,7 +22,7 @@ permissions:
 
 env:
   PYTHON_VERSION: '3.12' # api/Dockerfile
-  NODE_VERSION: '26.13.1' # web/Dockerfile
+  NODE_VERSION: '26.13.1' # web/Dockerfile, deploy.yml
 
 jobs:
   api:
