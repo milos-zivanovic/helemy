@@ -7,7 +7,7 @@ How Helemy runs in production and how to set it up from scratch. Local Docker pr
 
 | What | Where | Address |
 |---|---|---|
-| Web (React build) | Cloudflare Pages, built from this repo on every push | https://helemy.com (previews: `<id>.helemy.pages.dev`) |
+| Web (React build) | Cloudflare Pages: production uploaded by `deploy.yml` after the API, previews built by Pages from every other branch | https://helemy.com (previews: `<id>.helemy.pages.dev`) |
 | API (Django, gunicorn) | Google Cloud Run, region `europe-west1` (Belgium), 0–2 instances | https://api.helemy.com (also `helemy-api-<project-number>.europe-west1.run.app`) |
 | Migrations | Cloud Run job `helemy-migrate`, run by the deploy workflow | |
 | Database | Supabase PostgreSQL, `eu-west-1` (Ireland), session pooler | |
@@ -21,8 +21,9 @@ helemy.com ───────> Cloudflare Pages
                        │ fetch, Authorization: Bearer <JWT>
 api.helemy.com ───> Cloud Run: helemy-api ──> Supabase PostgreSQL
                                          └──> Cloudflare R2 (helemy-media) <── media.helemy.com
-GitHub Actions: CI → deploy.yml (image → Artifact Registry → migrate job → API)
+GitHub Actions: CI → deploy.yml (image → Artifact Registry → migrate job → API → web to Pages)
                      backup.yml (weekly pg_dump → R2 helemy-backups)
+Cloudflare Pages: previews of non-master branches (its own builds)
 ```
 
 Why `europe-west1` and not Frankfurt: Cloud Run maps a custom domain (`api.helemy.com`) only in some
@@ -35,9 +36,12 @@ Worker or Firebase Hosting in front of the `*.run.app` URL instead.
 
 Deploys:
 
-- **API**: push to `master` → CI → [`deploy.yml`](../.github/workflows/deploy.yml). Or by hand: Actions → Deploy API
-  → Run workflow. The workflow only replaces the image; env variables and secrets stay as set below.
-- **Web**: Cloudflare Pages builds `master` into production and every other branch into a preview.
+- **Production**: merge into `master` → CI → [`deploy.yml`](../.github/workflows/deploy.yml): the API
+  first, then the web app, so the web never goes out untested or before the API it calls. Or by hand:
+  Actions → Deploy → Run workflow. The API part only replaces the image; env variables and secrets stay
+  as set below. `master` only accepts pull requests whose CI passed (step 11).
+- **Previews**: Cloudflare Pages builds every other branch into `<id>.helemy.pages.dev` on push, without
+  waiting for CI. Previews use the **production API** (and its data), with code that isn't tested yet.
 
 ## Costs and limits
 
@@ -371,8 +375,8 @@ GitHub → repository → Settings → Secrets and variables → Actions. Variab
 | Secret | `R2_BACKUP_ACCESS_KEY_ID` | `helemy-backups` token (step 3), not the media one |
 | Secret | `R2_BACKUP_SECRET_ACCESS_KEY` | `helemy-backups` token (step 3) |
 
-Then Actions → **Deploy API** → Run workflow (`master`), about 5 minutes: it builds the real image,
-migrates the empty database and replaces the placeholder. Check
+Then Actions → **Deploy** → Run workflow (`master`), about 5 minutes: it builds the real image,
+migrates the empty database and replaces the placeholder (its `web` job is skipped until step 9). Check
 `https://helemy-api-<project-number>.europe-west1.run.app/api/docs/` (or https://api.helemy.com/api/docs/
 once its certificate is issued): Swagger. `/` answers 404, that's expected. Supabase → Table Editor shows
 Django's tables. The `auth` step can fail with `unauthorized_client` for a few minutes after the
@@ -395,7 +399,8 @@ Then Actions → **Database backup** → Run workflow, and check that a `helemy-
    - Root directory (advanced): `web`
    - Build command: `npm run build`
    - Build output directory: `dist`
-3. Environment variables (Production **and** Preview):
+3. Environment variables (Production **and** Preview; once item 6 is done only the previews use them,
+   production is built by `deploy.yml`, which sets the same two values itself):
    - `VITE_API_URL` = `https://api.helemy.com`
    - `NODE_VERSION` = the `NODE_VERSION` from `.github/workflows/ci.yml`
 4. Save and Deploy. The web then runs on `https://helemy.pages.dev`, but logging in there fails with a
@@ -404,6 +409,24 @@ Then Actions → **Database backup** → Run workflow, and check that a `helemy-
    Active within minutes). Then the same for `www.helemy.com`, and a redirect: the domain's Rules →
    Redirect Rules → template "Redirect from WWW to Root" (or by hand: hostname equals `www.helemy.com`
    → dynamic `concat("https://helemy.com", http.request.uri.path)`, 301, preserve query string).
+6. **Production goes through GitHub Actions**, after CI and the API (so Pages' own build of `master`
+   can't publish a web app whose tests fail, or one that's out before its API). Pages project →
+   Settings → Builds → Branch control: untick **Enable automatic production branch deployments**;
+   Preview branches: All non-production branches. Same page, **Build watch paths**: include `web/*`
+   (no preview builds for branches that only change the API or docs).
+7. Cloudflare API token for the workflow: My Profile → API Tokens → Create Token → **Create Custom
+   Token**: name `github-pages-deploy`, permission **Account → Cloudflare Pages → Edit**, account
+   resources: include your account, no IP filter, no TTL → copy the token (shown once).
+8. GitHub → Settings → Secrets and variables → Actions:
+
+   | Kind | Name | Value |
+   |---|---|---|
+   | Variable | `CLOUDFLARE_ACCOUNT_ID` | the Account ID (step 3) |
+   | Secret | `CLOUDFLARE_API_TOKEN` | the token from item 7 |
+
+   Then Actions → **Deploy** → Run workflow: its `web` job (skipped as long as `CLOUDFLARE_ACCOUNT_ID`
+   isn't set) builds `web/` and runs `wrangler pages deploy --branch=master`. Pages → Deployments shows
+   it as the production deployment, made by Wrangler / direct upload.
 
 [`web/public/_headers`](../web/public/_headers) sets the cache headers; Pages serves `index.html` for
 unknown paths itself (React Router).
@@ -434,6 +457,27 @@ Remove-Item Env:DATABASE_URL
 Then in the admin (https://api.helemy.com/admin/) → Users: first and last name, language (`en` by
 default).
 
+### 11. Protect `master` (GitHub)
+
+Every push to `master` goes to production (`deploy.yml`, after CI). A ruleset makes `master` accept only
+pull requests whose CI passed (free for a public repository): GitHub → repository → Settings → Rules →
+Rulesets → New ruleset → **New branch ruleset**:
+
+- Ruleset name: `master`, Enforcement status: **Active**
+- Target branches: Add target → **Include default branch**
+- Rules:
+  - **Restrict deletions** and **Block force pushes** (on by default): keep
+  - **Require a pull request before merging**, required approvals `0` (a solo project; it's there so
+    nothing reaches `master` without going through CI)
+  - **Require status checks to pass** → Add checks → `api`, `web`, `e2e`, `docker` (the jobs of
+    `ci.yml`; GitHub suggests them once CI has run). Also tick "Require branches to be up to date before
+    merging", so CI has run on what is actually merged.
+- Bypass list: leave empty, or add Repository admin for emergencies (then a direct push is possible,
+  but deliberate).
+
+When a CI job is renamed or added, update the ruleset's checks; a required check that no longer runs
+blocks every pull request.
+
 ## Restoring a backup
 
 Download a `.dump` from the `helemy-backups` bucket (R2 dashboard), then from its folder:
@@ -459,6 +503,8 @@ docker run --rm -v "$PWD:/backup" -e DATABASE_URL='<target DATABASE_URL>' postgr
 | `api.helemy.com` certificate stays `Unknown`/`False` for hours | Orange cloud on the `api` record, a typo in the CNAME, or a CAA record that excludes Google. Details: `gcloud beta run domain-mappings describe --domain=api.helemy.com --region=europe-west1 --format="yaml(status.conditions)"` |
 | Image upload fails with an R2 checksum error | Add `AWS_REQUEST_CHECKSUM_CALCULATION=when_required` and `AWS_RESPONSE_CHECKSUM_VALIDATION=when_required` (step 7, "Adding a setting later") |
 | No email arrives | Cloud Run → Services → `helemy-api` → Logs: `SMTPAuthenticationError` = SMTP login/key or the Brevo SMTP account isn't activated; `SMTPSenderRefused` = sender not active. Brevo → Transactional → Logs shows what it received. First emails from a new domain may land in spam |
+| Deploy: `web` job fails at "Upload to Cloudflare Pages" | `Authentication error` = the `CLOUDFLARE_API_TOKEN` secret or its permission (Cloudflare Pages: Edit); `Project not found` = `CLOUDFLARE_ACCOUNT_ID`, or the project isn't called `helemy` (`--project-name` in `deploy.yml`) |
+| Deploy: `web` job skipped | `CLOUDFLARE_ACCOUNT_ID` variable missing (step 9, item 8), or the `api` job failed |
 | Pages: "An unknown error occurred" on Save and Deploy | The project name is already used in the account (e.g. a Worker from the Workers form: delete it), or Cloudflare's GitHub app has no access to the repository (github.com/settings/installations) |
 | Logs full of 404s for `/wp-config.php`, `/.env`, `/.ssh/...` | Bots that read the public Certificate Transparency logs and scan every new domain. Harmless: Django serves no files from disk except `/static/` |
 | Supabase project paused | Supabase dashboard → Restore; check that the weekly backup workflow runs |

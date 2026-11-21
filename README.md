@@ -122,7 +122,8 @@ On an e2e failure the run's page has a `playwright-results` artifact with the sc
 no secrets.
 
 Two more workflows belong to production ([infrastructure/DEPLOYMENT.md](infrastructure/DEPLOYMENT.md)):
-[`deploy.yml`](.github/workflows/deploy.yml) deploys the API to Cloud Run after CI passes on `master`, and
+[`deploy.yml`](.github/workflows/deploy.yml) deploys the API to Cloud Run and then the web app to Cloudflare
+Pages after CI passes on `master` (Pages itself only builds the previews of other branches), and
 [`backup.yml`](.github/workflows/backup.yml) dumps the production database into R2 every week.
 
 ## License
