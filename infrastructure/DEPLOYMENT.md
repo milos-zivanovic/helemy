@@ -415,9 +415,13 @@ Then Actions → **Database backup** → Run workflow, and check that a `helemy-
    successful `web` job (item 8). Pages project → Settings → Builds → Branch control: untick **Enable
    automatic production branch deployments**; Preview branches: **None**. Pages then builds nothing
    itself; the Git connection only stays for the project's settings.
-7. Cloudflare API token for the workflow: My Profile → API Tokens → Create Token → **Create Custom
-   Token**: name `github-pages-deploy`, permission **Account → Cloudflare Pages → Edit**, account
-   resources: include your account, no IP filter, no TTL → copy the token (shown once).
+7. Cloudflare API token for the workflow: `dash.cloudflare.com/profile/api-tokens` → Create Token. On
+   the form: Token name `github-pages-deploy`; Policies → **Start from scratch** → **Start with an
+   Account policy** → Include your account (not "All accounts", if it's offered) → search the permission
+   groups for `Pages` → **Cloudflare Pages: Edit** (only this one; the counters of all other groups
+   stay at 0); Token expiration **No expiration**; no IP filter → Continue to summary → Create Token →
+   copy the token (shown once). The Account ID (item 8) is the 32 hex characters after
+   `dash.cloudflare.com/` in the dashboard's URL.
 8. GitHub → Settings → Secrets and variables → Actions:
 
    | Kind | Name | Value |
