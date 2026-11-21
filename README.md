@@ -107,8 +107,10 @@ Web unit tests and the end-to-end smoke test: see [web/README.md](web/README.md#
 
 ## CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `master` and every pull
-request (GitHub Actions, results in the repository's **Actions** tab). Four jobs run in parallel:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull request, again on each new
+commit, and once more on `master` after the merge (GitHub Actions, results in the PR and the repository's
+**Actions** tab). A pull request can only be merged once all four jobs pass; a pass on `master` starts
+the deploy. Four jobs run in parallel:
 
 | Job      | What it checks                                                                              |
 | -------- | ------------------------------------------------------------------------------------------- |
@@ -123,7 +125,7 @@ no secrets.
 
 Two more workflows belong to production ([infrastructure/DEPLOYMENT.md](infrastructure/DEPLOYMENT.md)):
 [`deploy.yml`](.github/workflows/deploy.yml) deploys the API to Cloud Run and then the web app to Cloudflare
-Pages after CI passes on `master` (Pages itself only builds the previews of other branches), and
+Pages after CI passes on `master` (Pages itself builds nothing, no branch previews), and
 [`backup.yml`](.github/workflows/backup.yml) dumps the production database into R2 every week.
 
 ## License
