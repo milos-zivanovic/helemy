@@ -1,6 +1,7 @@
 # Helemy
 
 Personal finance, fitness and nutrition tracker. One REST API serves a web client and a mobile app.
+It replaces the old `wallet` app, whose data was migrated to production on 2026-11-22; `wallet` is shut down.
 
 | Part | Folder | Status | Details |
 |---|---|---|---|
