@@ -16,10 +16,9 @@ in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of d
     created locally and pushed to GitHub.
   - Before EVERY commit, show the files and the commit message and wait for the user's yes. Before EVERY
     push, ask again: an approved commit is not an approved push.
-  - When the user confirms a piece is done, ask before opening the pull request (base `master`, via `gh`);
-    open it only after a yes.
-  - The merge is ALWAYS the user's, done by hand: never merge a PR, never enable auto-merge, never merge or
-    push into `master` (not even locally).
+  - Opening the pull request and the merge are ALWAYS the user's, done by hand: never open, merge or approve
+    a PR, never enable auto-merge, never merge or push into `master` (not even locally). When a piece is
+    pushed, give the user the branch name and a suggested PR title and description (base `master`).
   - After the user merges: update `master` locally and delete the merged local branch; delete the remote
     branch only when asked.
 - Work on `api/` and `web/` (and their Docker setup); mobile work needs the user's explicit approval.
