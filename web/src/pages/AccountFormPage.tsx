@@ -10,6 +10,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { CheckboxField } from '../components/CheckboxField'
 import { ConfirmButton } from '../components/ConfirmButton'
+import { FormDateField } from '../components/FormDateField'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
 import {
@@ -120,6 +121,7 @@ function AccountForm({
   const { t } = useTranslation()
   const schema = useMemo(() => accountSchema(t), [t])
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -155,11 +157,10 @@ function AccountForm({
           error={errors.opening_balance?.message}
           {...register('opening_balance')}
         />
-        <TextField
+        <FormDateField
+          control={control}
+          name="opening_date"
           label={t('finances.accounts.openingDate')}
-          type="date"
-          error={errors.opening_date?.message}
-          {...register('opening_date')}
         />
       </div>
       <p className="text-xs text-slate-500">{t('finances.accounts.openingHint')}</p>

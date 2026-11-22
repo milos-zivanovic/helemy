@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next'
 import { z } from 'zod'
 
+import { optionalDate, requiredDate } from '../lib/dateSchemas'
+
 // What the user types and what the API gets are not the same here, and Zod handles both sides:
 // the form works with strings (inputs and selects always hold strings), the schema checks them and
 // transforms them into the API's shape. React Hook Form's handleSubmit receives the transformed values.
@@ -29,7 +31,7 @@ export const transactionSchema = (t: TFunction) =>
       .min(1, t('validation.required'))
       .max(100, t('validation.maxLength', { max: 100 })),
     amount: amountField(t),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t('validation.required')),
+    date: requiredDate(t),
     // A <select> gives a string; the API wants the id as a number.
     category_id: z.string().min(1, t('validation.required')).transform(Number),
     account_id: z.string().min(1, t('validation.required')).transform(Number),
@@ -46,7 +48,6 @@ export type TransactionFormValues = z.input<ReturnType<typeof transactionSchema>
 // Days per month in a leap year (29 February is allowed in a yearly window).
 const daysInMonth = (month: number) => new Date(2024, month, 0).getDate()
 
-const optionalDate = z.string().transform((value) => value || null)
 const optionalNumber = z
   .string()
   .trim()
@@ -62,8 +63,8 @@ export const categorySchema = (t: TFunction) =>
         .max(100, t('validation.maxLength', { max: 100 })),
       category_group_id: z.string().min(1, t('validation.required')).transform(Number),
       is_active: z.boolean(),
-      start_date: optionalDate,
-      end_date: optionalDate,
+      start_date: optionalDate(t),
+      end_date: optionalDate(t),
       start_month: optionalNumber,
       start_day: optionalNumber,
       end_month: optionalNumber,
@@ -109,8 +110,8 @@ export const budgetSchema = (t: TFunction) =>
     .object({
       category_id: z.string().min(1, t('validation.required')).transform(Number),
       amount: amountField(t),
-      start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t('validation.required')),
-      end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t('validation.required')),
+      start_date: requiredDate(t),
+      end_date: requiredDate(t),
       description: z
         .string()
         .trim()
@@ -141,8 +142,6 @@ const bigAmountField = (t: TFunction, signed: boolean) =>
     )
     .transform((value) => Number(value).toFixed(2))
 
-const isoDate = (t: TFunction) => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t('validation.required'))
-
 export const accountSchema = (t: TFunction) =>
   z.object({
     name: z
@@ -151,7 +150,7 @@ export const accountSchema = (t: TFunction) =>
       .min(1, t('validation.required'))
       .max(100, t('validation.maxLength', { max: 100 })),
     opening_balance: bigAmountField(t, true),
-    opening_date: isoDate(t),
+    opening_date: requiredDate(t),
     is_active: z.boolean(),
   })
 
@@ -163,7 +162,7 @@ export const transferSchema = (t: TFunction) =>
       from_account_id: z.string().min(1, t('validation.required')).transform(Number),
       to_account_id: z.string().min(1, t('validation.required')).transform(Number),
       amount: bigAmountField(t, false),
-      date: isoDate(t),
+      date: requiredDate(t),
       description: z
         .string()
         .trim()

@@ -65,3 +65,20 @@ export const changePasswordSchema = (t: TFunction) =>
       message: t('validation.passwordMismatch'),
       path: ['password_confirm'],
     })
+
+// The profile form (PATCH /api/auth/me/). Names are optional and limited like Django's User model;
+// the choices are checked by the API, the select boxes only offer valid ones anyway.
+export const profileSchema = (t: TFunction) =>
+  z.object({
+    first_name: z
+      .string()
+      .trim()
+      .max(150, t('validation.maxLength', { max: 150 })),
+    last_name: z
+      .string()
+      .trim()
+      .max(150, t('validation.maxLength', { max: 150 })),
+    currency: z.enum(['RSD', 'EUR', 'USD', 'CHF', 'GBP', 'BAM', 'HUF']),
+    timezone: z.string().min(1, t('validation.required')),
+    language: z.enum(['en', 'sr-latn']),
+  })

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { errorMessage } from '../api/errors'
 import type { Household } from '../api/types'
 import { useMe } from '../auth/useAuth'
+import { Avatar } from '../components/Avatar'
 import { Alert } from '../components/Alert'
 import { Card } from '../components/Card'
 import { ConfirmButton } from '../components/ConfirmButton'
@@ -30,17 +31,25 @@ export function Members({ household }: { household: Household }) {
           const isHouseholdOwner = member.id === household.owner.id
           return (
             <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {member.full_name || member.email}
-                  {member.id === me?.id && (
-                    <span className="ml-1 text-slate-500">({t('household.members.you')})</span>
-                  )}
-                </p>
-                <p className="truncate text-xs text-slate-500">
-                  {member.email}
-                  {isHouseholdOwner && ` · ${t('household.roles.owner')}`}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar
+                  firstName={member.first_name}
+                  lastName={member.last_name}
+                  email={member.email}
+                  src={member.avatar_url}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {member.full_name || member.email}
+                    {member.id === me?.id && (
+                      <span className="ml-1 text-slate-500">({t('household.members.you')})</span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {member.email}
+                    {isHouseholdOwner && ` · ${t('household.roles.owner')}`}
+                  </p>
+                </div>
               </div>
               {isOwner && !isHouseholdOwner && (
                 <ConfirmButton

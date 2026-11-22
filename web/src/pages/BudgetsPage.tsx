@@ -6,6 +6,7 @@ import type { components } from '../api/schema'
 import { Alert } from '../components/Alert'
 import { Button, LinkButton } from '../components/Button'
 import { ProgressBar } from '../components/ProgressBar'
+import { progressTone } from '../components/progressTone'
 import { Icon } from '../components/Icon'
 import { useActiveBudgets, useBudgetsOfYear } from '../finances/hooks'
 import { useFormatters } from '../i18n/format'
@@ -84,7 +85,10 @@ function ActiveBudgets() {
                   spent: formatMoney(total_spent),
                   amount: formatMoney(total_amount),
                 })}{' '}
-                · {Math.round(Number(percentage))} %
+                ·{' '}
+                <span className={`font-medium ${progressTone(Number(percentage)).text}`}>
+                  {Math.round(Number(percentage))} %
+                </span>
               </span>
             </div>
             <ProgressBar percentage={Number(percentage)} label={t('finances.budgets.total')} />
@@ -181,7 +185,10 @@ function BudgetList({ budgets }: { budgets: Budget[] }) {
                 {left < 0
                   ? t('finances.budgets.over', { amount: formatMoney(-left) })
                   : t('finances.budgets.left', { amount: formatMoney(left) })}{' '}
-                · {Math.round(percentage)} %
+                ·{' '}
+                <span className={`font-medium ${progressTone(percentage).text}`}>
+                  {Math.round(percentage)} %
+                </span>
               </span>
             </Link>
           </li>

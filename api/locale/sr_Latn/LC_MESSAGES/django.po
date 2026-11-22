@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helemy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 12:00+0100\n"
+"POT-Creation-Date: 2026-11-22 14:14+0100\n"
 "PO-Revision-Date: 2026-11-19 12:00+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -15,7 +15,21 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: common/images.py:28
+#, python-format
+msgid "The image is too large (at most %(mb)s MB)."
+msgstr "Slika je prevelika (najviše %(mb)s MB)."
+
+#: common/images.py:33 common/images.py:41
+msgid "Upload a JPEG, PNG or WebP image."
+msgstr "Pošaljite JPEG, PNG ili WebP sliku."
+
+#: common/images.py:35
+msgid "The image has too many pixels."
+msgstr "Slika ima previše piksela."
 
 #: common/mixins.py:40
 msgid "You do not belong to any household."
@@ -75,20 +89,26 @@ msgstr "Broj može imati najviše {max_digits} cifara ukupno."
 msgid "Ensure that there are no more than {max_decimal_places} decimal places."
 msgstr "Broj može imati najviše {max_decimal_places} decimala."
 
-#: common/third_party_messages.py:29
+#: common/third_party_messages.py:30
 #, python-brace-format
-msgid "Ensure that there are no more than {max_whole_digits} digits before the decimal point."
-msgstr "Broj može imati najviše {max_whole_digits} cifara pre decimalnog zareza."
+msgid ""
+"Ensure that there are no more than {max_whole_digits} digits before the "
+"decimal point."
+msgstr ""
+"Broj može imati najviše {max_whole_digits} cifara pre decimalnog zareza."
 
 #: common/third_party_messages.py:32
 #, python-brace-format
 msgid "Date has wrong format. Use one of these formats instead: {format}."
-msgstr "Datum nije u ispravnom formatu. Koristite jedan od ovih formata: {format}."
+msgstr ""
+"Datum nije u ispravnom formatu. Koristite jedan od ovih formata: {format}."
 
 #: common/third_party_messages.py:33
 #, python-brace-format
 msgid "Datetime has wrong format. Use one of these formats instead: {format}."
-msgstr "Datum i vreme nisu u ispravnom formatu. Koristite jedan od ovih formata: {format}."
+msgstr ""
+"Datum i vreme nisu u ispravnom formatu. Koristite jedan od ovih formata: "
+"{format}."
 
 #: common/third_party_messages.py:34
 msgid "Expected a date but got a datetime."
@@ -224,21 +244,17 @@ msgstr "Token ne sadrži podatke o korisniku."
 
 #: common/third_party_messages.py:72
 msgid "Authorization header must contain two space-delimited values"
-msgstr "Zaglavlje Authorization mora sadržati dve vrednosti razdvojene razmakom."
+msgstr ""
+"Zaglavlje Authorization mora sadržati dve vrednosti razdvojene razmakom."
 
 #: common/third_party_messages.py:78
 #, python-format
 msgid "The password is too similar to the %(verbose_name)s."
 msgstr "Lozinka je previše slična polju „%(verbose_name)s“."
 
-#: finances/models.py:82
-#: finances/models.py:159
-#: finances/models.py:184
-#: fitness/models.py:8
-#: fitness/models.py:34
-#: fitness/models.py:73
-#: nutrition/models.py:13
-#: users/models.py:13
+#: finances/models.py:82 finances/models.py:159 finances/models.py:184
+#: fitness/models.py:8 fitness/models.py:34 fitness/models.py:73
+#: nutrition/models.py:13 users/models.py:17
 msgid "name"
 msgstr "naziv"
 
@@ -250,41 +266,22 @@ msgstr "početno stanje"
 msgid "opening date"
 msgstr "datum otvaranja"
 
-#: finances/models.py:90
-#: finances/models.py:160
-#: finances/models.py:185
+#: finances/models.py:90 finances/models.py:160 finances/models.py:185
 msgid "is active"
 msgstr "aktivno"
 
-#: finances/models.py:91
-#: finances/models.py:161
-#: finances/models.py:200
-#: finances/models.py:274
-#: finances/models.py:368
-#: fitness/models.py:10
-#: fitness/models.py:42
-#: fitness/models.py:76
-#: fitness/models.py:135
-#: fitness/models.py:183
-#: nutrition/models.py:22
-#: nutrition/models.py:67
-#: users/models.py:25
-#: users/models.py:92
+#: finances/models.py:91 finances/models.py:161 finances/models.py:200
+#: finances/models.py:274 finances/models.py:368 fitness/models.py:10
+#: fitness/models.py:42 fitness/models.py:76 fitness/models.py:135
+#: fitness/models.py:183 nutrition/models.py:22 nutrition/models.py:67
+#: users/models.py:29 users/models.py:96
 msgid "created at"
 msgstr "napravljeno"
 
-#: finances/models.py:92
-#: finances/models.py:162
-#: finances/models.py:201
-#: finances/models.py:275
-#: fitness/models.py:11
-#: fitness/models.py:43
-#: fitness/models.py:77
-#: fitness/models.py:136
-#: fitness/models.py:184
-#: nutrition/models.py:23
-#: nutrition/models.py:68
-#: users/models.py:26
+#: finances/models.py:92 finances/models.py:162 finances/models.py:201
+#: finances/models.py:275 fitness/models.py:11 fitness/models.py:43
+#: fitness/models.py:77 fitness/models.py:136 fitness/models.py:184
+#: nutrition/models.py:23 nutrition/models.py:68 users/models.py:30
 msgid "updated at"
 msgstr "izmenjeno"
 
@@ -292,13 +289,11 @@ msgstr "izmenjeno"
 msgid "is transfer"
 msgstr "prenos"
 
-#: finances/models.py:191
-#: finances/models.py:265
+#: finances/models.py:191 finances/models.py:265
 msgid "start date"
 msgstr "datum početka"
 
-#: finances/models.py:192
-#: finances/models.py:266
+#: finances/models.py:192 finances/models.py:266
 msgid "end date"
 msgstr "datum završetka"
 
@@ -318,17 +313,22 @@ msgstr "mesec završetka"
 msgid "end day"
 msgstr "dan završetka"
 
-#: finances/models.py:268
-#: finances/models.py:351
+#: finances/models.py:268 finances/models.py:351
 msgid "amount"
 msgstr "iznos"
 
-#: finances/models.py:273
-#: finances/models.py:349
-#: fitness/models.py:35
+#: finances/models.py:273 finances/models.py:349 fitness/models.py:35
 #: nutrition/models.py:14
 msgid "description"
 msgstr "opis"
+
+#: finances/models.py:322
+msgid "Income"
+msgstr "Prihod"
+
+#: finances/models.py:323
+msgid "Expense"
+msgstr "Rashod"
 
 #: finances/models.py:332
 msgid "type"
@@ -342,9 +342,7 @@ msgstr "naslov"
 msgid "is fixed"
 msgstr "fiksno"
 
-#: finances/models.py:367
-#: fitness/models.py:74
-#: nutrition/models.py:66
+#: finances/models.py:367 fitness/models.py:74 nutrition/models.py:66
 msgid "date"
 msgstr "datum"
 
@@ -352,50 +350,13 @@ msgstr "datum"
 msgid "is deleted"
 msgstr "obrisano"
 
-#: finances/models.py:322
-msgid "Income"
-msgstr "Prihod"
-
-#: finances/models.py:323
-msgid "Expense"
-msgstr "Rashod"
-
-#: finances/serializers.py:216
-#: finances/serializers.py:508
-#, python-format
-msgid "Account \"%(name)s\" is archived."
-msgstr "Račun „%(name)s“ je arhiviran."
-
-#: finances/serializers.py:231
-msgid "This transaction is part of a transfer: change it through transfers/."
-msgstr "Ova transakcija je deo prenosa: menja se kroz prenos (transfers/)."
-
 #: finances/serializers.py:89
 msgid "The transfer category can't be switched off."
 msgstr "Kategorija za prenose ne može da se isključi."
 
-#: finances/serializers.py:98
-#: finances/serializers.py:374
-#: finances/views.py:350
+#: finances/serializers.py:98 finances/serializers.py:374 finances/views.py:350
 msgid "End date must be on or after start date."
 msgstr "Datum završetka ne može biti pre datuma početka."
-
-#: finances/serializers.py:236
-msgid "This category is for transfers: use transfers/."
-msgstr "Ova kategorija je rezervisana za prenose (transfers/)."
-
-#: finances/serializers.py:387
-msgid "This category already has a budget that overlaps the given period."
-msgstr "Ova kategorija već ima budžet koji se preklapa sa izabranim periodom."
-
-#: finances/serializers.py:514
-msgid "Choose an account other than the source account."
-msgstr "Izaberite račun različit od računa sa kog se prenosi."
-
-#: finances/serializers.py:251
-#, python-format
-msgid "Category \"%(name)s\" is not active on %(date)s."
-msgstr "Na dan %(date)s kategorija „%(name)s“ nije aktivna."
 
 #: finances/serializers.py:106
 #, python-format
@@ -407,25 +368,51 @@ msgstr "Unesite i %(month)s i %(day)s, ili nijedno od njih."
 msgid "Month %(month)s has no day %(day)s."
 msgstr "Mesec %(month)s nema dan %(day)s."
 
+#: finances/serializers.py:216 finances/serializers.py:508
+#, python-format
+msgid "Account \"%(name)s\" is archived."
+msgstr "Račun „%(name)s“ je arhiviran."
+
+#: finances/serializers.py:231
+msgid "This transaction is part of a transfer: change it through transfers/."
+msgstr "Ova transakcija je deo prenosa: menja se kroz prenos (transfers/)."
+
+#: finances/serializers.py:236
+msgid "This category is for transfers: use transfers/."
+msgstr "Ova kategorija je rezervisana za prenose (transfers/)."
+
+#: finances/serializers.py:251
+#, python-format
+msgid "Category \"%(name)s\" is not active on %(date)s."
+msgstr "Na dan %(date)s kategorija „%(name)s“ nije aktivna."
+
+#: finances/serializers.py:387
+msgid "This category already has a budget that overlaps the given period."
+msgstr "Ova kategorija već ima budžet koji se preklapa sa izabranim periodom."
+
+#: finances/serializers.py:514
+msgid "Choose an account other than the source account."
+msgstr "Izaberite račun različit od računa sa kog se prenosi."
+
 #: finances/views.py:91
 msgid "This group has categories with transactions. Switch it off instead."
-msgstr "Ova grupa ima kategorije sa transakcijama. Umesto brisanja, isključite je."
+msgstr ""
+"Ova grupa ima kategorije sa transakcijama. Umesto brisanja, isključite je."
 
 #: finances/views.py:133
 msgid "This category has transactions. Switch it off instead."
 msgstr "Ova kategorija ima transakcije. Umesto brisanja, isključite je."
-
-#: finances/views.py:464
-msgid "This account has transactions. Archive it instead."
-msgstr "Ovaj račun ima transakcije. Umesto brisanja, arhivirajte ga."
 
 #: finances/views.py:354
 #, python-format
 msgid "Range is limited to %(days)s days."
 msgstr "Period može biti najviše %(days)s dana."
 
-#: fitness/models.py:9
-#: fitness/models.py:133
+#: finances/views.py:464
+msgid "This account has transactions. Archive it instead."
+msgstr "Ovaj račun ima transakcije. Umesto brisanja, arhivirajte ga."
+
+#: fitness/models.py:9 fitness/models.py:133
 msgid "order"
 msgstr "redosled"
 
@@ -433,10 +420,13 @@ msgstr "redosled"
 msgid "image"
 msgstr "slika"
 
-#: fitness/models.py:75
-#: fitness/models.py:134
+#: fitness/models.py:75 fitness/models.py:134
 msgid "notes"
 msgstr "beleške"
+
+#: fitness/models.py:156
+msgid "Exercise must belong to the same household as the training."
+msgstr "Vežba mora da pripada istom domaćinstvu kao i trening."
 
 #: fitness/models.py:174
 msgid "set number"
@@ -449,10 +439,6 @@ msgstr "težina (kg)"
 #: fitness/models.py:182
 msgid "reps"
 msgstr "ponavljanja"
-
-#: fitness/models.py:156
-msgid "Exercise must belong to the same household as the training."
-msgstr "Vežba mora da pripada istom domaćinstvu kao i trening."
 
 #: fitness/serializers.py:189
 msgid "You already have a training on this date."
@@ -510,142 +496,159 @@ msgstr "članstvo u domaćinstvu"
 msgid "household memberships"
 msgstr "članstva u domaćinstvu"
 
-#: users/admin.py:52
+#: users/admin.py:60
 msgid "Personal info"
 msgstr "Lični podaci"
 
-#: users/admin.py:53
+#: users/admin.py:61
 msgid "Preferences"
 msgstr "Podešavanja"
 
-#: users/admin.py:55
+#: users/admin.py:63
 msgid "Permissions"
 msgstr "Dozvole"
 
-#: users/admin.py:66
+#: users/admin.py:74
 msgid "Important dates"
 msgstr "Važni datumi"
 
-#: users/admin.py:90
-#: users/models.py:23
+#: users/admin.py:98 users/models.py:27
 msgid "members"
 msgstr "članovi"
 
-#: users/models.py:29
-#: users/models.py:77
-msgid "household"
-msgstr "domaćinstvo"
-
-#: users/models.py:30
-msgid "households"
-msgstr "domaćinstva"
-
-#: users/models.py:91
-msgid "status"
-msgstr "status"
-
-#: users/models.py:93
-msgid "responded at"
-msgstr "odgovoreno"
-
-#: users/models.py:96
-msgid "household invitation"
-msgstr "poziv u domaćinstvo"
-
-#: users/models.py:97
-msgid "household invitations"
-msgstr "pozivi u domaćinstvo"
-
-#: users/models.py:153
-msgid "email address"
-msgstr "email adresa"
-
-#: users/models.py:156
-msgid "timezone"
-msgstr "vremenska zona"
-
-#: users/models.py:157
-msgid "language"
-msgstr "jezik"
-
-#: users/models.py:158
-msgid "currency"
-msgstr "valuta"
-
-#: users/models.py:161
-msgid "last activity"
-msgstr "poslednja aktivnost"
-
-#: users/models.py:169
-msgid "user"
-msgstr "korisnik"
-
-#: users/models.py:170
-msgid "users"
-msgstr "korisnici"
-
-#: users/models.py:18
+#: users/models.py:22
 msgid "owner"
 msgstr "vlasnik"
 
-#: users/models.py:68
+#: users/models.py:33 users/models.py:81
+msgid "household"
+msgstr "domaćinstvo"
+
+#: users/models.py:34
+msgid "households"
+msgstr "domaćinstva"
+
+#: users/models.py:72
 msgid "pending"
 msgstr "na čekanju"
 
-#: users/models.py:69
+#: users/models.py:73
 msgid "accepted"
 msgstr "prihvaćen"
 
-#: users/models.py:70
+#: users/models.py:74
 msgid "declined"
 msgstr "odbijen"
 
-#: users/models.py:83
+#: users/models.py:87
 msgid "invited user"
 msgstr "pozvani korisnik"
 
-#: users/models.py:89
+#: users/models.py:93
 msgid "invited by"
 msgstr "pozvao"
 
-#: users/serializers.py:244
-msgid "The reset link is invalid or has expired."
-msgstr "Link za promenu lozinke nije ispravan ili je istekao."
+#: users/models.py:95
+msgid "status"
+msgstr "status"
 
-#: users/serializers.py:106
+#: users/models.py:97
+msgid "responded at"
+msgstr "odgovoreno"
+
+#: users/models.py:100
+msgid "household invitation"
+msgstr "poziv u domaćinstvo"
+
+#: users/models.py:101
+msgid "household invitations"
+msgstr "pozivi u domaćinstvo"
+
+#: users/models.py:159
+msgid "email address"
+msgstr "email adresa"
+
+#: users/models.py:162
+msgid "email verified"
+msgstr "email potvrđen"
+
+#: users/models.py:165
+msgid "timezone"
+msgstr "vremenska zona"
+
+#: users/models.py:166
+msgid "language"
+msgstr "jezik"
+
+#: users/models.py:167
+msgid "currency"
+msgstr "valuta"
+
+#: users/models.py:169
+msgid "profile picture"
+msgstr "profilna slika"
+
+#: users/models.py:172
+msgid "last activity"
+msgstr "poslednja aktivnost"
+
+#: users/models.py:180
+msgid "user"
+msgstr "korisnik"
+
+#: users/models.py:181
+msgid "users"
+msgstr "korisnici"
+
+#: users/serializers.py:116
+msgid "Unknown time zone."
+msgstr "Nepoznata vremenska zona."
+
+#: users/serializers.py:144
 msgid "You already belong to a household."
 msgstr "Već pripadate domaćinstvu."
 
-#: users/serializers.py:133
-msgid "User is already a member of this household."
-msgstr "Korisnik je već član ovog domaćinstva."
-
-#: users/serializers.py:137
-msgid "User already has a pending invitation."
-msgstr "Korisnik već ima poziv na čekanju."
-
-#: users/serializers.py:191
-msgid "A user with this email already exists."
-msgstr "Korisnik sa ovom email adresom već postoji."
-
-#: users/serializers.py:227
-msgid "The current password is incorrect."
-msgstr "Trenutna lozinka nije ispravna."
-
-#: users/serializers.py:129
+#: users/serializers.py:167
 msgid "User with this email does not exist."
 msgstr "Korisnik sa ovom email adresom ne postoji."
 
-#: users/services.py:43
+#: users/serializers.py:171
+msgid "User is already a member of this household."
+msgstr "Korisnik je već član ovog domaćinstva."
+
+#: users/serializers.py:175
+msgid "User already has a pending invitation."
+msgstr "Korisnik već ima poziv na čekanju."
+
+#: users/serializers.py:229
+msgid "A user with this email already exists."
+msgstr "Korisnik sa ovom email adresom već postoji."
+
+#: users/serializers.py:265
+msgid "Confirm your email address first: open the link we emailed you."
+msgstr "Prvo potvrdite email adresu: otvorite link koji smo vam poslali."
+
+#: users/serializers.py:283
+msgid "The confirmation link is invalid or has expired."
+msgstr "Link za potvrdu nije ispravan ili je istekao."
+
+#: users/serializers.py:286
+msgid "This email address is already confirmed. Log in."
+msgstr "Ova email adresa je već potvrđena. Prijavite se."
+
+#: users/serializers.py:306
+msgid "The current password is incorrect."
+msgstr "Trenutna lozinka nije ispravna."
+
+#: users/serializers.py:323
+msgid "The reset link is invalid or has expired."
+msgstr "Link za promenu lozinke nije ispravan ili je istekao."
+
+#: users/services.py:53
 msgid "Helemy: reset your password"
 msgstr "Helemy: promena lozinke"
 
-#: users/services.py:76
-#: users/services.py:93
-msgid "This invitation is no longer pending."
-msgstr "Ovaj poziv više nije na čekanju."
-
-#: users/services.py:44
+#: users/services.py:55
 #, python-format
 msgid ""
 "Someone asked to reset the password for %(email)s.\n"
@@ -662,38 +665,65 @@ msgstr ""
 "\n"
 "Ako to niste bili vi, zanemarite ovaj email; lozinka ostaje ista."
 
-#: users/services.py:80
+#: users/services.py:100
+msgid "Helemy: confirm your email address"
+msgstr "Helemy: potvrda email adrese"
+
+#: users/services.py:102
+#, python-format
+msgid ""
+"Welcome to Helemy!\n"
+"\n"
+"Open this link to confirm %(email)s and finish signing up (valid for "
+"%(hours)s hours):\n"
+"%(link)s\n"
+"\n"
+"If you didn't sign up, ignore this email."
+msgstr ""
+"Dobro došli u Helemy!\n"
+"\n"
+"Otvorite ovaj link da potvrdite %(email)s i završite registraciju (važi "
+"%(hours)s sati):\n"
+"%(link)s\n"
+"\n"
+"Ako se niste registrovali, zanemarite ovaj email."
+
+#: users/services.py:159 users/services.py:176
+msgid "This invitation is no longer pending."
+msgstr "Ovaj poziv više nije na čekanju."
+
+#: users/services.py:163
 msgid "You already belong to another household."
 msgstr "Već pripadate drugom domaćinstvu."
 
-#: users/services.py:82
+#: users/services.py:165
 msgid "Remove the members of your household first."
 msgstr "Prvo uklonite članove svog domaćinstva."
 
-#: users/views.py:229
+#: users/views.py:316
 msgid "Only the household owner can invite members."
 msgstr "Samo vlasnik domaćinstva može da poziva članove."
 
-#: users/views.py:250
+#: users/views.py:337
 msgid "The owner can't leave their own household."
 msgstr "Vlasnik ne može da napusti svoje domaćinstvo."
 
-#: users/views.py:265
+#: users/views.py:352
 msgid "Only the household owner can remove members."
 msgstr "Samo vlasnik domaćinstva može da uklanja članove."
 
-#: users/views.py:272
+#: users/views.py:359
 msgid "Cannot remove the household owner."
 msgstr "Vlasnik domaćinstva ne može da se ukloni."
 
-#: users/views.py:280
+#: users/views.py:367
 msgid "User is not a member of this household."
 msgstr "Korisnik nije član ovog domaćinstva."
 
-#: users/views.py:325
+#: users/views.py:412
 msgid "Only the household owner can cancel an invitation."
 msgstr "Samo vlasnik domaćinstva može da otkaže poziv."
 
-#: users/views.py:336
+#: users/views.py:423
 msgid "Only the invited user can respond to an invitation."
 msgstr "Samo pozvani korisnik može da odgovori na poziv."

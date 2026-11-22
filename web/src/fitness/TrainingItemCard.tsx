@@ -20,6 +20,7 @@ import {
   useExerciseHistory,
   useUpdateSet,
 } from './hooks'
+import { ExerciseThumb } from './ExerciseThumb'
 import { type SetFormValues, setSchema } from './schemas'
 
 /** The API's "82.50" as an input value: "82.5"; no weight → empty. */
@@ -55,19 +56,22 @@ export function TrainingItemCard({ item, training }: { item: TrainingItem; train
 
   return (
     <section className="surface p-4">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <Link
-          to={`/fitness/exercises/${item.exercise.id}`}
-          className="font-semibold hover:underline"
-        >
-          {item.exercise.name}
-        </Link>
-        {previous && (
-          <span className="text-xs text-slate-500">
-            {t('fitness.trainings.lastTime', { date: formatShortDate(previous.date) })}{' '}
-            {previous.sets.map(setLabel).join(', ')}
-          </span>
-        )}
+      <div className="mb-2 flex items-center gap-3">
+        <ExerciseThumb name={item.exercise.name} src={item.exercise.image_url} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+          <Link
+            to={`/fitness/exercises/${item.exercise.id}`}
+            className="font-semibold hover:underline"
+          >
+            {item.exercise.name}
+          </Link>
+          {previous && (
+            <span className="text-xs text-slate-500">
+              {t('fitness.trainings.lastTime', { date: formatShortDate(previous.date) })}{' '}
+              {previous.sets.map(setLabel).join(', ')}
+            </span>
+          )}
+        </div>
       </div>
 
       {item.sets.length > 0 && (

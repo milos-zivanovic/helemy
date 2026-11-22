@@ -61,20 +61,17 @@ class HouseholdAPITests(HouseholdAPITestCase):
 
 
 class RegisterAPITests(APITestCase):
-    def test_register_creates_user_with_household_and_returns_tokens(self):
+    def test_register_creates_unverified_user_with_household_and_no_tokens(self):
+        # Logging in after the verification email is covered in test_email_verification.py.
         payload = {"email": "Ana@Example.com", "password": PASSWORD, "first_name": "Ana"}
         response = self.client.post(REGISTER_URL, payload, format="json")
         self.assertEqual(response.status_code, 201, response.data)
-        self.assertEqual(response.data["user"]["email"], "ana@example.com")
-        self.assertNotIn("password", response.data["user"])
+        self.assertEqual(response.data, {"email": "ana@example.com"})
 
         user = User.objects.get(email="ana@example.com")
         self.assertTrue(user.check_password(PASSWORD))
+        self.assertFalse(user.email_verified)
         self.assertEqual(user.get_active_household().owner, user)
-
-        # The returned access token works right away
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
-        self.assertEqual(self.client.get(ME_URL).data["email"], "ana@example.com")
 
     def test_register_rejects_duplicate_email_case_insensitive(self):
         User.objects.create_user(email="ana@example.com", password=PASSWORD)
@@ -102,7 +99,7 @@ class RegisterAPITests(APITestCase):
 
 class LoginLogoutAPITests(APITestCase):
     def setUp(self):
-        User.objects.create_user(email="ana@example.com", password=PASSWORD)
+        User.objects.create_user(email="ana@example.com", password=PASSWORD, email_verified=True)
 
     def _login(self, email="ana@example.com"):
         return self.client.post(TOKEN_URL, {"email": email, "password": PASSWORD}, format="json")

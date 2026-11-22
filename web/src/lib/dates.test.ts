@@ -2,14 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   currentMonth,
+  fromDisplayDate,
   fullMonth,
   isDay,
   isMonth,
+  maskDisplayDate,
   monthRange,
   parseDate,
   shiftDay,
   shiftMonth,
   toDateString,
+  toDisplayDate,
   today,
 } from './dates'
 
@@ -130,5 +133,33 @@ describe('fullMonth', () => {
     ['2026-02-01', '2026-02-29'], // 29 Feb doesn't exist in 2026
   ])('returns null for %s..%s', (start, end) => {
     expect(fullMonth(start, end)).toBeNull()
+  })
+})
+
+describe('toDisplayDate / fromDisplayDate', () => {
+  it('turns the API day into day/month/year and back', () => {
+    expect(toDisplayDate('2026-11-05')).toBe('05/11/2026')
+    expect(fromDisplayDate('05/11/2026')).toBe('2026-11-05')
+  })
+
+  it('rejects incomplete text and days that do not exist', () => {
+    expect(fromDisplayDate('05/11/20')).toBeNull()
+    expect(fromDisplayDate('5/11/2026')).toBeNull()
+    expect(fromDisplayDate('31/02/2026')).toBeNull()
+    expect(fromDisplayDate('')).toBeNull()
+  })
+})
+
+describe('maskDisplayDate', () => {
+  it('puts the slashes in while typing', () => {
+    expect(maskDisplayDate('0')).toBe('0')
+    expect(maskDisplayDate('051')).toBe('05/1')
+    expect(maskDisplayDate('05112026')).toBe('05/11/2026')
+  })
+
+  it('ignores anything but digits and stops at 8 of them', () => {
+    expect(maskDisplayDate('05.11.2026')).toBe('05/11/2026')
+    expect(maskDisplayDate('05/11/20269')).toBe('05/11/2026')
+    expect(maskDisplayDate('')).toBe('')
   })
 })

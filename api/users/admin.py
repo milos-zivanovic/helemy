@@ -12,7 +12,7 @@ from users.models import Household, HouseholdInvitation, User
 class UserCreationAdminForm(AdminUserCreationForm):
     class Meta:
         model = User
-        fields = ("email",)
+        fields = ("email", "email_verified")
         field_classes = {}
 
 
@@ -41,14 +41,22 @@ class UserAdmin(BaseUserAdmin):
         # Not on the add page: the personal household is created after save (post_save signal).
         return self.inlines if obj else ()
 
-    list_display = ("email", "first_name", "last_name", "is_active", "is_staff", "date_joined")
-    list_filter = ("is_staff", "is_superuser", "is_active")
+    list_display = (
+        "email",
+        "first_name",
+        "last_name",
+        "email_verified",
+        "is_active",
+        "is_staff",
+        "date_joined",
+    )
+    list_filter = ("email_verified", "is_staff", "is_superuser", "is_active")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("-date_joined",)
     readonly_fields = ("last_login", "date_joined", "last_activity")
 
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
+        (None, {"fields": ("email", "email_verified", "password")}),
         (_("Personal info"), {"fields": ("first_name", "last_name")}),
         (_("Preferences"), {"fields": ("timezone", "language", "currency")}),
         (
@@ -70,7 +78,7 @@ class UserAdmin(BaseUserAdmin):
             None,
             {
                 "classes": ("wide",),
-                "fields": ("email", "usable_password", "password1", "password2"),
+                "fields": ("email", "email_verified", "usable_password", "password1", "password2"),
             },
         ),
     )

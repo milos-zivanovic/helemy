@@ -5,9 +5,9 @@ import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { DateField } from '../components/DateField'
 import { SelectField } from '../components/SelectField'
 import { StatTile } from '../components/StatTile'
-import { TextField } from '../components/TextField'
 import { segmentedOption, segmentedTrack } from '../components/segmented'
 import { BalanceChart } from '../finances/BalanceChart'
 import {
@@ -97,17 +97,15 @@ export default function ReportsPage() {
           })}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          <TextField
+          <DateField
             label={t('finances.categories.startDate')}
-            type="date"
             value={start}
-            onChange={(event) => update({ start: event.target.value })}
+            onChange={(value) => update({ start: value })}
           />
-          <TextField
+          <DateField
             label={t('finances.categories.endDate')}
-            type="date"
             value={end}
-            onChange={(event) => update({ end: event.target.value })}
+            onChange={(value) => update({ end: value })}
           />
         </div>
       </div>

@@ -1,7 +1,8 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '../api/client'
 import { unwrap } from '../api/errors'
+import { fileFormData } from '../lib/formData'
 import type { components } from '../api/schema'
 
 // Same idea as the finances: every fitness key starts with 'fitness', and a write invalidates the
@@ -104,6 +105,30 @@ export function useUpdateExercise(id: number) {
   })
 }
 
+/** Upload (the cropped square, as a Blob) or remove the exercise's picture. */
+export function useExerciseImage(id: number) {
+  const invalidate = useInvalidateFitness()
+  const params = { path: { id } }
+  const upload = useMutation({
+    mutationFn: async (blob: Blob) =>
+      unwrap(
+        await api.PUT('/api/fitness/exercises/{id}/image/', {
+          params,
+          // The file is a string ("binary") in the schema; the real body is multipart/form-data.
+          body: { image: '' },
+          bodySerializer: () => fileFormData('image', blob),
+        }),
+      ),
+    onSuccess: invalidate,
+  })
+  const remove = useMutation({
+    mutationFn: async () =>
+      unwrap(await api.DELETE('/api/fitness/exercises/{id}/image/', { params })),
+    onSuccess: invalidate,
+  })
+  return { upload, remove }
+}
+
 export function useDeleteExercise(id: number) {
   const markStale = useMarkFitnessStale()
   return useMutation({
@@ -115,14 +140,19 @@ export function useDeleteExercise(id: number) {
 
 // --- trainings --------------------------------------------------------------------------------
 
-export function useTrainings(page: number) {
-  return useQuery({
-    queryKey: [FITNESS, 'trainings', page],
-    queryFn: async () =>
+/** Trainings, newest first, 20 at a time: each fetchNextPage() appends the next page. */
+export function useTrainings() {
+  return useInfiniteQuery({
+    queryKey: [FITNESS, 'trainings', 'infinite'],
+    queryFn: async ({ pageParam }) =>
       unwrap(
-        await api.GET('/api/fitness/trainings/', { params: { query: { page, page_size: 20 } } }),
+        await api.GET('/api/fitness/trainings/', {
+          params: { query: { page: pageParam, page_size: 20 } },
+        }),
       ),
-    placeholderData: keepPreviousData,
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.current_page < last.total_pages ? last.current_page + 1 : undefined,
   })
 }
 

@@ -160,7 +160,7 @@ password, `clear` afterwards).
    idle the shell is new; files in the home directory, like `env.yaml`, stay):
 
 ```bash
-PROJECT_ID=helemy-prod          # your project ID
+PROJECT_ID=profound-hydra-283519   # the project named "helemy" (gcloud wants the ID, not the name)
 REGION=europe-west1
 GITHUB_REPO=milos-zivanovic/helemy
 gcloud config set project $PROJECT_ID
@@ -244,6 +244,7 @@ ALLOWED_HOSTS: "api.helemy.com,RUN_HOST"
 CORS_ALLOWED_ORIGINS: "https://helemy.com"
 DEFAULT_FROM_EMAIL: "Helemy <noreply@helemy.com>"
 PASSWORD_RESET_URL: "https://helemy.com/reset-password?uid={uid}&token={token}"
+EMAIL_VERIFICATION_URL: "https://helemy.com/verify-email?token={token}"
 MEDIA_BUCKET_NAME: "helemy-media"
 MEDIA_ENDPOINT_URL: "https://R2_ACCOUNT_ID.r2.cloudflarestorage.com"
 MEDIA_ACCESS_KEY_ID: "MEDIA_KEY_ID"

@@ -9,14 +9,17 @@ import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { ConfirmButton } from '../components/ConfirmButton'
+import { ImageEditor } from '../components/ImageEditor'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
+import { ExerciseThumb } from '../fitness/ExerciseThumb'
 import {
   type ExerciseInput,
   useCreateExercise,
   useDeleteExercise,
   useExercise,
+  useExerciseImage,
   useMuscleGroups,
   useUpdateExercise,
 } from '../fitness/hooks'
@@ -54,6 +57,7 @@ export function EditExercisePage() {
   const exercise = useExercise(id)
   const update = useUpdateExercise(id)
   const remove = useDeleteExercise(id)
+  const image = useExerciseImage(id)
   const navigate = useNavigate()
 
   if (exercise.isPending) return <p className="text-sm text-slate-600">{t('common.loading')}</p>
@@ -72,6 +76,20 @@ export function EditExercisePage() {
       <Suspense fallback={<p className="text-sm text-slate-600">{t('common.loading')}</p>}>
         <ExerciseProgress exerciseId={id} />
       </Suspense>
+      <Card title={t('fitness.exercises.image')}>
+        <ImageEditor
+          hasImage={Boolean(data.image_url)}
+          preview={<ExerciseThumb name={data.name} src={data.image_url} className="size-32" />}
+          labels={{
+            upload: t('fitness.exercises.imageUpload'),
+            change: t('fitness.exercises.imageChange'),
+            remove: t('fitness.exercises.imageRemove'),
+            removeConfirm: t('fitness.exercises.imageRemoveConfirm'),
+          }}
+          upload={(blob) => image.upload.mutateAsync(blob)}
+          remove={() => image.remove.mutateAsync()}
+        />
+      </Card>
       <Card title={t('fitness.exercises.edit')}>
         {remove.error && (
           <div className="mb-4">

@@ -26,6 +26,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { EditTransactionPage, NewTransactionPage } from './pages/TransactionFormPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { EditTransferPage } from './pages/TransferFormPage'
@@ -34,19 +35,23 @@ import { EditTransferPage } from './pages/TransferFormPage'
 // its <Outlet />, so the layouts decide who may see their pages (logged in or not).
 export const router = createBrowserRouter([
   {
-    element: <AuthLayout />, // public pages; a logged-in user is sent to the app
+    // The public one-page website; its hero card shows the form of the matched route (login on / and
+    // /login). A logged-in user is sent to the app.
+    element: <AuthLayout />,
     children: [
+      { path: '/', element: <LoginPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/verify-email', element: <VerifyEmailPage /> },
     ],
   },
   {
-    path: '/',
+    // No path of its own (a "layout route"): it only wraps the children, whose paths are under /.
     element: <AppLayout />, // needs a login
     children: [
-      { index: true, element: <HomePage /> },
+      { path: 'home', element: <HomePage /> },
       { path: 'household', element: <HouseholdPage /> },
       { path: 'profile', element: <ProfilePage /> },
       {
@@ -103,5 +108,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> }, // unknown URL
+  { path: '*', element: <Navigate to="/" replace /> }, // unknown URL: the website (or /home if logged in)
 ])

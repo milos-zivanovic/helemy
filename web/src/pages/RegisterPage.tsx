@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { publicApi } from '../api/client'
 import { ROOT_ERROR, showApiError } from '../api/errors'
 import { registerSchema } from '../auth/schemas'
-import { setTokens } from '../auth/tokens'
+import { ResendVerification } from '../auth/ResendVerification'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { TextField } from '../components/TextField'
@@ -24,6 +24,8 @@ export function RegisterPage() {
     resolver: zodResolver(schema),
     defaultValues: { email: '', first_name: '', last_name: '', password: '', password_confirm: '' },
   })
+  // The address the verification email went to; once set, the card shows "check your email".
+  const [sentTo, setSentTo] = useState<string | null>(null)
 
   const onSubmit = handleSubmit(async ({ email, first_name, last_name, password }) => {
     // password_confirm stays in the browser; the API gets only the fields it knows.
@@ -31,8 +33,8 @@ export function RegisterPage() {
     try {
       const { data, error, response } = await publicApi.POST('/api/auth/register/', { body })
       if (data) {
-        // Sign up returns tokens too, so the user is logged in right away; AuthLayout redirects.
-        setTokens(data)
+        // No tokens: the account can log in only after the link in the email confirms the address.
+        setSentTo(data.email)
       } else {
         showApiError(
           setError,
@@ -46,6 +48,19 @@ export function RegisterPage() {
       setError(ROOT_ERROR, { message: t('errors.network') })
     }
   })
+
+  if (sentTo) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold">{t('auth.verify.checkTitle')}</h1>
+        <Alert tone="success">{t('auth.verify.checkText', { email: sentTo })}</Alert>
+        <ResendVerification email={sentTo} />
+        <TextLink to="/login" className="text-sm">
+          {t('auth.backToLogin')}
+        </TextLink>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">

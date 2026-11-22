@@ -48,11 +48,6 @@ class Exercise(models.Model):
     def __str__(self):
         return self.name
 
-    def get_image_url(self):
-        if self.image:
-            return self.image.url
-        return None
-
 
 class Training(models.Model):
     household = models.ForeignKey(

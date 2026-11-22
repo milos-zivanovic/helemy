@@ -8,9 +8,11 @@ import type { components } from '../api/schema'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { CheckboxField } from '../components/CheckboxField'
+import { FormDateField } from '../components/FormDateField'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { useFormatters } from '../i18n/format'
+import { isDay } from '../lib/dates'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { CategoryOptions } from './CategoryOptions'
 import {
@@ -72,7 +74,8 @@ export function TransactionForm({
 
   // Only categories active on the chosen date can be used; the API checks it too. The transfer
   // category belongs to transfers only (they're made with the "transfer" type).
-  const categories = useCategories(date)
+  // While the date is half typed ("05/1") the list isn't narrowed by it: no API call with a bad date.
+  const categories = useCategories(isDay(date) ? date : undefined)
   const options = useMemo(() => {
     const list = (categories.data ?? []).filter((category) => !category.is_transfer)
     if (currentCategory && !list.some((category) => category.id === currentCategory.id)) {
@@ -194,12 +197,7 @@ export function TransactionForm({
           error={errors.amount?.message}
           {...register('amount')}
         />
-        <TextField
-          label={t('finances.fields.date')}
-          type="date"
-          error={errors.date?.message}
-          {...register('date')}
-        />
+        <FormDateField control={control} name="date" label={t('finances.fields.date')} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

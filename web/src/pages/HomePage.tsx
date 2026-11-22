@@ -4,6 +4,7 @@ import { useMe } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Card } from '../components/Card'
 import { ProgressBar } from '../components/ProgressBar'
+import { progressTone } from '../components/progressTone'
 import { StatTile } from '../components/StatTile'
 import { TextLink } from '../components/TextLink'
 import { useAccounts, useActiveBudgets, usePeriodTotals } from '../finances/hooks'
@@ -36,18 +37,19 @@ export function HomePage() {
           <TextLink to="/household">{t('home.viewInvitations')}</TextLink>
         </Alert>
       )}
-      {/* One column on a phone; from a laptop up finances take two thirds, the rest goes beside */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <FinancesSummary />
+      {/* One column on a phone (in this order); from a laptop up two columns: finances, nutrition
+          and fitness take the left two thirds, budgets (and the household) the right third.
+          items-start keeps each column as tall as its own content. */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <FinancesSummary />
+          <NutritionSummary userId={me.id} />
+          <FitnessSummary />
+        </div>
         <div className="flex flex-col gap-6">
-          <BudgetsAttention />
+          <BudgetsSummary />
           {household && <HouseholdSummary household={household} />}
         </div>
-      </div>
-      {/* Two columns from tablet width up, one under the other on a phone */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <FitnessSummary />
-        <NutritionSummary userId={me.id} />
       </div>
     </div>
   )
@@ -88,7 +90,7 @@ function FinancesSummary() {
   const open = accounts.data.filter((account) => account.is_active)
 
   return (
-    <Card title={t('nav.finances')} className="lg:col-span-2">
+    <Card title={t('nav.finances')}>
       <div className="flex flex-col gap-5">
         {/* The headline number on the logo's gradient: the one place it's this loud */}
         <div className="bg-brand-gradient shadow-brand-500/20 rounded-2xl p-5 text-white shadow-lg sm:p-6">
@@ -96,11 +98,14 @@ function FinancesSummary() {
           <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">
             {formatMoney(total)}
           </p>
-          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+          {/* Each open account as a tile on the gradient (white at 15 % opacity) */}
+          <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {open.map((account) => (
-              <li key={account.id} className="flex justify-between gap-3">
-                <span className="truncate text-white/80">{account.name}</span>
-                <span className="font-medium tabular-nums">{formatMoney(account.balance)}</span>
+              <li key={account.id} className="min-w-0 rounded-xl bg-white/15 px-4 py-3">
+                <p className="truncate text-sm text-white/85">{account.name}</p>
+                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl">
+                  {formatMoney(account.balance)}
+                </p>
               </li>
             ))}
           </ul>
@@ -141,39 +146,75 @@ function FinancesSummary() {
   )
 }
 
-// Only the budgets that need attention (80 % or more spent); nothing when all is well.
-function BudgetsAttention() {
+// Every budget running today with the overall total, coloured by how much is spent (green, yellow
+// from 80 %, red over 100 %), like on the budgets page.
+function BudgetsSummary() {
   const { t } = useTranslation()
-  const { formatMoney } = useFormatters()
   const budgets = useActiveBudgets()
-  const attention = (budgets.data?.results ?? []).filter(
-    (budget) => Number(budget.percentage) >= 80,
-  )
-  if (attention.length === 0) return null
+  if (!budgets.data) return null
+  const { results, total_amount, total_spent, percentage } = budgets.data
 
   return (
-    <Card title={t('home.budgetsAttention')}>
-      <ul className="flex flex-col gap-3">
-        {attention.map((budget) => (
-          <li key={budget.id} className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-              <span className="font-medium">{budget.category.name}</span>
-              <span className="text-slate-600">
-                {t('finances.budgets.spentOf', {
-                  spent: formatMoney(budget.spent),
-                  amount: formatMoney(budget.amount),
-                })}{' '}
-                · {Math.round(Number(budget.percentage))} %
-              </span>
-            </div>
-            <ProgressBar percentage={Number(budget.percentage)} label={budget.category.name} />
-          </li>
-        ))}
-      </ul>
-      <TextLink to="/finances/budgets" className="mt-3 inline-block text-sm">
-        {t('home.openBudgets')}
-      </TextLink>
+    <Card title={t('home.budgets')}>
+      {results.length === 0 ? (
+        <p className="text-sm text-slate-600">{t('finances.budgets.noneActive')}</p>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          <BudgetRow
+            name={t('finances.budgets.total')}
+            spent={total_spent}
+            amount={total_amount}
+            percentage={Number(percentage)}
+            strong
+          />
+          {results.map((budget) => (
+            <BudgetRow
+              key={budget.id}
+              name={budget.category.name}
+              spent={budget.spent}
+              amount={budget.amount}
+              percentage={Number(budget.percentage)}
+            />
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <TextLink to="/finances/budgets">{t('home.openBudgets')}</TextLink>
+        <TextLink to="/finances/budgets/new">{t('finances.budgets.new')}</TextLink>
+      </div>
     </Card>
+  )
+}
+
+function BudgetRow({
+  name,
+  spent,
+  amount,
+  percentage,
+  strong = false,
+}: {
+  name: string
+  spent: string
+  amount: string
+  percentage: number
+  strong?: boolean
+}) {
+  const { t } = useTranslation()
+  const { formatMoney } = useFormatters()
+  return (
+    // The total is set apart from the budgets under it by a line
+    <li className={`flex flex-col gap-1 ${strong ? 'border-b border-slate-100 pb-4' : ''}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+        <span className={strong ? 'font-semibold' : 'font-medium'}>{name}</span>
+        <span className={`font-medium tabular-nums ${progressTone(percentage).text}`}>
+          {Math.round(percentage)} %
+        </span>
+      </div>
+      <ProgressBar percentage={percentage} label={name} />
+      <span className="text-xs text-slate-500">
+        {t('finances.budgets.spentOf', { spent: formatMoney(spent), amount: formatMoney(amount) })}
+      </span>
+    </li>
   )
 }
 

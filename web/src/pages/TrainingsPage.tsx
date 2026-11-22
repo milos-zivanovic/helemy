@@ -1,23 +1,25 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router'
+import { Link } from 'react-router'
 
 import { errorMessage } from '../api/errors'
 import { useMe } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
-import { Button, LinkButton } from '../components/Button'
+import { LinkButton } from '../components/Button'
 import { Icon } from '../components/Icon'
+import { LoadMore } from '../components/LoadMore'
 import { useTrainings } from '../fitness/hooks'
 import { useActiveHousehold } from '../household/hooks'
 import { useFormatters } from '../i18n/format'
 
-// /fitness/trainings?page=2: trainings of the household, newest first. In a shared household the
-// other members' trainings are greyed out, so your own stand out.
+// /fitness/trainings: trainings of the household, newest first, loaded 20 at a time while scrolling
+// (infinite scroll, like the transactions). In a shared household the other members' trainings are
+// greyed out, so your own stand out.
 export function TrainingsPage() {
   const { t } = useTranslation()
   const { formatDay, formatNumber } = useFormatters()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page')) || 1
-  const trainings = useTrainings(page)
+  const trainings = useTrainings()
+  // All pages loaded so far, as one list
+  const items = trainings.data?.pages.flatMap((page) => page.results) ?? []
   const household = useActiveHousehold()
   const showUser = (household?.member_count ?? 1) > 1
   const { data: me } = useMe()
@@ -34,19 +36,15 @@ export function TrainingsPage() {
       {trainings.isError && <Alert tone="error">{errorMessage(trainings.error, t)}</Alert>}
       {trainings.isPending && <p className="text-sm text-slate-600">{t('common.loading')}</p>}
 
-      {trainings.data && trainings.data.results.length === 0 && (
+      {trainings.data && items.length === 0 && (
         <p className="surface p-8 text-center text-sm text-slate-500">
           {t('fitness.trainings.empty')}
         </p>
       )}
 
-      {trainings.data && trainings.data.results.length > 0 && (
-        <ul
-          className={`surface divide-y divide-slate-100 overflow-hidden ${
-            trainings.isPlaceholderData ? 'opacity-60' : ''
-          }`}
-        >
-          {trainings.data.results.map((training) => {
+      {items.length > 0 && (
+        <ul className="surface divide-y divide-slate-100 overflow-hidden">
+          {items.map((training) => {
             // Someone else's training: grey text instead of black (only in a shared household).
             const others = showUser && me !== undefined && training.user.id !== me.id
             return (
@@ -93,26 +91,13 @@ export function TrainingsPage() {
         </ul>
       )}
 
-      {trainings.data && trainings.data.total_pages > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <Button
-            variant="secondary"
-            disabled={page <= 1}
-            onClick={() => setSearchParams({ page: String(page - 1) })}
-          >
-            {t('common.previous')}
-          </Button>
-          <span className="text-sm text-slate-600">
-            {t('common.pageOf', { page, pages: trainings.data.total_pages })}
-          </span>
-          <Button
-            variant="secondary"
-            disabled={page >= trainings.data.total_pages}
-            onClick={() => setSearchParams({ page: String(page + 1) })}
-          >
-            {t('common.next')}
-          </Button>
-        </div>
+      {trainings.data && trainings.hasNextPage && (
+        <LoadMore
+          loading={trainings.isFetchingNextPage}
+          onLoad={() => void trainings.fetchNextPage()}
+          shown={items.length}
+          total={trainings.data.pages[0].count}
+        />
       )}
     </div>
   )
