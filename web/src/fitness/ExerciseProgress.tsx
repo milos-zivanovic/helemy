@@ -16,7 +16,7 @@ import { Alert } from '../components/Alert'
 import { Card } from '../components/Card'
 import { StatTile } from '../components/StatTile'
 import { AXIS_COLOR, GRID_COLOR, MUTED_TEXT, SERIES_COLOR } from '../lib/chartTheme'
-import { useFormatters } from '../i18n/format'
+import { useFormatters, type WeightUnit } from '../i18n/format'
 import { type HistoryEntry, useExerciseHistory } from './hooks'
 
 /**
@@ -24,9 +24,16 @@ import { type HistoryEntry, useExerciseHistory } from './hooks'
  * training (or total reps for bodyweight exercises) and every training as a table. Loaded with
  * React.lazy from the exercise page, so Recharts is downloaded only when this is shown.
  */
-export default function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
+// Weights are in the exercise's own unit (`unit`): the history comes straight from its sets.
+export default function ExerciseProgress({
+  exerciseId,
+  unit,
+}: {
+  exerciseId: number
+  unit: WeightUnit
+}) {
   const { t } = useTranslation()
-  const { formatWeight, formatShortDate } = useFormatters()
+  const { formatWeight, formatShortDate, unitLabel } = useFormatters()
   const { data: me } = useMe()
   const history = useExerciseHistory(exerciseId, me?.id)
 
@@ -53,7 +60,7 @@ export default function ExerciseProgress({ exerciseId }: { exerciseId: number })
       <dl className="mb-4 grid grid-cols-3 gap-3">
         <StatTile
           label={t(byWeight ? 'fitness.progress.bestWeight' : 'fitness.progress.bestReps')}
-          value={byWeight ? formatWeight(best.max_weight) : String(best.total_reps)}
+          value={byWeight ? formatWeight(best.max_weight, unit) : String(best.total_reps)}
         />
         <StatTile label={t('fitness.progress.lastTime')} value={formatShortDate(last.date)} />
         <StatTile label={t('fitness.progress.trainings')} value={String(entries.length)} />
@@ -62,18 +69,28 @@ export default function ExerciseProgress({ exerciseId }: { exerciseId: number })
       {entries.length > 1 && (
         <>
           <p className="mb-2 text-xs text-slate-500">
-            {t(byWeight ? 'fitness.progress.chartWeight' : 'fitness.progress.chartReps')}
+            {byWeight
+              ? t('fitness.progress.chartWeight', { unit: unitLabel(unit) })
+              : t('fitness.progress.chartReps')}
           </p>
-          <ProgressChart entries={entries} byWeight={byWeight} />
+          <ProgressChart entries={entries} byWeight={byWeight} unit={unit} />
         </>
       )}
 
-      <HistoryTable entries={entries} />
+      <HistoryTable entries={entries} unit={unit} />
     </Card>
   )
 }
 
-function ProgressChart({ entries, byWeight }: { entries: HistoryEntry[]; byWeight: boolean }) {
+function ProgressChart({
+  entries,
+  byWeight,
+  unit,
+}: {
+  entries: HistoryEntry[]
+  byWeight: boolean
+  unit: WeightUnit
+}) {
   const { formatWeight, formatShortDate, formatNumber } = useFormatters()
   const data = entries.map((entry) => ({
     date: entry.date,
@@ -109,7 +126,7 @@ function ProgressChart({ entries, byWeight }: { entries: HistoryEntry[]; byWeigh
               return (
                 <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
                   <p className="font-medium">{formatShortDate(point.date)}</p>
-                  <p>{byWeight ? formatWeight(point.value) : point.value}</p>
+                  <p>{byWeight ? formatWeight(point.value, unit) : point.value}</p>
                 </div>
               )
             }}
@@ -131,9 +148,9 @@ function ProgressChart({ entries, byWeight }: { entries: HistoryEntry[]; byWeigh
 }
 
 // Every training with this exercise, newest first: the chart's numbers plus each set.
-function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
+function HistoryTable({ entries, unit }: { entries: HistoryEntry[]; unit: WeightUnit }) {
   const { t } = useTranslation()
-  const { formatWeight, formatShortDate, formatNumber } = useFormatters()
+  const { formatWeight, formatShortDate, formatVolume } = useFormatters()
 
   return (
     <details className="mt-3 text-sm" open={entries.length === 1}>
@@ -153,14 +170,14 @@ function HistoryTable({ entries }: { entries: HistoryEntry[] }) {
                   .map((set) =>
                     set.weight === null
                       ? `${set.reps}`
-                      : `${formatWeight(set.weight)} × ${set.reps}`,
+                      : `${formatWeight(set.weight, unit)} × ${set.reps}`,
                   )
                   .join(', ')}
               </span>
             </span>
             {entry.volume > 0 && (
               <span className="shrink-0 text-xs text-slate-600 tabular-nums">
-                {formatNumber(entry.volume)} kg
+                {formatVolume(entry.volume, unit)}
               </span>
             )}
           </li>

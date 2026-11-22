@@ -58,7 +58,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {"fields": ("email", "email_verified", "password")}),
         (_("Personal info"), {"fields": ("first_name", "last_name")}),
-        (_("Preferences"), {"fields": ("timezone", "language", "currency")}),
+        (_("Preferences"), {"fields": ("timezone", "language", "currency", "weight_unit")}),
         (
             _("Permissions"),
             {

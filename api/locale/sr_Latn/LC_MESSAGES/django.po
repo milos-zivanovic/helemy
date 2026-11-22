@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: helemy\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 14:14+0100\n"
+"POT-Creation-Date: 2026-11-22 23:14+0100\n"
 "PO-Revision-Date: 2026-11-19 12:00+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -252,9 +252,17 @@ msgstr ""
 msgid "The password is too similar to the %(verbose_name)s."
 msgstr "Lozinka je previše slična polju „%(verbose_name)s“."
 
+#: common/units.py:13
+msgid "kilograms"
+msgstr "kilogrami"
+
+#: common/units.py:14
+msgid "pounds"
+msgstr "funte"
+
 #: finances/models.py:82 finances/models.py:159 finances/models.py:184
-#: fitness/models.py:8 fitness/models.py:34 fitness/models.py:73
-#: nutrition/models.py:13 users/models.py:17
+#: fitness/models.py:15 fitness/models.py:41 fitness/models.py:98
+#: nutrition/models.py:13 users/models.py:19
 msgid "name"
 msgstr "naziv"
 
@@ -271,17 +279,17 @@ msgid "is active"
 msgstr "aktivno"
 
 #: finances/models.py:91 finances/models.py:161 finances/models.py:200
-#: finances/models.py:274 finances/models.py:368 fitness/models.py:10
-#: fitness/models.py:42 fitness/models.py:76 fitness/models.py:135
-#: fitness/models.py:183 nutrition/models.py:22 nutrition/models.py:67
-#: users/models.py:29 users/models.py:96
+#: finances/models.py:274 finances/models.py:368 fitness/models.py:17
+#: fitness/models.py:53 fitness/models.py:101 fitness/models.py:167
+#: fitness/models.py:216 nutrition/models.py:22 nutrition/models.py:67
+#: users/models.py:31 users/models.py:98
 msgid "created at"
 msgstr "napravljeno"
 
 #: finances/models.py:92 finances/models.py:162 finances/models.py:201
-#: finances/models.py:275 fitness/models.py:11 fitness/models.py:43
-#: fitness/models.py:77 fitness/models.py:136 fitness/models.py:184
-#: nutrition/models.py:23 nutrition/models.py:68 users/models.py:30
+#: finances/models.py:275 fitness/models.py:18 fitness/models.py:54
+#: fitness/models.py:102 fitness/models.py:168 fitness/models.py:217
+#: nutrition/models.py:23 nutrition/models.py:68 users/models.py:32
 msgid "updated at"
 msgstr "izmenjeno"
 
@@ -317,7 +325,7 @@ msgstr "dan završetka"
 msgid "amount"
 msgstr "iznos"
 
-#: finances/models.py:273 finances/models.py:349 fitness/models.py:35
+#: finances/models.py:273 finances/models.py:349 fitness/models.py:42
 #: nutrition/models.py:14
 msgid "description"
 msgstr "opis"
@@ -342,7 +350,7 @@ msgstr "naslov"
 msgid "is fixed"
 msgstr "fiksno"
 
-#: finances/models.py:367 fitness/models.py:74 nutrition/models.py:66
+#: finances/models.py:367 fitness/models.py:99 nutrition/models.py:66
 msgid "date"
 msgstr "datum"
 
@@ -412,47 +420,56 @@ msgstr "Period može biti najviše %(days)s dana."
 msgid "This account has transactions. Archive it instead."
 msgstr "Ovaj račun ima transakcije. Umesto brisanja, arhivirajte ga."
 
-#: fitness/models.py:9 fitness/models.py:133
+#: fitness/models.py:16 fitness/models.py:165
 msgid "order"
 msgstr "redosled"
 
-#: fitness/models.py:37
+#: fitness/models.py:45 users/models.py:172
+msgid "weight unit"
+msgstr "jedinica težine"
+
+#: fitness/models.py:48
 msgid "image"
 msgstr "slika"
 
-#: fitness/models.py:75 fitness/models.py:134
+#: fitness/models.py:100 fitness/models.py:166
 msgid "notes"
 msgstr "beleške"
 
-#: fitness/models.py:156
+#: fitness/models.py:188
 msgid "Exercise must belong to the same household as the training."
 msgstr "Vežba mora da pripada istom domaćinstvu kao i trening."
 
-#: fitness/models.py:174
+#: fitness/models.py:207
 msgid "set number"
 msgstr "broj serije"
 
-#: fitness/models.py:176
-msgid "weight (kg)"
-msgstr "težina (kg)"
+#: fitness/models.py:209
+msgid "weight"
+msgstr "težina"
 
-#: fitness/models.py:182
+#: fitness/models.py:215
 msgid "reps"
 msgstr "ponavljanja"
 
-#: fitness/serializers.py:189
+#: fitness/serializers.py:77
+#, python-format
+msgid "Converted to %(unit)s, a set would weigh more than %(max)s."
+msgstr "Pretvorena u %(unit)s, neka serija bi bila teža od %(max)s."
+
+#: fitness/serializers.py:243
 msgid "You already have a training on this date."
 msgstr "Već imate trening na ovaj datum."
 
-#: fitness/serializers.py:253
+#: fitness/serializers.py:307
 msgid "The exercise's muscle group is not part of this training."
 msgstr "Mišićna grupa ove vežbe nije deo ovog treninga."
 
-#: fitness/views.py:78
+#: fitness/views.py:83
 msgid "This exercise is used in trainings and can't be deleted."
 msgstr "Ova vežba se koristi u treninzima i ne može da se obriše."
 
-#: fitness/views.py:112
+#: fitness/views.py:117
 msgid "A user id is a number."
 msgstr "ID korisnika mora biti broj."
 
@@ -512,91 +529,91 @@ msgstr "Dozvole"
 msgid "Important dates"
 msgstr "Važni datumi"
 
-#: users/admin.py:98 users/models.py:27
+#: users/admin.py:98 users/models.py:29
 msgid "members"
 msgstr "članovi"
 
-#: users/models.py:22
+#: users/models.py:24
 msgid "owner"
 msgstr "vlasnik"
 
-#: users/models.py:33 users/models.py:81
+#: users/models.py:35 users/models.py:83
 msgid "household"
 msgstr "domaćinstvo"
 
-#: users/models.py:34
+#: users/models.py:36
 msgid "households"
 msgstr "domaćinstva"
 
-#: users/models.py:72
+#: users/models.py:74
 msgid "pending"
 msgstr "na čekanju"
 
-#: users/models.py:73
+#: users/models.py:75
 msgid "accepted"
 msgstr "prihvaćen"
 
-#: users/models.py:74
+#: users/models.py:76
 msgid "declined"
 msgstr "odbijen"
 
-#: users/models.py:87
+#: users/models.py:89
 msgid "invited user"
 msgstr "pozvani korisnik"
 
-#: users/models.py:93
+#: users/models.py:95
 msgid "invited by"
 msgstr "pozvao"
 
-#: users/models.py:95
+#: users/models.py:97
 msgid "status"
 msgstr "status"
 
-#: users/models.py:97
+#: users/models.py:99
 msgid "responded at"
 msgstr "odgovoreno"
 
-#: users/models.py:100
+#: users/models.py:102
 msgid "household invitation"
 msgstr "poziv u domaćinstvo"
 
-#: users/models.py:101
+#: users/models.py:103
 msgid "household invitations"
 msgstr "pozivi u domaćinstvo"
 
-#: users/models.py:159
+#: users/models.py:161
 msgid "email address"
 msgstr "email adresa"
 
-#: users/models.py:162
+#: users/models.py:164
 msgid "email verified"
 msgstr "email potvrđen"
 
-#: users/models.py:165
+#: users/models.py:167
 msgid "timezone"
 msgstr "vremenska zona"
 
-#: users/models.py:166
+#: users/models.py:168
 msgid "language"
 msgstr "jezik"
 
-#: users/models.py:167
+#: users/models.py:169
 msgid "currency"
 msgstr "valuta"
 
-#: users/models.py:169
+#: users/models.py:175
 msgid "profile picture"
 msgstr "profilna slika"
 
-#: users/models.py:172
+#: users/models.py:178
 msgid "last activity"
 msgstr "poslednja aktivnost"
 
-#: users/models.py:180
+#: users/models.py:186
 msgid "user"
 msgstr "korisnik"
 
-#: users/models.py:181
+#: users/models.py:187
 msgid "users"
 msgstr "korisnici"
 
@@ -688,15 +705,15 @@ msgstr ""
 "\n"
 "Ako se niste registrovali, zanemarite ovaj email."
 
-#: users/services.py:159 users/services.py:176
+#: users/services.py:148 users/services.py:165
 msgid "This invitation is no longer pending."
 msgstr "Ovaj poziv više nije na čekanju."
 
-#: users/services.py:163
+#: users/services.py:152
 msgid "You already belong to another household."
 msgstr "Već pripadate drugom domaćinstvu."
 
-#: users/services.py:165
+#: users/services.py:154
 msgid "Remove the members of your household first."
 msgstr "Prvo uklonite članove svog domaćinstva."
 

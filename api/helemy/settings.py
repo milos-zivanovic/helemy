@@ -269,7 +269,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     # users.serializers.ROLE_FIELD is used by both User.role and Household.user_role
-    "ENUM_NAME_OVERRIDES": {"HouseholdRoleEnum": ["owner", "member"]},
+    "ENUM_NAME_OVERRIDES": {
+        "HouseholdRoleEnum": ["owner", "member"],
+        # kg / lb on users, exercises and training totals: one WeightUnitEnum in the client's types.
+        "WeightUnitEnum": "common.units.WeightUnit",
+    },
     "SCHEMA_PATH_PREFIX": "/api",
     "TAGS": [
         {"name": "Authentication", "description": "User authentication and authorization"},

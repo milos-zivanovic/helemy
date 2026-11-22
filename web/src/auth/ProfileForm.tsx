@@ -11,7 +11,9 @@ import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
+import { FITNESS } from '../fitness/hooks'
 import { API_LANGUAGES, fromApiLanguage, LANGUAGES, type Language } from '../i18n'
+import { WEIGHT_UNITS } from '../i18n/format'
 import { profileSchema } from './schemas'
 import { ME_QUERY_KEY, useMe } from './useAuth'
 
@@ -24,7 +26,14 @@ const CURRENCIES: Currency[] = ['RSD', 'EUR', 'USD', 'CHF', 'GBP', 'BAM', 'HUF']
 // Every IANA time zone the browser knows ("Europe/Belgrade"), read once when the file loads.
 const TIME_ZONES = Intl.supportedValuesOf('timeZone')
 
-const FIELDS = ['first_name', 'last_name', 'currency', 'timezone', 'language'] as const
+const FIELDS = [
+  'first_name',
+  'last_name',
+  'currency',
+  'timezone',
+  'language',
+  'weight_unit',
+] as const
 
 // Name and preferences of the logged-in user: PATCH /api/auth/me/. The email (the login) isn't here.
 export function ProfileForm() {
@@ -45,6 +54,7 @@ export function ProfileForm() {
         currency: CURRENCIES.find((code) => code === me.currency) ?? 'RSD',
         timezone: me.timezone || 'Europe/Belgrade',
         language: API_LANGUAGES[fromApiLanguage(me.language) ?? 'en'],
+        weight_unit: me.weight_unit ?? 'kg',
       },
     [me],
   )
@@ -71,6 +81,10 @@ export function ProfileForm() {
       // The answer is the whole profile: into the cache, so every page (and the form) shows it.
       // A changed language switches the app too (useSyncLanguage in AppLayout).
       queryClient.setQueryData(ME_QUERY_KEY, profile)
+      // Training totals are computed by the API in the user's unit: a new unit makes them stale.
+      if (profile.weight_unit !== me?.weight_unit) {
+        void queryClient.invalidateQueries({ queryKey: [FITNESS] })
+      }
       setSaved(true)
     } catch (error) {
       showMutationError(setError, error, FIELDS, t)
@@ -122,6 +136,17 @@ export function ProfileForm() {
             </option>
           ))}
         </SelectField>
+        <SelectField
+          label={t('profile.weightUnit')}
+          error={errors.weight_unit?.message}
+          {...register('weight_unit')}
+        >
+          {WEIGHT_UNITS.map((unit) => (
+            <option key={unit} value={unit}>
+              {t(`units.${unit}Name`)}
+            </option>
+          ))}
+        </SelectField>
         <div className="sm:col-span-2">
           <SelectField
             label={t('profile.timezone')}
@@ -136,7 +161,10 @@ export function ProfileForm() {
           </SelectField>
         </div>
       </div>
-      <p className="text-xs text-slate-500">{t('profile.currencyInfo')}</p>
+      <div className="flex flex-col gap-1 text-xs text-slate-500">
+        <p>{t('profile.currencyInfo')}</p>
+        <p>{t('profile.weightUnitInfo')}</p>
+      </div>
       <Button type="submit" disabled={isSubmitting || !isDirty} className="self-start">
         {isSubmitting ? t('common.sending') : t('common.save')}
       </Button>

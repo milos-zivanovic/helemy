@@ -16,7 +16,7 @@ import { useFormatters } from '../i18n/format'
 // greyed out, so your own stand out.
 export function TrainingsPage() {
   const { t } = useTranslation()
-  const { formatDay, formatNumber } = useFormatters()
+  const { formatDay, formatVolume } = useFormatters()
   const trainings = useTrainings()
   // All pages loaded so far, as one list
   const items = trainings.data?.pages.flatMap((page) => page.results) ?? []
@@ -80,7 +80,7 @@ export function TrainingsPage() {
                     })}
                     {training.total_volume > 0 && (
                       <span className="block tabular-nums">
-                        {formatNumber(training.total_volume)} kg
+                        {formatVolume(training.total_volume, training.volume_unit)}
                       </span>
                     )}
                   </span>

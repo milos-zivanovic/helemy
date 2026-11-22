@@ -51,6 +51,20 @@ class UpdateMeTests(HouseholdAPITestCase):
             ("Alice", "Smith", "EUR", "America/New_York"),
         )
 
+    def test_changes_the_weight_unit(self):
+        response = self.client.patch(ME_URL, {"weight_unit": "lb"}, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["weight_unit"], "lb")
+        self.alice.refresh_from_db()
+        self.assertEqual(self.alice.weight_unit, "lb")
+
+    def test_rejects_an_unknown_weight_unit(self):
+        response = self.client.patch(ME_URL, {"weight_unit": "stone"}, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("weight_unit", response.data)
+
     def test_name_can_be_cleared(self):
         self.client.patch(ME_URL, {"first_name": "Alice"}, format="json")
         response = self.client.patch(ME_URL, {"first_name": ""}, format="json")

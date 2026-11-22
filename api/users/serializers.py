@@ -19,6 +19,7 @@ from rest_framework_simplejwt.serializers import TokenObtainSerializer as TokenO
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 
 from common.images import absolute_url
+from common.units import WeightUnit
 from finances.services import create_default_finances
 from users.models import CURRENCIES, Household, HouseholdInvitation
 from users.services import user_for_email_verification_token
@@ -46,6 +47,7 @@ class UserSerializer(serializers.ModelSerializer):
             "timezone",
             "language",
             "currency",
+            "weight_unit",
             "date_joined",
             "last_activity",
             "role",
@@ -100,10 +102,12 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
     currency = serializers.ChoiceField(choices=CURRENCIES)
     # An IANA name ("Europe/Belgrade"). Stored only for now: dates still use TIME_ZONE.
     timezone = serializers.CharField(max_length=50)
+    # The unit training totals are converted into ("kg" or "lb"); exercises keep their own unit.
+    weight_unit = serializers.ChoiceField(choices=WeightUnit.choices)
 
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "currency", "timezone", "language"]
+        fields = ["first_name", "last_name", "currency", "timezone", "language", "weight_unit"]
 
     def validate_timezone(self, value):
         # A free-text field checked against the tz database instead of a ChoiceField: ~600 choices

@@ -19,7 +19,7 @@ const LIST = '/fitness/trainings'
 // with one tap (prefilled with the previous set), and new exercises are added at the bottom.
 export function TrainingPage() {
   const { t } = useTranslation()
-  const { formatDay, formatNumber } = useFormatters()
+  const { formatDay, formatVolume } = useFormatters()
   const id = Number(useParams().id)
   const training = useTraining(id)
   const remove = useDeleteTraining(id)
@@ -55,7 +55,7 @@ export function TrainingPage() {
           </p>
           <p className="text-xs text-slate-500">
             {t('fitness.trainings.summary', { exercises: data.items_count, sets: data.total_sets })}
-            {data.total_volume > 0 && ` · ${formatNumber(data.total_volume)} kg`}
+            {data.total_volume > 0 && ` · ${formatVolume(data.total_volume, data.volume_unit)}`}
           </p>
           {data.notes && <p className="mt-1 text-sm whitespace-pre-line">{data.notes}</p>}
         </div>

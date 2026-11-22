@@ -1,14 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { showMutationError } from '../api/errors'
+import { useMe } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
+import { useFormatters } from '../i18n/format'
 import { type Training, useAppendSet, useExercises } from './hooks'
 import { newExerciseSetSchema } from './schemas'
 
@@ -29,8 +31,15 @@ export function AddExerciseForm({ training }: { training: Training }) {
     handleSubmit,
     setError,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues: EMPTY })
+  const { unitLabel } = useFormatters()
+  const { data: me } = useMe()
+  // The weight is in the chosen exercise's unit; before one is chosen, the user's own.
+  const exerciseId = useWatch({ control, name: 'exercise_id' })
+  const chosen = exercises.data?.find((exercise) => String(exercise.id) === exerciseId)
+  const unit = chosen?.weight_unit ?? me?.weight_unit ?? 'kg'
 
   const used = new Set(training.items.map((item) => item.exercise.id))
   const options = (exercises.data ?? []).filter((exercise) => !used.has(exercise.id))
@@ -72,7 +81,7 @@ export function AddExerciseForm({ training }: { training: Training }) {
       <div className="flex flex-wrap items-start gap-2">
         <div className="w-28">
           <TextField
-            label={t('fitness.fields.weight')}
+            label={t('fitness.fields.weight', { unit: unitLabel(unit) })}
             inputMode="decimal"
             autoComplete="off"
             error={errors.weight?.message}

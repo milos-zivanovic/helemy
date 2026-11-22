@@ -161,7 +161,7 @@ TypeScript then reports every place in the web code that no longer matches. The 
 | `/reset-password`             | Set a new password from the email's link               |
 | `/home`                       | Start page: summary of finances, trainings, nutrition  |
 | `/household`                  | Household: details, members, invitations               |
-| `/profile`                    | Name, currency, time zone, language; password change   |
+| `/profile`                    | Name and preferences; picture, password change         |
 | `/finances/transactions`      | Main screen: period, filters, totals, list or chart    |
 | `/finances/transactions/new`  | New expense, income or transfer (`?type=transfer`)     |
 | `/finances/transactions/:id`  | Edit or delete a transaction                           |
@@ -269,14 +269,17 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   previous result for that exercise ("last time") and an "add set" row prefilled with the last set, so
   a repeated set is one tap. Sets can be corrected or deleted (the rest are renumbered). A new exercise
   is added with its first set; only exercises of the training's muscle groups are offered. Weight is
-  optional (bodyweight exercises). Each card shows the exercise's picture left of its name
+  optional (bodyweight exercises). Weights are in the exercise's own unit (kg or lbs, as on the machine);
+  the training's total (here and in the list) is in the user's unit from the profile, converted by the
+  API. Each card shows the exercise's picture left of its name
   (`ExerciseThumb`; a click opens it large, Escape or a click closes it) or a dumbbell placeholder.
 - **Exercises** (`/fitness/exercises`): grouped by muscle group. The exercise page shows the user's
   progress (heaviest set per training, or total reps for bodyweight exercises) as headline numbers, a
   line chart and the list of trainings. The progress component is loaded with `React.lazy`, so Recharts
   is downloaded only when it's shown. Its picture is set or removed there with the same crop editor
   as the profile picture (`ImageEditor`, square), `PUT /api/fitness/exercises/{id}/image/`. An exercise
-  used in trainings can't be deleted.
+  used in trainings can't be deleted. Its weight unit (a new one starts with the profile's) can be
+  changed; when it's already in trainings, the form warns that the sets will be converted.
 
 ## Nutrition
 

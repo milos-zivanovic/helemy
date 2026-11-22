@@ -9,7 +9,7 @@ import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { TextField } from '../components/TextField'
-import { useFormatters } from '../i18n/format'
+import { useFormatters, type WeightUnit } from '../i18n/format'
 import {
   type Training,
   type TrainingItem,
@@ -27,20 +27,22 @@ import { type SetFormValues, setSchema } from './schemas'
 const weightInput = (weight: string | null | undefined) =>
   weight === null || weight === undefined ? '' : String(Number(weight))
 
-/** "80 kg × 8" or just "12" for a bodyweight set. */
-function useSetLabel() {
+/** "80 kg × 8" (in the exercise's unit) or just "12" for a bodyweight set. */
+function useSetLabel(unit: WeightUnit) {
   const { formatWeight } = useFormatters()
   return (set: { weight?: string | null; reps: number }) =>
     set.weight === null || set.weight === undefined
       ? String(set.reps)
-      : `${formatWeight(set.weight)} × ${set.reps}`
+      : `${formatWeight(set.weight, unit)} × ${set.reps}`
 }
 
 /** One exercise of a training: last time's sets, this training's sets, and adding the next one. */
 export function TrainingItemCard({ item, training }: { item: TrainingItem; training: Training }) {
   const { t } = useTranslation()
   const { formatShortDate } = useFormatters()
-  const setLabel = useSetLabel()
+  // Every weight of this card is in the exercise's unit: what the machine shows.
+  const unit = item.exercise.weight_unit
+  const setLabel = useSetLabel(unit)
   const removeItem = useDeleteTrainingItem()
 
   // The same member's previous training with this exercise: what to beat today.
@@ -77,7 +79,7 @@ export function TrainingItemCard({ item, training }: { item: TrainingItem; train
       {item.sets.length > 0 && (
         <ol className="mb-3 divide-y divide-slate-100">
           {item.sets.map((set) => (
-            <SetRow key={set.id} set={set} />
+            <SetRow key={set.id} set={set} unit={unit} />
           ))}
         </ol>
       )}
@@ -87,6 +89,7 @@ export function TrainingItemCard({ item, training }: { item: TrainingItem; train
         key={item.sets.length}
         trainingId={training.id}
         exerciseId={item.exercise.id}
+        unit={unit}
         defaultValues={nextDefaults}
       />
 
@@ -105,16 +108,16 @@ export function TrainingItemCard({ item, training }: { item: TrainingItem; train
 }
 
 // One set: shown as text, switches to a small form to correct it.
-function SetRow({ set }: { set: TrainingSet }) {
+function SetRow({ set, unit }: { set: TrainingSet; unit: WeightUnit }) {
   const { t } = useTranslation()
-  const setLabel = useSetLabel()
+  const setLabel = useSetLabel(unit)
   const [editing, setEditing] = useState(false)
   const remove = useDeleteSet()
 
   if (editing) {
     return (
       <li className="py-2">
-        <EditSetForm set={set} onDone={() => setEditing(false)} />
+        <EditSetForm set={set} unit={unit} onDone={() => setEditing(false)} />
       </li>
     )
   }
@@ -147,11 +150,20 @@ function SetRow({ set }: { set: TrainingSet }) {
   )
 }
 
-function EditSetForm({ set, onDone }: { set: TrainingSet; onDone: () => void }) {
+function EditSetForm({
+  set,
+  unit,
+  onDone,
+}: {
+  set: TrainingSet
+  unit: WeightUnit
+  onDone: () => void
+}) {
   const { t } = useTranslation()
   const update = useUpdateSet()
   return (
     <SetFields
+      unit={unit}
       defaultValues={{ weight: weightInput(set.weight), reps: String(set.reps) }}
       submitLabel={t('common.save')}
       onCancel={onDone}
@@ -166,16 +178,19 @@ function EditSetForm({ set, onDone }: { set: TrainingSet; onDone: () => void }) 
 function AddSetForm({
   trainingId,
   exerciseId,
+  unit,
   defaultValues,
 }: {
   trainingId: number
   exerciseId: number
+  unit: WeightUnit
   defaultValues: SetFormValues
 }) {
   const { t } = useTranslation()
   const append = useAppendSet(trainingId)
   return (
     <SetFields
+      unit={unit}
       defaultValues={defaultValues}
       submitLabel={t('fitness.trainings.addSet')}
       onSubmit={async (values) => {
@@ -187,17 +202,20 @@ function AddSetForm({
 
 // Weight + reps in one row, shared by "add set" and "edit set".
 function SetFields({
+  unit,
   defaultValues,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
+  unit: WeightUnit
   defaultValues: SetFormValues
   submitLabel: string
   onSubmit: (values: { weight: string | null; reps: number }) => Promise<void>
   onCancel?: () => void
 }) {
   const { t } = useTranslation()
+  const { unitLabel } = useFormatters()
   const schema = useMemo(() => setSchema(t), [t])
   const {
     register,
@@ -220,7 +238,7 @@ function SetFields({
       <div className="flex flex-wrap items-start gap-2">
         <div className="w-28">
           <TextField
-            label={t('fitness.fields.weight')}
+            label={t('fitness.fields.weight', { unit: unitLabel(unit) })}
             inputMode="decimal"
             autoComplete="off"
             error={errors.weight?.message}
