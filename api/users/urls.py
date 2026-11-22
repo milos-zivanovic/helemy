@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from users.views import (
+    AvatarView,
+    EmailVerificationView,
     HouseholdInvitationViewSet,
     HouseholdViewSet,
     LogoutView,
@@ -10,6 +12,7 @@ from users.views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     RegisterView,
+    ResendVerificationView,
     UserViewSet,
 )
 
@@ -20,6 +23,8 @@ router.register(r"invitations", HouseholdInvitationViewSet, basename="household-
 urlpatterns = [
     # Auth endpoints
     path("register/", RegisterView.as_view(), name="register"),
+    path("email/verify/", EmailVerificationView.as_view(), name="email_verify"),
+    path("email/verify/resend/", ResendVerificationView.as_view(), name="email_verify_resend"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
@@ -31,6 +36,7 @@ urlpatterns = [
         name="password_reset_confirm",
     ),
     # User endpoints
+    path("me/avatar/", AvatarView.as_view(), name="user-avatar"),
     path("me/", UserViewSet.as_view({"get": "me", "patch": "update_me"}), name="user-me"),
     # Router endpoints
     path("", include(router.urls)),

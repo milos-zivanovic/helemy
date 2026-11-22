@@ -9,6 +9,7 @@ import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { ConfirmButton } from '../components/ConfirmButton'
+import { FormDateField } from '../components/FormDateField'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
@@ -118,6 +119,7 @@ function BudgetForm({
   const categories = useCategories()
   const schema = useMemo(() => budgetSchema(t), [t])
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -190,17 +192,15 @@ function BudgetForm({
           ))}
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField
+          <FormDateField
+            control={control}
+            name="start_date"
             label={t('finances.categories.startDate')}
-            type="date"
-            error={errors.start_date?.message}
-            {...register('start_date')}
           />
-          <TextField
+          <FormDateField
+            control={control}
+            name="end_date"
             label={t('finances.categories.endDate')}
-            type="date"
-            error={errors.end_date?.message}
-            {...register('end_date')}
           />
         </div>
       </div>

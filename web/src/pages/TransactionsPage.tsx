@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { errorMessage } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { Button, LinkButton } from '../components/Button'
+import { DateField } from '../components/DateField'
 import { SelectField } from '../components/SelectField'
 import { StatTile } from '../components/StatTile'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
 import { segmentedOption, segmentedTrack } from '../components/segmented'
 import { Icon } from '../components/Icon'
+import { LoadMore } from '../components/LoadMore'
 import { CategoryOptions } from '../finances/CategoryOptions'
 import {
   type Transaction,
@@ -25,18 +27,20 @@ import {
 import { RankedBars } from '../finances/RankedBars'
 import { useActiveHousehold } from '../household/hooks'
 import { useFormatters } from '../i18n/format'
-import { currentMonth, fullMonth, isDay, monthRange, shiftMonth, today } from '../lib/dates'
+import { fullMonth, isDay, monthRange, shiftMonth } from '../lib/dates'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 import { useMediaQuery } from '../lib/useMediaQuery'
 
 type Params = Record<string, string | null>
+// The URL parameters that filter the transactions (not `view`, which only picks how they're shown).
+const FILTER_PARAMS = ['start', 'end', 'account', 'type', 'group', 'category', 'fixed', 'q']
 type Type = NonNullable<TransactionFilters['transaction_type']>
 const TYPES: Type[] = ['expense', 'income', 'transfer']
 
 // /finances/transactions: the main finance screen, like the old wallet's overview. Everything is
 // in the URL (?start=2026-11-01&end=2026-11-30&type=expense&group=4&view=chart), like the GET
 // parameters of a Django list view with a FilterSet: a reload, a bookmark or the back button keeps
-// the filters, and the page is just a function of its URL. No period = all transactions.
+// the filters, and the page is just a function of its URL. No period = all transactions (the default).
 // The same filters drive both views: the list, and the chart (totals per group / category).
 export function TransactionsPage() {
   const { t } = useTranslation()
@@ -99,6 +103,25 @@ export function TransactionsPage() {
   // Open by itself when the page opens with filters already in the URL (e.g. a bookmark).
   const activeFilters = [type, group, category, account, fixed, get('q')].filter(Boolean).length
   const [filtersOpen, setFiltersOpen] = useState(activeFilters > 0)
+  const anyFilter = activeFilters > 0 || start !== null || end !== null || search !== ''
+
+  // Every filter off at once (the chosen view stays); the search box too, which has its own state.
+  const resetFilters = () => {
+    setSearch('')
+    updateParams(Object.fromEntries(FILTER_PARAMS.map((key) => [key, null])))
+  }
+  // Small on purpose: a secondary action, enabled once any filter is set. A JSX value can be kept in
+  // a variable and placed wherever it's needed (here: one of two places, by screen width).
+  const resetButton = (
+    <button
+      type="button"
+      onClick={resetFilters}
+      disabled={!anyFilter}
+      className="focus-visible:ring-brand-300 inline-flex shrink-0 items-center rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-xs hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {t('finances.filters.reset')}
+    </button>
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,25 +134,34 @@ export function TransactionsPage() {
       </div>
 
       <div className="surface flex flex-col gap-4 p-4 sm:p-5">
-        <PeriodPicker start={start} end={end} onChange={updateParams} />
+        {/* From tablet width up "Reset" sits beside the dates; on a phone beside the filters button,
+            so the two date fields get the whole width. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <PeriodPicker start={start} end={end} onChange={updateParams} />
+          </div>
+          {wide && resetButton}
+        </div>
         {/* On a phone the other filters fold away behind a button (with how many are set), so the
             transactions aren't a whole screen down; from tablet width up they are always shown. */}
         {!wide && (
-          <Button
-            variant="secondary"
-            className="self-start"
-            aria-expanded={filtersOpen}
-            onClick={() => setFiltersOpen(!filtersOpen)}
-          >
-            <Icon name="filter" className="size-4" />
-            {activeFilters > 0
-              ? t('finances.filters.toggleCount', { n: activeFilters })
-              : t('finances.filters.toggle')}
-            <Icon
-              name="chevronDown"
-              className={`size-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
-            />
-          </Button>
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              variant="secondary"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <Icon name="filter" className="size-4" />
+              {activeFilters > 0
+                ? t('finances.filters.toggleCount', { n: activeFilters })
+                : t('finances.filters.toggle')}
+              <Icon
+                name="chevronDown"
+                className={`size-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+              />
+            </Button>
+            {resetButton}
+          </div>
         )}
         {(wide || filtersOpen) && (
           <Filters
@@ -225,7 +257,8 @@ function TotalBalance() {
   )
 }
 
-// Quick periods, a month stepper (when the period is one calendar month) and a free date range.
+// A free date range (dd/mm/yyyy, either end optional) and, when the range is exactly one calendar
+// month (e.g. "this month's transactions" from the start page), a stepper to the previous/next month.
 function PeriodPicker({
   start,
   end,
@@ -238,68 +271,43 @@ function PeriodPicker({
   const { t } = useTranslation()
   const { formatMonth } = useFormatters()
   const month = fullMonth(start, end)
-  const year = today().slice(0, 4)
   const setMonth = (value: string) => onChange(monthRange(value))
 
-  const presets = [
-    { label: t('finances.filters.allTime'), start: null, end: null },
-    { label: t('finances.budgets.thisMonth'), ...monthRange(currentMonth()) },
-    { label: t('finances.reports.lastMonth'), ...monthRange(shiftMonth(currentMonth(), -1)) },
-    { label: t('finances.budgets.thisYear'), start: `${year}-01-01`, end: `${year}-12-31` },
-  ]
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {presets.map((preset) => {
-          const selected = preset.start === start && preset.end === end
-          return (
-            <Button
-              key={preset.label}
-              variant={selected ? 'primary' : 'secondary'}
-              aria-pressed={selected}
-              onClick={() => onChange({ start: preset.start, end: preset.end })}
-            >
-              {preset.label}
-            </Button>
-          )
-        })}
-        {month && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              aria-label={t('finances.transactions.previousMonth')}
-              onClick={() => setMonth(shiftMonth(month, -1))}
-            >
-              ‹
-            </Button>
-            <span className="min-w-32 text-center text-sm font-medium capitalize">
-              {formatMonth(month)}
-            </span>
-            <Button
-              variant="secondary"
-              aria-label={t('finances.transactions.nextMonth')}
-              onClick={() => setMonth(shiftMonth(month, 1))}
-            >
-              ›
-            </Button>
-          </div>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-        <TextField
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="grid w-full grid-cols-2 gap-3 sm:w-md">
+        <DateField
           label={t('finances.categories.startDate')}
-          type="date"
           value={start ?? ''}
-          onChange={(event) => onChange({ start: event.target.value })}
+          onChange={(value) => onChange({ start: value })}
         />
-        <TextField
+        <DateField
           label={t('finances.categories.endDate')}
-          type="date"
           value={end ?? ''}
-          onChange={(event) => onChange({ end: event.target.value })}
+          onChange={(value) => onChange({ end: value })}
         />
       </div>
+      {month && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            aria-label={t('finances.transactions.previousMonth')}
+            onClick={() => setMonth(shiftMonth(month, -1))}
+          >
+            ‹
+          </Button>
+          <span className="min-w-32 text-center text-sm font-medium capitalize">
+            {formatMonth(month)}
+          </span>
+          <Button
+            variant="secondary"
+            aria-label={t('finances.transactions.nextMonth')}
+            onClick={() => setMonth(shiftMonth(month, 1))}
+          >
+            ›
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -334,7 +342,20 @@ function Filters({
   const accounts = useAccounts()
 
   return (
+    // Account, type, group, category, fixed, search: in reading order, row by row
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <SelectField
+        label={t('finances.fields.account')}
+        value={account ?? ''}
+        onChange={(event) => onChange({ account: event.target.value })}
+      >
+        <option value="">{t('finances.filters.allAccounts')}</option>
+        {(accounts.data ?? []).map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </SelectField>
       <SelectField
         label={t('finances.fields.type')}
         value={type ?? ''}
@@ -367,18 +388,6 @@ function Filters({
       >
         <option value="">{t('finances.filters.allCategories')}</option>
         <CategoryOptions categories={categoryOptions} />
-      </SelectField>
-      <SelectField
-        label={t('finances.fields.account')}
-        value={account ?? ''}
-        onChange={(event) => onChange({ account: event.target.value })}
-      >
-        <option value="">{t('finances.filters.allAccounts')}</option>
-        {(accounts.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.name}
-          </option>
-        ))}
       </SelectField>
       <SelectField
         label={t('finances.filters.fixed')}
@@ -490,48 +499,6 @@ function Breakdown({
         </div>
       )}
     </section>
-  )
-}
-
-// The next 50 rows: by a button, or by itself when the button scrolls into view (an
-// IntersectionObserver tells when an element becomes visible, no scroll events needed).
-function LoadMore({
-  loading,
-  onLoad,
-  shown,
-  total,
-}: {
-  loading: boolean
-  onLoad: () => void
-  shown: number
-  total: number
-}) {
-  const { t } = useTranslation()
-  const button = useRef<HTMLButtonElement>(null)
-  // The latest onLoad/loading for the observer, which is created once (a ref doesn't re-render).
-  const latest = useRef({ onLoad, loading })
-  useEffect(() => {
-    latest.current = { onLoad, loading }
-  })
-  useEffect(() => {
-    const element = button.current
-    if (!element) return
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !latest.current.loading) latest.current.onLoad()
-    })
-    observer.observe(element)
-    return () => observer.disconnect() // cleanup when the button goes away (last page loaded)
-  }, [])
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <Button ref={button} variant="secondary" disabled={loading} onClick={onLoad}>
-        {loading ? t('common.loading') : t('finances.transactions.loadMore')}
-      </Button>
-      <span className="text-xs text-slate-500">
-        {t('finances.transactions.shownOf', { shown, total })}
-      </span>
-    </div>
   )
 }
 

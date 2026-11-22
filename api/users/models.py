@@ -4,6 +4,10 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
+# Currencies a user can pick for showing amounts (ISO 4217); not `choices` on the field, so a code
+# stored before (e.g. by the admin) stays valid. Extend the list when someone needs another one.
+CURRENCIES = ["RSD", "EUR", "USD", "CHF", "GBP", "BAM", "HUF"]
+
 
 class Household(models.Model):
     """
@@ -137,6 +141,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        # Made on the command line: there's no email to confirm.
+        extra_fields.setdefault("email_verified", True)
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
@@ -151,11 +157,16 @@ class User(AbstractUser):
 
     username = None  # removed from AbstractUser: login is by email only
     email = models.EmailField(_("email address"), unique=True)
+    # Set when the user opens the link from the verification email sent at sign up; until then they
+    # can't log in (users.serializers.TokenObtainSerializer).
+    email_verified = models.BooleanField(_("email verified"), default=False)
 
     # Preferences
     timezone = models.CharField(_("timezone"), max_length=50, default="Europe/Belgrade")
     language = models.CharField(_("language"), max_length=10, default="en")
     currency = models.CharField(_("currency"), max_length=3, default="RSD")
+    # Profile picture: a 256x256 WebP made by users.services.save_avatar (R2 in production).
+    avatar = models.ImageField(_("profile picture"), upload_to="avatars/", blank=True, null=True)
 
     # Timestamps
     last_activity = models.DateTimeField(_("last activity"), null=True, blank=True)

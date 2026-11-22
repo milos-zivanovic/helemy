@@ -37,6 +37,7 @@ env = environ.Env(
     EMAIL_URL=(str, "consolemail://"),
     DEFAULT_FROM_EMAIL=(str, "Helemy <noreply@localhost>"),
     PASSWORD_RESET_URL=(str, "http://localhost:3000/reset-password?uid={uid}&token={token}"),
+    EMAIL_VERIFICATION_URL=(str, "http://localhost:3000/verify-email?token={token}"),
 )
 
 # Read .env file if exists
@@ -216,6 +217,7 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
         "burst": "60/minute",
         "password_reset": "5/hour",
+        "email_verification": "5/hour",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Proxies in front of the API: throttling then takes the client IP from X-Forwarded-For,
@@ -242,6 +244,8 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+    # Login: also refuses users who haven't confirmed their email yet.
+    "TOKEN_OBTAIN_SERIALIZER": "users.serializers.TokenObtainSerializer",
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
@@ -323,3 +327,7 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 # new_password to /api/auth/password/reset/confirm/. {uid} and {token} are filled in.
 PASSWORD_RESET_URL = env("PASSWORD_RESET_URL")
 PASSWORD_RESET_TIMEOUT = 60 * 60  # seconds a reset link stays valid (Django's default is 3 days)
+
+# Email verification: the sign up email links to the client app, which posts the token back.
+EMAIL_VERIFICATION_URL = env("EMAIL_VERIFICATION_URL")
+EMAIL_VERIFICATION_TIMEOUT = 48 * 60 * 60  # seconds a verification link stays valid

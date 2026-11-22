@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+    "/api/auth/email/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Confirm the email with the token from the verification email and log in: returns a JWT pair.
+         *     A link works once; afterwards (or expired, after 48 hours) it answers 400 under `token`.
+         */
+        post: operations["auth_email_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/email/verify/resend/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Email a new verification link to an account that isn't confirmed yet. Always answers 204, so the
+         *     endpoint can't be used to find out which emails have an account.
+         */
+        post: operations["auth_email_verify_resend_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/households/": {
         parameters: {
             query?: never;
@@ -216,8 +256,34 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Change your own preferences (the language); answers with the whole profile, like GET. */
+        /** @description Change your name and preferences (currency, time zone, language); answers like GET. */
         patch: operations["auth_me_partial_update"];
+        trace?: never;
+    };
+    "/api/auth/me/avatar/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Your profile picture. PUT (multipart, field `avatar`) stores a new one, cut to a 256x256 square
+         *     (the web client lets the user choose the square first); DELETE removes it. Both answer with the
+         *     whole profile, like GET /api/auth/me/ (`avatar_url`).
+         */
+        put: operations["auth_me_avatar_update"];
+        post?: never;
+        /**
+         * @description Your profile picture. PUT (multipart, field `avatar`) stores a new one, cut to a 256x256 square
+         *     (the web client lets the user choose the square first); DELETE removes it. Both answer with the
+         *     whole profile, like GET /api/auth/me/ (`avatar_url`).
+         */
+        delete: operations["auth_me_avatar_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/auth/password/change/": {
@@ -286,7 +352,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Create an account (with its personal household) and return JWT tokens, i.e. log in right away. */
+        /**
+         * @description Create an account (with its personal household) and email a verification link
+         *     (EMAIL_VERIFICATION_URL). No tokens: login works once the email is confirmed (`email/verify/`).
+         */
         post: operations["auth_register_create"];
         delete?: never;
         options?: never;
@@ -813,6 +882,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fitness/exercises/{id}/image/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description The exercise's picture. PUT (multipart, field `image`) stores a new one as a 512x512 WebP (the
+         *     web client lets the user choose the square first) and deletes the old file; DELETE removes it.
+         *     Both answer with the exercise.
+         */
+        put: operations["fitness_exercises_image_update"];
+        post?: never;
+        /**
+         * @description The exercise's picture. PUT (multipart, field `image`) stores a new one as a 512x512 WebP (the
+         *     web client lets the user choose the square first) and deletes the old file; DELETE removes it.
+         *     Both answer with the exercise.
+         */
+        delete: operations["fitness_exercises_image_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/fitness/muscle-groups/": {
         parameters: {
             query?: never;
@@ -1170,6 +1265,13 @@ export interface components {
             /** @default 1 */
             reps: number;
         };
+        AvatarRequest: {
+            /**
+             * Format: binary
+             * @description JPEG, PNG or WebP, at most 5 MB; stored as 256x256 WebP.
+             */
+            avatar: string;
+        };
         BalanceDay: {
             /** Format: date */
             date: string;
@@ -1353,6 +1455,17 @@ export interface components {
             /** Format: date */
             date: string;
         };
+        /**
+         * @description * `RSD` - RSD
+         *     * `EUR` - EUR
+         *     * `USD` - USD
+         *     * `CHF` - CHF
+         *     * `GBP` - GBP
+         *     * `BAM` - BAM
+         *     * `HUF` - HUF
+         * @enum {string}
+         */
+        CurrencyEnum: "RSD" | "EUR" | "USD" | "CHF" | "GBP" | "BAM" | "HUF";
         /** @description Schema of `CategorySerializer.current_budget`. */
         CurrentBudget: {
             id: number;
@@ -1368,13 +1481,14 @@ export interface components {
             /** Format: decimal */
             percentage: string;
         };
+        EmailVerificationRequest: {
+            token: string;
+        };
         Exercise: {
             readonly id: number;
             name: string;
             description?: string;
             readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
-            /** Format: uri */
-            image?: string | null;
             readonly image_url: string | null;
             readonly trainings_count: number;
             /** Format: date-time */
@@ -1399,17 +1513,23 @@ export interface components {
             weight: string | null;
             reps: number;
         };
+        ExerciseImageRequest: {
+            /**
+             * Format: binary
+             * @description JPEG, PNG or WebP, at most 5 MB; stored as 512x512 WebP.
+             */
+            image: string;
+        };
         ExerciseList: {
             readonly id: number;
             name: string;
             readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
+            readonly image_url: string | null;
         };
         ExerciseRequest: {
             name: string;
             description?: string;
             muscle_group_id?: number | null;
-            /** Format: binary */
-            image?: string | null;
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         Food: {
@@ -1908,8 +2028,6 @@ export interface components {
             name?: string;
             description?: string;
             muscle_group_id?: number | null;
-            /** Format: binary */
-            image?: string | null;
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         PatchedFoodRequest: {
@@ -1972,8 +2090,15 @@ export interface components {
             date?: string;
             description?: string;
         };
-        /** @description What users change about themselves with PATCH /api/auth/me/ (for now only the language). */
+        /**
+         * @description What users change about themselves with PATCH /api/auth/me/: name and preferences. Not the email
+         *     (the login) and nothing else; fields that aren't listed here are ignored.
+         */
         PatchedUserPreferencesRequest: {
+            first_name?: string;
+            last_name?: string;
+            currency?: components["schemas"]["CurrencyEnum"];
+            timezone?: string;
             language?: components["schemas"]["LanguageEnum"];
         };
         RegisterRequest: {
@@ -1987,9 +2112,15 @@ export interface components {
             last_name?: string;
         };
         RegisterResponse: {
-            user: components["schemas"]["User"];
-            access: string;
-            refresh: string;
+            /**
+             * Format: email
+             * @description Where the verification email was sent.
+             */
+            email: string;
+        };
+        ResendVerificationRequest: {
+            /** Format: email */
+            email: string;
         };
         /**
          * @description * `pending` - pending
@@ -2001,11 +2132,11 @@ export interface components {
         TokenBlacklistRequest: {
             refresh: string;
         };
-        TokenObtainPair: {
-            readonly access: string;
-            readonly refresh: string;
-        };
-        TokenObtainPairRequest: {
+        /**
+         * @description Login (`auth/token/`, SIMPLE_JWT's TOKEN_OBTAIN_SERIALIZER): SimpleJWT's checks, plus a confirmed
+         *     email. Checked only after the password, so it never tells a stranger that an email has an account.
+         */
+        TokenObtainRequest: {
             email: string;
             password: string;
         };
@@ -2241,6 +2372,8 @@ export interface components {
             first_name?: string;
             last_name?: string;
             readonly full_name: string;
+            /** @description The profile picture's full URL (the bucket's domain, or this server in development). */
+            readonly avatar_url: string | null;
             timezone?: string;
             language?: string;
             currency?: string;
@@ -2260,6 +2393,8 @@ export interface components {
             first_name?: string;
             last_name?: string;
             readonly full_name: string;
+            /** @description The profile picture's full URL (the bucket's domain, or this server in development). */
+            readonly avatar_url: string | null;
             timezone?: string;
             language?: string;
             currency?: string;
@@ -2300,6 +2435,55 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    auth_email_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailVerificationRequest"];
+                "multipart/form-data": components["schemas"]["EmailVerificationRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+        };
+    };
+    auth_email_verify_resend_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendVerificationRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResendVerificationRequest"];
+                "multipart/form-data": components["schemas"]["ResendVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     auth_households_list: {
         parameters: {
             query?: {
@@ -2679,6 +2863,48 @@ export interface operations {
             };
         };
     };
+    auth_me_avatar_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AvatarRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDetail"];
+                };
+            };
+        };
+    };
+    auth_me_avatar_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDetail"];
+                };
+            };
+        };
+    };
     auth_password_change_create: {
         parameters: {
             query?: never;
@@ -2786,19 +3012,18 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TokenObtainPairRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TokenObtainPairRequest"];
-                "multipart/form-data": components["schemas"]["TokenObtainPairRequest"];
+                "application/json": components["schemas"]["TokenObtainRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TokenObtainRequest"];
+                "multipart/form-data": components["schemas"]["TokenObtainRequest"];
             };
         };
         responses: {
+            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["TokenObtainPair"];
-                };
+                content?: never;
             };
         };
     };
@@ -3988,6 +4213,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExerciseHistoryEntry"][];
+                };
+            };
+        };
+    };
+    fitness_exercises_image_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this exercise. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ExerciseImageRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exercise"];
+                };
+            };
+        };
+    };
+    fitness_exercises_image_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this exercise. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exercise"];
                 };
             };
         };

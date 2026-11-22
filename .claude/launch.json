@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "C:/Users/zmilo/AppData/Roaming/fnm/node-versions/v26.13.1/installation/node.exe",
+      "runtimeArgs": ["web/node_modules/vite/bin/vite.js", "web", "--port", "3011"],
+      "port": 3011
+    },
+    {
+      "name": "api-smoke",
+      "runtimeExecutable": "api/.venv/Scripts/python.exe",
+      "runtimeArgs": ["api/manage.py", "runserver", "127.0.0.1:8020", "--noreload"],
+      "port": 8020,
+      "autoPort": false,
+      "env": {
+        "DATABASE_URL": "sqlite:///C:/Users/zmilo/AppData/Local/Temp/claude/5624fd190f291088/7c907438-140c-403d-bc50-fbc35a105772/scratchpad/smoke.sqlite3",
+        "SECRET_KEY": "smoke-test-only-not-a-secret-at-least-32-bytes",
+        "DEBUG": "True",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3021"
+      }
+    },
+    {
+      "name": "web-smoke",
+      "runtimeExecutable": "C:/Users/zmilo/AppData/Roaming/fnm/node-versions/v26.13.1/installation/node.exe",
+      "runtimeArgs": ["web/node_modules/vite/bin/vite.js", "web", "--port", "3021", "--strictPort"],
+      "port": 3021,
+      "autoPort": false,
+      "env": { "VITE_API_URL": "http://127.0.0.1:8020" }
+    }
+  ]
+}

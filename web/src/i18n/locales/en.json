@@ -2,6 +2,68 @@
   "app": {
     "title": "Helemy"
   },
+  "landing": {
+    "nav": {
+      "modules": "Modules",
+      "how": "How it works",
+      "contact": "Contact"
+    },
+    "hero": {
+      "eyebrow": "Finances · Fitness · Nutrition",
+      "title": "Money, workouts and meals in one place",
+      "subtitle": "Helemy tracks your spending, budgets, workouts and nutrition, alone or together with your household, on your computer and phone."
+    },
+    "modules": {
+      "title": "Everything you track, in one app",
+      "subtitle": "Instead of five different apps and spreadsheets, one place for your whole day.",
+      "finances": {
+        "title": "Finances",
+        "text": "Accounts, transactions, transfers, budgets and reports. Always know what you have and where the money goes."
+      },
+      "fitness": {
+        "title": "Fitness",
+        "text": "Workouts, exercises and sets, with last time's result and the progress of every exercise."
+      },
+      "nutrition": {
+        "title": "Nutrition",
+        "text": "A meal diary with calories and macros, and a food database with values per 100 g."
+      },
+      "household": {
+        "title": "Household",
+        "text": "Invite the people you live with and keep finances, workouts and nutrition together, in one household."
+      }
+    },
+    "how": {
+      "title": "How it works",
+      "account": {
+        "title": "Create an account",
+        "text": "Signing up takes a minute; you get default categories and your first account right away."
+      },
+      "track": {
+        "title": "Log your day",
+        "text": "Add expenses, workouts and meals as they happen, from your computer or phone."
+      },
+      "progress": {
+        "title": "Follow your progress",
+        "text": "Budgets, reports and charts show where you are and where you're heading."
+      }
+    },
+    "cta": {
+      "title": "Ready to start?",
+      "text": "Create an account and keep your finances, training and nutrition under control.",
+      "register": "Create an account",
+      "login": "I already have an account"
+    },
+    "about": {
+      "title": "About",
+      "text": "Helemy was made so that money, training and nutrition live in one place, simply and without ads."
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "Questions, ideas or a bug to report? Write to us:"
+    },
+    "footer": "© {{year}} Helemy. All rights reserved."
+  },
   "language": {
     "label": "Language"
   },
@@ -26,6 +88,8 @@
     "delete": "Delete",
     "previous": "Previous",
     "next": "Next",
+    "loadMore": "Load more",
+    "shownOf": "Showing {{shown}} of {{total}}",
     "pageOf": "Page {{page}} of {{pages}}"
   },
   "errors": {
@@ -33,6 +97,13 @@
     "throttled": "Too many attempts. Wait a little and try again.",
     "unexpected": "Something went wrong (status {{status}}). Please try again.",
     "loadProfile": "Your profile couldn't be loaded."
+  },
+  "image": {
+    "cropTitle": "Choose part of the picture",
+    "cropHint": "Drag the picture and set the zoom so the frame covers what you want.",
+    "zoom": "Zoom",
+    "wrongType": "Choose a JPEG, PNG or WebP image.",
+    "tooLarge": "The picture is too large (at most 30 MB)."
   },
   "validation": {
     "required": "This field is required.",
@@ -79,6 +150,17 @@
       "invalidLink": "The link is invalid or has expired.",
       "requestNew": "Request a new link"
     },
+    "verify": {
+      "title": "Email confirmation",
+      "verifying": "Confirming your email address…",
+      "missingToken": "The link is incomplete. Open it again from the email.",
+      "newLinkHint": "Log in: if the address isn't confirmed yet, you can ask for a new link there.",
+      "checkTitle": "Check your email",
+      "checkText": "We sent a confirmation link to {{email}}. Open it to finish signing up; it's valid for 48 hours.",
+      "notVerified": "Your email address isn't confirmed yet. Open the link we sent you or ask for a new one.",
+      "resend": "Send the link again",
+      "resent": "We sent a new link. If you don't see it, check your spam folder too."
+    },
     "backToLogin": "Back to login",
     "logout": "Log out"
   },
@@ -90,7 +172,7 @@
     "viewInvitations": "View them",
     "thisMonth": "This month",
     "openReports": "Reports",
-    "budgetsAttention": "Budgets running out",
+    "budgets": "Budgets",
     "openBudgets": "All budgets",
     "openAccounts": "Accounts and transfers",
     "openTransactions": "This month's transactions",
@@ -141,17 +223,24 @@
   "profile": {
     "title": "Profile",
     "account": "Account",
-    "name": "Name",
     "currency": "Currency",
     "timezone": "Time zone",
     "language": "Language",
     "memberSince": "Member since",
+    "saved": "Your changes are saved.",
+    "currencyInfo": "The currency only changes how amounts are shown; they aren't converted. The time zone is only stored for now.",
     "password": {
       "title": "Change password",
       "current": "Current password",
       "submit": "Change password",
       "info": "After the change you'll be logged out on all other devices.",
       "changed": "Your password has been changed. Other devices have been logged out."
+    },
+    "avatar": {
+      "upload": "Add a picture",
+      "change": "Change picture",
+      "remove": "Remove picture",
+      "removeConfirm": "Remove your profile picture?"
     }
   },
   "finances": {
@@ -184,13 +273,13 @@
       "allCategories": "All categories",
       "search": "Search",
       "allAccounts": "All accounts",
-      "allTime": "All time",
       "fixed": "Fixed costs",
       "fixedAll": "All",
       "fixedOnly": "Fixed only",
       "fixedNone": "Without fixed",
       "toggle": "Filters",
-      "toggleCount": "Filters ({{n}})"
+      "toggleCount": "Filters ({{n}})",
+      "reset": "Reset"
     },
     "totals": {
       "income": "Income",
@@ -208,9 +297,7 @@
       "backToList": "Back to the list",
       "viewList": "List",
       "viewChart": "Chart",
-      "byCategoryHint": "Click a category to see its transactions.",
-      "loadMore": "Load more",
-      "shownOf": "Showing {{shown}} of {{total}}"
+      "byCategoryHint": "Click a category to see its transactions."
     },
     "categories": {
       "intro": "Categories are grouped. A transaction can only use a category that is active on its date.",
@@ -364,7 +451,13 @@
       "backToList": "Back to exercises",
       "noMuscleGroup": "No muscle group",
       "deleteConfirm": "Delete the exercise?",
-      "inUse": "The exercise is used in trainings, so it can't be deleted (its history would be lost)."
+      "inUse": "The exercise is used in trainings, so it can't be deleted (its history would be lost).",
+      "image": "Picture",
+      "imageUpload": "Add a picture",
+      "imageChange": "Change picture",
+      "imageRemove": "Remove picture",
+      "imageRemoveConfirm": "Remove the exercise's picture?",
+      "openImage": "Show the picture of {{name}}"
     },
     "progress": {
       "title": "Progress",
@@ -436,5 +529,10 @@
       "deleteConfirm": "Delete this food?",
       "inUse": "This food is in the diary and can't be deleted."
     }
+  },
+  "date": {
+    "placeholder": "dd/mm/yyyy",
+    "openCalendar": "Open the calendar: {{label}}",
+    "invalid": "Enter the date as dd/mm/yyyy."
   }
 }

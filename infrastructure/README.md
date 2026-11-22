@@ -114,6 +114,7 @@ Cloudflare Pages and R2) is in [DEPLOYMENT.md](DEPLOYMENT.md).
   | `EMAIL_URL` | no | `consolemail://` (emails printed to the container log) |
   | `DEFAULT_FROM_EMAIL` | no | `Helemy <noreply@localhost>` |
   | `PASSWORD_RESET_URL` | no | `http://localhost:8080/reset-password?uid={uid}&token={token}` (the web app of this profile) |
+  | `EMAIL_VERIFICATION_URL` | no | `http://localhost:8080/verify-email?token={token}` (the web app of this profile) |
 - The full list of API variables and their defaults: [`../api/README.md`](../api/README.md#configuration).
 
 `CORS_ALLOWED_ORIGINS` in dev allows `localhost:3000` (web dev server) and `localhost:8081` (future

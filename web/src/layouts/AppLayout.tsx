@@ -7,7 +7,6 @@ import { Avatar } from '../components/Avatar'
 import { Brand } from '../components/Brand'
 import { Button } from '../components/Button'
 import { Icon, type IconName } from '../components/Icon'
-import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useActiveHousehold, useInvitations } from '../household/hooks'
 import { DESKTOP, useMediaQuery } from '../lib/useMediaQuery'
 import type { AuthRedirectState } from './AuthLayout'
@@ -63,14 +62,14 @@ export function AppLayout() {
   )
 }
 
-type Section = { to: string; label: string; icon: IconName; end?: boolean; badge?: number }
+type Section = { to: string; label: string; icon: IconName; badge?: number }
 
 // The sections of the app, the same in the sidebar and the bottom bar.
 function useSections(): Section[] {
   const { t } = useTranslation()
   const invitations = useInvitations()
   return [
-    { to: '/', label: t('nav.home'), icon: 'home', end: true },
+    { to: '/home', label: t('nav.home'), icon: 'home' },
     { to: '/finances', label: t('nav.finances'), icon: 'wallet' },
     { to: '/fitness', label: t('nav.fitness'), icon: 'dumbbell' },
     { to: '/nutrition', label: t('nav.nutrition'), icon: 'apple' },
@@ -95,8 +94,8 @@ function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-slate-200 bg-slate-50/70">
       <div className="px-6 pt-6 pb-4">
-        <Link to="/" aria-label={t('nav.home')}>
-          <Brand />
+        <Link to="/home" aria-label={t('nav.home')}>
+          <Brand large />
         </Link>
         {household && (
           <p className="mt-3 truncate text-xs font-medium text-slate-500">{household.name}</p>
@@ -116,7 +115,12 @@ function Sidebar() {
             to="/profile"
             className="flex min-w-0 items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white"
           >
-            <Avatar firstName={me.first_name} lastName={me.last_name} email={me.email} />
+            <Avatar
+              firstName={me.first_name}
+              lastName={me.last_name}
+              email={me.email}
+              src={me.avatar_url}
+            />
             <span className="min-w-0">
               {/* "First Last" from the API; it falls back to the email when no name was entered */}
               <span className="block truncate text-sm font-medium text-slate-900">
@@ -127,7 +131,6 @@ function Sidebar() {
           </Link>
         )}
         <div className="flex items-center justify-between gap-2">
-          <LanguageSwitcher compact />
           <Button variant="secondary" className="px-3" onClick={() => void logout()}>
             <Icon name="logout" className="size-4" />
             {t('auth.logout')}
@@ -139,12 +142,10 @@ function Sidebar() {
 }
 
 // NavLink is a <Link> that knows whether its URL is the current page and styles itself as active.
-// `end` makes "/" active only on the start page itself, not on every page below it.
 function SidebarItem({ section }: { section: Section }) {
   return (
     <NavLink
       to={section.to}
-      end={section.end}
       className={({ isActive }) =>
         `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive
@@ -170,14 +171,13 @@ function TopBar() {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
-        <Link to="/" aria-label={t('nav.home')} className="flex min-w-0 items-center gap-2.5">
+        <Link to="/home" aria-label={t('nav.home')} className="flex min-w-0 items-center gap-2.5">
           <Brand compact />
           {household && (
             <span className="truncate text-sm font-medium text-slate-700">{household.name}</span>
           )}
         </Link>
         <div className="flex shrink-0 items-center gap-1.5">
-          <LanguageSwitcher compact />
           <button
             type="button"
             onClick={() => void logout()}
@@ -198,6 +198,7 @@ function TopBar() {
                 firstName={me.first_name}
                 lastName={me.last_name}
                 email={me.email}
+                src={me.avatar_url}
                 className="size-8 text-xs"
               />
             </NavLink>
@@ -219,7 +220,6 @@ function BottomBar() {
           <NavLink
             key={section.to}
             to={section.to}
-            end={section.end}
             className={({ isActive }) =>
               `relative flex flex-col items-center gap-1 px-1 pt-2.5 pb-2 text-[11px] font-medium transition-colors ${
                 isActive ? 'text-brand-600' : 'text-slate-500 hover:text-slate-800'

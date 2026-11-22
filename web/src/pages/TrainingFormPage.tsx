@@ -8,6 +8,7 @@ import { errorMessage, showMutationError } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
+import { FormDateField } from '../components/FormDateField'
 import { TextField } from '../components/TextField'
 import { TextLink } from '../components/TextLink'
 import { chipClasses } from '../components/segmented'
@@ -94,6 +95,7 @@ function TrainingForm({
   const muscleGroups = useMuscleGroups()
   const schema = useMemo(() => trainingSchema(t), [t])
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -113,12 +115,7 @@ function TrainingForm({
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       {errors.root?.server && <Alert tone="error">{errors.root.server.message}</Alert>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField
-          label={t('fitness.fields.date')}
-          type="date"
-          error={errors.date?.message}
-          {...register('date')}
-        />
+        <FormDateField control={control} name="date" label={t('fitness.fields.date')} />
         <TextField
           label={t('fitness.fields.trainingName')}
           error={errors.name?.message}

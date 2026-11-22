@@ -5,6 +5,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from common.fields import HouseholdPrimaryKeyRelatedField
+from common.images import absolute_url
 from fitness.models import Exercise, MuscleGroup, Training, TrainingItem, TrainingSet
 from users.serializers import UserSerializer
 
@@ -46,7 +47,6 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "description",
             "muscle_group",
             "muscle_group_id",
-            "image",
             "image_url",
             "trainings_count",
             "created_at",
@@ -55,7 +55,8 @@ class ExerciseSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_image_url(self, obj) -> str | None:
-        return obj.get_image_url()
+        # Uploaded through `exercises/{id}/image/`, not here (it must be cut to a square first).
+        return absolute_url(obj.image, self.context.get("request"))
 
     def get_trainings_count(self, obj) -> int:
         return obj.training_items.count()
@@ -63,10 +64,20 @@ class ExerciseSerializer(serializers.ModelSerializer):
 
 class ExerciseListSerializer(serializers.ModelSerializer):
     muscle_group = MuscleGroupSerializer(read_only=True, allow_null=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Exercise
-        fields = ["id", "name", "muscle_group"]
+        fields = ["id", "name", "muscle_group", "image_url"]
+
+    def get_image_url(self, obj) -> str | None:
+        return absolute_url(obj.image, self.context.get("request"))
+
+
+class ExerciseImageSerializer(serializers.Serializer):
+    image = serializers.FileField(
+        help_text="JPEG, PNG or WebP, at most 5 MB; stored as 512x512 WebP."
+    )
 
 
 class TrainingSetSerializer(serializers.ModelSerializer):

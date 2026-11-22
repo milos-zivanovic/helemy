@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { showMutationError } from '../api/errors'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
+import { FormDateField } from '../components/FormDateField'
 import { SelectField } from '../components/SelectField'
 import { TextField } from '../components/TextField'
 import { type Account, type TransferInput, useAccounts } from './hooks'
@@ -35,6 +36,7 @@ export function TransferForm({
   const schema = useMemo(() => transferSchema(t), [t])
   const accounts = useAccounts()
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -108,12 +110,7 @@ export function TransferForm({
           error={errors.amount?.message}
           {...register('amount')}
         />
-        <TextField
-          label={t('finances.fields.date')}
-          type="date"
-          error={errors.date?.message}
-          {...register('date')}
-        />
+        <FormDateField control={control} name="date" label={t('finances.fields.date')} />
       </div>
       <TextField
         label={t('finances.fields.description')}

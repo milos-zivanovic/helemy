@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
 import { publicApi } from '../api/client'
 import { ROOT_ERROR, showApiError } from '../api/errors'
+import { ResendVerification } from '../auth/ResendVerification'
 import { loginSchema } from '../auth/schemas'
 import { setTokens } from '../auth/tokens'
 import { Alert } from '../components/Alert'
@@ -22,14 +23,19 @@ export function LoginPage() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
+  // Set when the password was right but the email isn't confirmed yet: offers a new link to it.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null)
 
   // handleSubmit runs the schema first and calls this only with valid values (like form.is_valid()).
   const onSubmit = handleSubmit(async (values) => {
+    setUnverifiedEmail(null)
     try {
       const { data, error, response } = await publicApi.POST('/api/auth/token/', { body: values })
       if (data) {
         // That's all: the tokens module notifies AuthLayout, which redirects to the app.
         setTokens(data)
+      } else if (response.status === 401 && errorCode(error) === 'email_not_verified') {
+        setUnverifiedEmail(values.email)
       } else if (response.status === 401) {
         setError(ROOT_ERROR, { message: t('auth.login.invalidCredentials') })
       } else {
@@ -44,6 +50,12 @@ export function LoginPage() {
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">{t('auth.login.title')}</h1>
       {errors.root?.server && <Alert tone="error">{errors.root.server.message}</Alert>}
+      {unverifiedEmail && (
+        <>
+          <Alert tone="info">{t('auth.verify.notVerified')}</Alert>
+          <ResendVerification email={unverifiedEmail} />
+        </>
+      )}
       <TextField
         label={t('auth.fields.email')}
         type="email"
@@ -70,4 +82,9 @@ export function LoginPage() {
       </div>
     </form>
   )
+}
+
+// The machine-readable `code` of an API error body ({"detail": "...", "code": "email_not_verified"}).
+function errorCode(body: unknown): unknown {
+  return typeof body === 'object' && body !== null && 'code' in body ? body.code : undefined
 }

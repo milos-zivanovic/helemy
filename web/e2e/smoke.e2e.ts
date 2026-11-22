@@ -1,6 +1,29 @@
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { expect, type Locator, type Page, test } from '@playwright/test'
 
 import { tr } from './i18n.ts'
+
+// Where the test API writes its emails, one file per email (api-server.mjs, Django's file backend).
+const MAIL_DIR = join(tmpdir(), 'helemy-e2e-mail')
+
+/** The verification link of the newest email sent to `email`; waits until it's there. */
+async function verificationLink(email: string): Promise<string> {
+  let link: string | undefined
+  await expect
+    .poll(() => {
+      if (!existsSync(MAIL_DIR)) return undefined // no email sent yet
+      const files = readdirSync(MAIL_DIR, { withFileTypes: true }).filter((f) => f.isFile())
+      const mails = files.map((f) => readFileSync(join(MAIL_DIR, f.name), 'utf-8'))
+      const mail = mails.reverse().find((text) => text.includes(`To: ${email}`))
+      link = mail?.match(/https?:\/\/\S+\/verify-email\?token=\S+/)?.[0]
+      return link
+    })
+    .toBeTruthy()
+  return link!
+}
 
 // The main path through the app, end to end: sign up, a savings account, an income, an expense, a
 // transfer to the savings account, the balances on every screen, then log out and back in.
@@ -93,9 +116,18 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
     await page.getByLabel(tr('auth.fields.passwordConfirm'), { exact: true }).fill(PASSWORD)
     await page.getByRole('button', { name: tr('auth.register.submit') }).click()
+    await expect(page.getByRole('heading', { name: tr('auth.verify.checkTitle') })).toBeVisible()
 
-    // Logged in right away, on the home page, with the seeded account at 0.
-    await expect(page).toHaveURL('/')
+    // Not confirmed yet: the right password only offers a new link.
+    await page.goto('/login')
+    await page.getByLabel(tr('auth.fields.email'), { exact: true }).fill(email)
+    await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
+    await page.getByRole('button', { name: tr('auth.login.submit') }).click()
+    await expect(page.getByText(tr('auth.verify.notVerified'))).toBeVisible()
+
+    // The link from the email confirms the address and logs in: the home page, the account at 0.
+    await page.goto(await verificationLink(email))
+    await expect(page).toHaveURL('/home')
     await expect(
       page.getByRole('heading', { name: tr('home.greeting', { name: 'Smoke' }) }),
     ).toBeVisible()
@@ -233,30 +265,34 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     await page.getByLabel(tr('auth.fields.password'), { exact: true }).fill(PASSWORD)
     await page.getByRole('button', { name: tr('auth.login.submit') }).click()
 
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/home')
     await expect(totalBalance(page)).toHaveText(total)
   })
 
-  await test.step('the chosen language is saved on the account', async () => {
+  await test.step('the profile form saves the name and the language on the account', async () => {
     // Signed up in Serbian: the API stored the language of that request.
     await openFromNav(page, 'nav.profile', page.getByRole('heading', { name: tr('profile.title') }))
-    const savedLanguage = (language: 'sr' | 'en') =>
-      page
-        .locator('dt')
-        .getByText(tr('profile.language', {}, language), { exact: true })
-        .locator('xpath=following-sibling::dd[1]')
-    await expect(savedLanguage('sr')).toHaveText('Srpski')
+    // In the page's main part: the menu has a language switcher with the same label.
+    const profileField = (key: string, language: 'sr' | 'en' = 'sr') =>
+      page.getByRole('main').getByLabel(tr(key, {}, language), { exact: true })
+    await expect(profileField('profile.language')).toHaveValue('sr-latn')
 
-    // Switching the app to English saves it on the account too (PATCH /api/auth/me/).
+    // Saving English and a new first name (PATCH /api/auth/me/) switches the app to English.
+    await profileField('auth.fields.firstName').fill('Smokey')
+    await profileField('profile.language').selectOption('en')
     const saved = page.waitForResponse(
       (response) =>
         response.url().endsWith('/api/auth/me/') && response.request().method() === 'PATCH',
     )
-    await page.getByLabel(tr('language.label')).selectOption('en')
+    await page
+      .getByRole('main')
+      .getByRole('button', { name: tr('common.save') })
+      .click()
     const response = await saved
     expect(response.status()).toBe(200)
-    expect((await response.json()).language).toBe('en')
-    await expect(savedLanguage('en')).toHaveText('English') // the page is in English now, too
+    expect(await response.json()).toMatchObject({ language: 'en', first_name: 'Smokey' })
+    await expect(page.getByText(tr('profile.saved', {}, 'en'))).toBeVisible()
+    await expect(profileField('profile.language', 'en')).toHaveValue('en')
 
     // Logged out, the language is the browser's and not saved anywhere: Serbian on the login page.
     await page.getByRole('button', { name: tr('auth.logout', {}, 'en') }).click()
@@ -270,6 +306,7 @@ test('sign up, savings account, income, expense and transfer', async ({ page }) 
     // the account still says English.
     await expect(page).toHaveURL('/profile')
     await expect(page.getByRole('heading', { name: tr('profile.title', {}, 'en') })).toBeVisible()
-    await expect(savedLanguage('en')).toHaveText('English')
+    await expect(profileField('profile.language', 'en')).toHaveValue('en')
+    await expect(profileField('auth.fields.firstName', 'en')).toHaveValue('Smokey')
   })
 })

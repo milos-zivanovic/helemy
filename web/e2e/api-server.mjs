@@ -24,6 +24,10 @@ const python =
 // Outside the repo, and never api/data/: the tests must not touch a real database.
 const database = join(tmpdir(), 'helemy-e2e.sqlite3')
 rmSync(database, { force: true })
+// Emails (the sign up verification link) are written there as files, which the tests read; the same
+// path is in smoke.e2e.ts (MAIL_DIR).
+const mailDir = join(tmpdir(), 'helemy-e2e-mail')
+rmSync(mailDir, { recursive: true, force: true })
 
 // Set explicitly, so these win over anything in api/.env (django-environ only fills in variables
 // that are not already set).
@@ -34,7 +38,9 @@ const env = {
   DEBUG: 'True',
   ALLOWED_HOSTS: '127.0.0.1,localhost',
   CORS_ALLOWED_ORIGINS: webOrigin,
-  EMAIL_URL: 'consolemail://',
+  // filemail:/// + an absolute path (C:/... on Windows, /tmp/... on Linux): Django's file backend.
+  EMAIL_URL: `filemail:///${mailDir.replaceAll('\\', '/')}`,
+  EMAIL_VERIFICATION_URL: `${webOrigin}/verify-email?token={token}`,
 }
 
 const migrate = spawnSync(python, ['manage.py', 'migrate', '--noinput'], {

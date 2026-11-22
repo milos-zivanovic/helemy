@@ -5,15 +5,20 @@ from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenBlacklistView
 
+from common.images import ImageError
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsHouseholdOwner
 from users.models import Household, HouseholdInvitation
 from users.serializers import (
+    AvatarSerializer,
+    EmailVerificationSerializer,
     HouseholdCreateSerializer,
     HouseholdInvitationSerializer,
     HouseholdSerializer,
@@ -24,6 +29,7 @@ from users.serializers import (
     PasswordResetRequestSerializer,
     RegisterResponseSerializer,
     RegisterSerializer,
+    ResendVerificationSerializer,
     TokenPairSerializer,
     UserDetailSerializer,
     UserPreferencesSerializer,
@@ -34,8 +40,11 @@ from users.services import (
     accept_invitation,
     blacklist_user_tokens,
     decline_invitation,
+    delete_avatar,
     remove_from_household,
+    save_avatar,
     send_password_reset_email,
+    send_verification_email,
     tokens_for_user,
 )
 
@@ -44,7 +53,10 @@ User = get_user_model()
 
 @extend_schema(responses={201: RegisterResponseSerializer})
 class RegisterView(generics.CreateAPIView):
-    """Create an account (with its personal household) and return JWT tokens, i.e. log in right away."""
+    """
+    Create an account (with its personal household) and email a verification link
+    (EMAIL_VERIFICATION_URL). No tokens: login works once the email is confirmed (`email/verify/`).
+    """
 
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
@@ -54,9 +66,53 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        data = {"user": UserSerializer(user, context={"request": request}).data}
-        data.update(tokens_for_user(user))
-        return Response(data, status=status.HTTP_201_CREATED)
+        send_verification_email(user)
+        return Response({"email": user.email}, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(responses={200: TokenPairSerializer})
+class EmailVerificationView(generics.GenericAPIView):
+    """
+    Confirm the email with the token from the verification email and log in: returns a JWT pair.
+    A link works once; afterwards (or expired, after 48 hours) it answers 400 under `token`.
+    """
+
+    serializer_class = EmailVerificationSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.context["user"]
+        user.email_verified = True
+        user.save(update_fields=["email_verified"])
+        return Response(tokens_for_user(user))
+
+
+@extend_schema(responses={204: None})
+class ResendVerificationView(generics.GenericAPIView):
+    """
+    Email a new verification link to an account that isn't confirmed yet. Always answers 204, so the
+    endpoint can't be used to find out which emails have an account.
+    """
+
+    serializer_class = ResendVerificationSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "email_verification"
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        user = User.objects.filter(
+            email__iexact=email, is_active=True, email_verified=False
+        ).first()
+        if user:
+            send_verification_email(user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(responses={204: None})
@@ -159,11 +215,42 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
         tags=["Users"], request=UserPreferencesSerializer, responses={200: UserDetailSerializer}
     )
     def update_me(self, request):
-        """Change your own preferences (the language); answers with the whole profile, like GET."""
+        """Change your name and preferences (currency, time zone, language); answers like GET."""
         serializer = UserPreferencesSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return self.me(request)
+
+
+@extend_schema(tags=["Users"], responses={200: UserDetailSerializer})
+class AvatarView(generics.GenericAPIView):
+    """
+    Your profile picture. PUT (multipart, field `avatar`) stores a new one, cut to a 256x256 square
+    (the web client lets the user choose the square first); DELETE removes it. Both answer with the
+    whole profile, like GET /api/auth/me/ (`avatar_url`).
+    """
+
+    serializer_class = AvatarSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def put(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            save_avatar(request.user, serializer.validated_data["avatar"])
+        except ImageError as exc:
+            raise ValidationError({"avatar": [str(exc)]}) from exc
+        return self.profile()
+
+    def delete(self, request):
+        delete_avatar(request.user)
+        return self.profile()
+
+    def profile(self):
+        return Response(
+            UserDetailSerializer(self.request.user, context={"request": self.request}).data
+        )
 
 
 @extend_schema_view(

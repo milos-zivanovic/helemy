@@ -1,5 +1,8 @@
+import zoneinfo
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -10,9 +13,15 @@ from django.utils.translation import get_language, gettext_lazy
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainSerializer as TokenObtainSerializerBase
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
 
+from common.images import absolute_url
 from finances.services import create_default_finances
-from users.models import Household, HouseholdInvitation
+from users.models import CURRENCIES, Household, HouseholdInvitation
+from users.services import user_for_email_verification_token
 
 User = get_user_model()
 
@@ -23,6 +32,7 @@ ROLE_FIELD = serializers.ChoiceField(choices=["owner", "member"], allow_null=Tru
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source="get_full_name", read_only=True)
     role = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -32,6 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "full_name",
+            "avatar_url",
             "timezone",
             "language",
             "currency",
@@ -40,6 +51,10 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
         ]
         read_only_fields = ["id", "date_joined", "last_activity"]
+
+    def get_avatar_url(self, obj) -> str | None:
+        """The profile picture's full URL (the bucket's domain, or this server in development)."""
+        return absolute_url(obj.avatar, self.context.get("request"))
 
     @extend_schema_field(ROLE_FIELD)
     def get_role(self, obj):
@@ -73,15 +88,35 @@ class HouseholdSerializer(serializers.ModelSerializer):
 
 
 class UserPreferencesSerializer(serializers.ModelSerializer):
-    """What users change about themselves with PATCH /api/auth/me/ (for now only the language)."""
+    """
+    What users change about themselves with PATCH /api/auth/me/: name and preferences. Not the email
+    (the login) and nothing else; fields that aren't listed here are ignored.
+    """
 
     # One of settings.LANGUAGES ("en", "sr-latn"): the language of emails and messages that don't
     # come from one of the user's own requests (those follow Accept-Language).
     language = serializers.ChoiceField(choices=settings.LANGUAGES)
+    # Only how amounts are shown; they're never converted.
+    currency = serializers.ChoiceField(choices=CURRENCIES)
+    # An IANA name ("Europe/Belgrade"). Stored only for now: dates still use TIME_ZONE.
+    timezone = serializers.CharField(max_length=50)
 
     class Meta:
         model = User
-        fields = ["language"]
+        fields = ["first_name", "last_name", "currency", "timezone", "language"]
+
+    def validate_timezone(self, value):
+        # A free-text field checked against the tz database instead of a ChoiceField: ~600 choices
+        # would end up as an enum in the OpenAPI schema and the client's types.
+        if value not in zoneinfo.available_timezones():
+            raise serializers.ValidationError(_("Unknown time zone."))
+        return value
+
+
+class AvatarSerializer(serializers.Serializer):
+    avatar = serializers.FileField(
+        help_text="JPEG, PNG or WebP, at most 5 MB; stored as 256x256 WebP."
+    )
 
 
 class UserDetailSerializer(UserSerializer):
@@ -207,9 +242,50 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class RegisterResponseSerializer(serializers.Serializer):
-    user = UserSerializer()
-    access = serializers.CharField()
-    refresh = serializers.CharField()
+    email = serializers.EmailField(help_text="Where the verification email was sent.")
+
+
+class TokenObtainSerializer(TokenObtainPairSerializer):
+    """
+    Login (`auth/token/`, SIMPLE_JWT's TOKEN_OBTAIN_SERIALIZER): SimpleJWT's checks, plus a confirmed
+    email. Checked only after the password, so it never tells a stranger that an email has an account.
+    """
+
+    def validate(self, attrs):
+        # TokenObtainSerializer.validate (authenticate) runs first; the pair is made only for a
+        # verified user, so an unverified one gets no outstanding refresh token either.
+        data = TokenObtainSerializerBase.validate(self, attrs)
+        if not self.user.email_verified:
+            raise AuthenticationFailed(
+                {
+                    "detail": _("Confirm your email address first: open the link we emailed you."),
+                    "code": "email_not_verified",
+                }
+            )
+        refresh = self.get_token(self.user)
+        data["refresh"] = str(refresh)
+        data["access"] = str(refresh.access_token)
+        if jwt_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, self.user)
+        return data
+
+
+class EmailVerificationSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+    def validate_token(self, value):
+        user = user_for_email_verification_token(value)
+        if user is None:
+            raise serializers.ValidationError(_("The confirmation link is invalid or has expired."))
+        if user.email_verified:
+            # One use only: the link logs in, so a forwarded or leaked old link must not.
+            raise serializers.ValidationError(_("This email address is already confirmed. Log in."))
+        self.context["user"] = user
+        return value
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 class TokenPairSerializer(serializers.Serializer):

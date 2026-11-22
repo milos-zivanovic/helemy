@@ -2,6 +2,68 @@
   "app": {
     "title": "Helemy"
   },
+  "landing": {
+    "nav": {
+      "modules": "Moduli",
+      "how": "Kako radi",
+      "contact": "Kontakt"
+    },
+    "hero": {
+      "eyebrow": "Finansije · Fitnes · Ishrana",
+      "title": "Novac, treninzi i obroci na jednom mestu",
+      "subtitle": "Helemy prati tvoje troškove, budžete, treninge i ishranu, sam ili zajedno sa ukućanima, na računaru i telefonu."
+    },
+    "modules": {
+      "title": "Sve što pratiš, u jednoj aplikaciji",
+      "subtitle": "Umesto pet različitih aplikacija i tabela, jedno mesto za ceo dan.",
+      "finances": {
+        "title": "Finansije",
+        "text": "Računi, transakcije, transferi, budžeti i izveštaji. Uvek znaš koliko imaš i gde odlazi novac."
+      },
+      "fitness": {
+        "title": "Fitnes",
+        "text": "Treninzi, vežbe i serije, uz rezultat od prošlog puta i napredak svake vežbe."
+      },
+      "nutrition": {
+        "title": "Ishrana",
+        "text": "Dnevnik obroka sa kalorijama i makronutrijentima i baza namirnica sa vrednostima na 100 g."
+      },
+      "household": {
+        "title": "Domaćinstvo",
+        "text": "Pozovi ukućane i vodite finansije, treninge i ishranu zajedno, u istom domaćinstvu."
+      }
+    },
+    "how": {
+      "title": "Kako radi",
+      "account": {
+        "title": "Napravi nalog",
+        "text": "Registracija traje minut; odmah dobijaš podrazumevane kategorije i prvi račun."
+      },
+      "track": {
+        "title": "Unosi svoj dan",
+        "text": "Dodaj troškove, treninge i obroke kad se dese, sa računara ili telefona."
+      },
+      "progress": {
+        "title": "Prati napredak",
+        "text": "Budžeti, izveštaji i grafikoni pokazuju gde si i kuda ideš."
+      }
+    },
+    "cta": {
+      "title": "Spreman da počneš?",
+      "text": "Napravi nalog i imaj finansije, trening i ishranu pod kontrolom.",
+      "register": "Napravi nalog",
+      "login": "Već imam nalog"
+    },
+    "about": {
+      "title": "O nama",
+      "text": "Helemy je nastao iz potrebe da novac, trening i ishrana budu na jednom mestu, jednostavno i bez reklama."
+    },
+    "contact": {
+      "title": "Kontakt",
+      "text": "Pitanja, predlozi ili prijava greške? Piši nam:"
+    },
+    "footer": "© {{year}} Helemy. Sva prava zadržana."
+  },
   "language": {
     "label": "Jezik"
   },
@@ -26,6 +88,8 @@
     "delete": "Obriši",
     "previous": "Prethodna",
     "next": "Sledeća",
+    "loadMore": "Učitaj još",
+    "shownOf": "Prikazano {{shown}} od {{total}}",
     "pageOf": "Strana {{page}} od {{pages}}"
   },
   "errors": {
@@ -33,6 +97,13 @@
     "throttled": "Previše pokušaja. Sačekajte malo pa pokušajte ponovo.",
     "unexpected": "Došlo je do greške (status {{status}}). Pokušajte ponovo.",
     "loadProfile": "Profil nije učitan."
+  },
+  "image": {
+    "cropTitle": "Izaberite deo slike",
+    "cropHint": "Prevucite sliku i podesite uvećanje tako da okvir obuhvati ono što želite.",
+    "zoom": "Uvećanje",
+    "wrongType": "Izaberite JPEG, PNG ili WebP sliku.",
+    "tooLarge": "Slika je prevelika (najviše 30 MB)."
   },
   "validation": {
     "required": "Obavezno polje.",
@@ -79,6 +150,17 @@
       "invalidLink": "Link nije ispravan ili je istekao.",
       "requestNew": "Zatražite novi link"
     },
+    "verify": {
+      "title": "Potvrda email adrese",
+      "verifying": "Potvrđujem email adresu…",
+      "missingToken": "Link nije potpun. Otvorite ga ponovo iz emaila.",
+      "newLinkHint": "Prijavite se: ako adresa još nije potvrđena, tamo možete zatražiti novi link.",
+      "checkTitle": "Proverite email",
+      "checkText": "Poslali smo link za potvrdu na {{email}}. Otvorite ga da završite registraciju; važi 48 sati.",
+      "notVerified": "Email adresa još nije potvrđena. Otvorite link koji smo vam poslali ili zatražite novi.",
+      "resend": "Pošalji link ponovo",
+      "resent": "Poslali smo novi link. Ako ga ne vidite, proverite i spam."
+    },
     "backToLogin": "Nazad na prijavu",
     "logout": "Odjavi se"
   },
@@ -90,7 +172,7 @@
     "viewInvitations": "Pogledajte",
     "thisMonth": "Ovaj mesec",
     "openReports": "Izveštaji",
-    "budgetsAttention": "Budžeti pri kraju",
+    "budgets": "Budžeti",
     "openBudgets": "Svi budžeti",
     "openAccounts": "Računi i prenosi",
     "openTransactions": "Transakcije ovog meseca",
@@ -141,17 +223,24 @@
   "profile": {
     "title": "Profil",
     "account": "Nalog",
-    "name": "Ime i prezime",
     "currency": "Valuta",
     "timezone": "Vremenska zona",
     "language": "Jezik",
     "memberSince": "Član od",
+    "saved": "Promene su sačuvane.",
+    "currencyInfo": "Valuta menja samo prikaz iznosa; iznosi se ne preračunavaju. Vremenska zona se za sada samo čuva.",
     "password": {
       "title": "Promena lozinke",
       "current": "Trenutna lozinka",
       "submit": "Promeni lozinku",
       "info": "Posle promene bićete odjavljeni na svim ostalim uređajima.",
       "changed": "Lozinka je promenjena. Ostali uređaji su odjavljeni."
+    },
+    "avatar": {
+      "upload": "Dodaj sliku",
+      "change": "Promeni sliku",
+      "remove": "Ukloni sliku",
+      "removeConfirm": "Ukloniti profilnu sliku?"
     }
   },
   "finances": {
@@ -184,13 +273,13 @@
       "allCategories": "Sve kategorije",
       "search": "Pretraga",
       "allAccounts": "Svi računi",
-      "allTime": "Sve",
       "fixed": "Fiksni troškovi",
       "fixedAll": "Svi",
       "fixedOnly": "Samo fiksni",
       "fixedNone": "Bez fiksnih",
       "toggle": "Filteri",
-      "toggleCount": "Filteri ({{n}})"
+      "toggleCount": "Filteri ({{n}})",
+      "reset": "Resetuj"
     },
     "totals": {
       "income": "Prihodi",
@@ -208,9 +297,7 @@
       "backToList": "Nazad na listu",
       "viewList": "Lista",
       "viewChart": "Grafikon",
-      "byCategoryHint": "Kliknite na kategoriju da vidite njene transakcije.",
-      "loadMore": "Učitaj još",
-      "shownOf": "Prikazano {{shown}} od {{total}}"
+      "byCategoryHint": "Kliknite na kategoriju da vidite njene transakcije."
     },
     "categories": {
       "intro": "Kategorije su grupisane. Transakcija može da koristi samo kategoriju koja je aktivna na njen datum.",
@@ -364,7 +451,13 @@
       "backToList": "Nazad na vežbe",
       "noMuscleGroup": "Bez mišićne grupe",
       "deleteConfirm": "Obrisati vežbu?",
-      "inUse": "Vežba je korišćena u treninzima, pa ne može da se obriše (izgubila bi se istorija)."
+      "inUse": "Vežba je korišćena u treninzima, pa ne može da se obriše (izgubila bi se istorija).",
+      "image": "Slika",
+      "imageUpload": "Dodaj sliku",
+      "imageChange": "Promeni sliku",
+      "imageRemove": "Ukloni sliku",
+      "imageRemoveConfirm": "Ukloniti sliku vežbe?",
+      "openImage": "Prikaži sliku vežbe {{name}}"
     },
     "progress": {
       "title": "Napredak",
@@ -436,5 +529,10 @@
       "deleteConfirm": "Obrisati namirnicu?",
       "inUse": "Namirnica je u dnevniku i ne može da se obriše."
     }
+  },
+  "date": {
+    "placeholder": "dd/mm/gggg",
+    "openCalendar": "Otvori kalendar: {{label}}",
+    "invalid": "Unesite datum kao dd/mm/gggg."
   }
 }

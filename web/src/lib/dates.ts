@@ -68,3 +68,26 @@ export function fullMonth(start: string | null, end: string | null): string | nu
   const range = monthRange(start.slice(0, 7))
   return range.start === start && range.end === end ? start.slice(0, 7) : null
 }
+
+/** "2026-11-05" → "05/11/2026", the day/month/year form shown in date fields. */
+export function toDisplayDate(value: string): string {
+  const [year, month, day] = value.split('-')
+  return `${day}/${month}/${year}`
+}
+
+/** "05/11/2026" → "2026-11-05"; null when it isn't a complete, existing day ("31/02/2026"). */
+export function fromDisplayDate(text: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text)
+  if (!match) return null
+  const value = `${match[3]}-${match[2]}-${match[1]}`
+  return isDay(value) ? value : null
+}
+
+/**
+ * What's typed, shaped as dd/mm/yyyy: only digits count, the slashes are put in by themselves
+ * ("0511" → "05/11", "05112026" → "05/11/2026"), at most 8 digits.
+ */
+export function maskDisplayDate(text: string): string {
+  const digits = text.replace(/\D/g, '').slice(0, 8)
+  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean).join('/')
+}

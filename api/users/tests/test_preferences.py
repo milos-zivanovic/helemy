@@ -34,6 +34,40 @@ class UpdateMeTests(HouseholdAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("language", response.data)
 
+    def test_changes_name_currency_and_timezone(self):
+        body = {
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "currency": "EUR",
+            "timezone": "America/New_York",
+        }
+        response = self.client.patch(ME_URL, body, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["full_name"], "Alice Smith")
+        self.alice.refresh_from_db()
+        self.assertEqual(
+            (self.alice.first_name, self.alice.last_name, self.alice.currency, self.alice.timezone),
+            ("Alice", "Smith", "EUR", "America/New_York"),
+        )
+
+    def test_name_can_be_cleared(self):
+        self.client.patch(ME_URL, {"first_name": "Alice"}, format="json")
+        response = self.client.patch(ME_URL, {"first_name": ""}, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.alice.refresh_from_db()
+        self.assertEqual(self.alice.first_name, "")
+
+    def test_rejects_an_unknown_currency_or_timezone(self):
+        response = self.client.patch(
+            ME_URL, {"currency": "XYZ", "timezone": "Mars/Olympus"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("currency", response.data)
+        self.assertIn("timezone", response.data)
+
     def test_other_fields_are_ignored(self):
         # Only preferences: the email (the login) can't be changed here.
         response = self.client.patch(

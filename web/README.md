@@ -18,6 +18,7 @@ the database directly.
 | i18next + react-i18next            | Translations (Serbian Latin `sr`, English `en`)                 |
 | Tailwind CSS                       | Styling                                                         |
 | Recharts                           | Charts (only the reports page; loaded on demand)                |
+| react-easy-crop                    | Choosing the square of a profile picture before the upload      |
 | oxlint, Prettier                   | Linting and formatting                                          |
 | Vitest (+ jsdom)                   | Unit tests                                                      |
 | Playwright                         | End-to-end smoke test in a real browser                         |
@@ -125,29 +126,42 @@ TypeScript then reports every place in the web code that no longer matches. The 
   user lands on `/login`. After a reload the first request refreshes before it is sent.
 - **Clients**: `publicApi` sends no token and is used for the endpoints that don't need one (login, refresh,
   sign up, logout, password reset), so a wrong password never triggers a refresh.
-- **Routes**: `AuthLayout` frames the public pages and sends a logged-in user into the app (back to the page
-  they first asked for); `AppLayout` sends a logged-out user to `/login` and loads `GET /api/auth/me/`.
+- **Routes**: `AuthLayout` is the public one-page website (header, hero, sections from
+  `src/landing/LandingSections.tsx`); its hero card shows the form of the public route (login on `/` and
+  `/login`). It sends a logged-in user into the app (`/home`, or back to the page they first asked for);
+  `AppLayout` sends a logged-out user to `/login` and loads `GET /api/auth/me/`.
 - **Language**: every request carries the app's language in `Accept-Language` (`sr-latn` / `en`, see
   `API_LANGUAGES` in `src/i18n/index.ts`), so API errors come translated. The language belongs to the
   user (`User.language`): `useSyncLanguage` (in `AppLayout`) switches the app to it after login, on reload
-  and when it changed on another device, and saves a switch made in the app with `PATCH /api/auth/me/`.
-  Logged out (login, sign up...) it's the browser's: the last one picked there, else the browser's
+  and when it changed on another device. Logged in, it's chosen only in the profile form
+  (`PATCH /api/auth/me/`); the menu has no language switcher.
+  Logged out (the website's header) it's the browser's: the last one picked there, else the browser's
   language, else English. Sign up stores the language it was done in on the new account.
 - **Logout** drops both tokens and the whole query cache, then blacklists the refresh token on the API.
+- **Profile picture** (`/profile`, `AvatarEditor`): the chosen photo opens in a crop dialog
+  (react-easy-crop); the chosen square is cut on a `<canvas>` (`src/lib/cropImage.ts`) into a 512×512 JPEG
+  and sent as multipart to `PUT /api/auth/me/avatar/`, which stores a 256×256 WebP. `Avatar` shows
+  `avatar_url` (menu, profile, household members), else the initials.
 - **Password change** (`/profile`): the API logs out every session and returns a new token pair, which
   replaces the stored one; other tabs of the same browser keep working because they share `localStorage`.
+- **Email verification**: sign up returns no tokens; the API emails a link to `/verify-email?token=…`
+  (`EMAIL_VERIFICATION_URL`, valid 48 hours), which posts the token once and gets the tokens, i.e. logs in.
+  Logging in to an unconfirmed account (right password) answers 401 with `code: email_not_verified`;
+  the login page then offers to send the link again (also offered after sign up). The e2e test reads
+  the link from the email file the test API writes (`EMAIL_URL=filemail://…`).
 - **Password reset**: the API emails a link to `/reset-password?uid=…&token=…` (`PASSWORD_RESET_URL`). In
   development the email is printed to the API log (`docker compose --profile dev logs api-dev`).
 
 | Route                         | Page                                                   |
 | ----------------------------- | ------------------------------------------------------ |
-| `/login`                      | Log in                                                 |
-| `/register`                   | Sign up (logged in right away)                         |
+| `/`, `/login`                 | Website with the login form                            |
+| `/register`                   | Website with the sign up form, then "check your email" |
+| `/verify-email`               | Confirms the email from the sign up link and logs in   |
 | `/forgot-password`            | Ask for a reset email                                  |
 | `/reset-password`             | Set a new password from the email's link               |
-| `/`                           | Start page: summary of finances, trainings, nutrition  |
+| `/home`                       | Start page: summary of finances, trainings, nutrition  |
 | `/household`                  | Household: details, members, invitations               |
-| `/profile`                    | Account data and password change                       |
+| `/profile`                    | Name, currency, time zone, language; password change   |
 | `/finances/transactions`      | Main screen: period, filters, totals, list or chart    |
 | `/finances/transactions/new`  | New expense, income or transfer (`?type=transfer`)     |
 | `/finances/transactions/:id`  | Edit or delete a transaction                           |
@@ -168,7 +182,7 @@ TypeScript then reports every place in the web code that no longer matches. The 
 | `/fitness/trainings/:id/edit` | Edit the training's date, name, muscle groups, notes   |
 | `/fitness/exercises`          | Exercises by muscle group                              |
 | `/fitness/exercises/new`      | New exercise                                           |
-| `/fitness/exercises/:id`      | Progress of the exercise, edit or delete it            |
+| `/fitness/exercises/:id`      | Progress of the exercise, its picture, edit or delete  |
 | `/nutrition/diary`            | Diary of a day (`?date=`, default today) and its week  |
 | `/nutrition/foods`            | Foods with values per 100 g, searchable                |
 | `/nutrition/foods/new`        | New food                                               |
@@ -187,9 +201,11 @@ the whole query cache is refetched.
 
 ## Start page
 
-`/` sums up every section, each card linking to its details: finances (total balance, each open account,
-this month's income, expenses and balance), budgets at 80 % or more (only when there are any), fitness
-(trainings this month, the last training) and nutrition (the logged-in member's calories and macros today).
+`/home` sums up every section, each card linking to its details. From a laptop up it has two columns: on
+the left finances (total balance, each open account as a large tile, this month's income, expenses and
+balance), nutrition (the logged-in member's calories and macros today) and fitness (trainings this month,
+the last training); on the right every budget running today with the total, then the household. On a
+phone the cards are one column in that order.
 
 ## Finances
 
@@ -209,9 +225,9 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   a delete applies to both halves.
 - **Transactions** (`/finances/transactions`): the main screen, like the old wallet's overview. On top the
   total balance of all accounts and a button for a new entry. The period is all transactions by
-  default, with quick choices (all, this month, last month, this year), a month stepper when the period is
-  one calendar month, and a free from–to range. Filters: type, group, category (only the chosen group's),
-  account, fixed costs, search. Everything lives in the URL (`start`, `end`, `type`, `group`, `category`,
+  default; a from–to range (dd/mm/yyyy, see Design) narrows it, with a month stepper when the
+  range is one calendar month. Filters, in this order: account, type, group, category (only the chosen
+  group's), fixed costs, search. A small "Reset" button clears all of them and the range. Everything lives in the URL (`start`, `end`, `type`, `group`, `category`,
   `account`, `fixed`, `q`, `view`), so reload, bookmarks and the back button keep it. The totals come
   from the API and cover every transaction matching the filters, not only the rows loaded so far. The list
   shows 50 rows and grows with "Load more" (also by itself when the button scrolls into view:
@@ -233,7 +249,8 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   category (badge "For transfers") can be renamed or moved, but has no switch and no periods.
 - **Budgets** (`/finances/budgets`): a limit for one category over a period. The page shows the budgets
   running today with an overall total, then all budgets of a year (`?year=`). Spent is the sum of the
-  category's expenses in the period; the bar turns amber at 80 % and red above 100 %. A category can't
+  category's expenses in the period; the bar and the percentage are green under 80 %, yellow from 80 %
+  to 100 % and red above (`progressTone`, also on the start page and for the total). A category can't
   have two budgets with overlapping periods.
 - **Reports** (`/finances/reports?start=&end=&type=&group=&account=`): one period scopes the whole
   page: the totals, the breakdown (ranked bars per group; a group opens its categories) and the account
@@ -245,17 +262,21 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
 
 ## Fitness
 
-- **Trainings** (`/fitness/trainings`): the household's trainings, newest first. A new training asks
+- **Trainings** (`/fitness/trainings`): the household's trainings, newest first, 20 at a time with
+  "Load more" (the same `LoadMore` as transactions, by itself when it scrolls into view). A new training asks
   for the date, an optional name and muscle groups, then opens the training page.
 - **Training page** (`/fitness/trainings/:id`): one card per exercise with its sets, the member's
   previous result for that exercise ("last time") and an "add set" row prefilled with the last set, so
   a repeated set is one tap. Sets can be corrected or deleted (the rest are renumbered). A new exercise
   is added with its first set; only exercises of the training's muscle groups are offered. Weight is
-  optional (bodyweight exercises).
+  optional (bodyweight exercises). Each card shows the exercise's picture left of its name
+  (`ExerciseThumb`; a click opens it large, Escape or a click closes it) or a dumbbell placeholder.
 - **Exercises** (`/fitness/exercises`): grouped by muscle group. The exercise page shows the user's
   progress (heaviest set per training, or total reps for bodyweight exercises) as headline numbers, a
   line chart and the list of trainings. The progress component is loaded with `React.lazy`, so Recharts
-  is downloaded only when it's shown. An exercise used in trainings can't be deleted.
+  is downloaded only when it's shown. Its picture is set or removed there with the same crop editor
+  as the profile picture (`ImageEditor`, square), `PUT /api/fitness/exercises/{id}/image/`. An exercise
+  used in trainings can't be deleted.
 
 ## Nutrition
 
@@ -292,8 +313,12 @@ Optional; put it in `web/.env.local` (gitignored). Only variables starting with 
 - **Shared looks**: `surface` (the white box of cards and lists, a utility in `index.css`), `Card`,
   `Button`/`LinkButton`, the fields, `SectionHeader` (title + tabs of a section) and the segmented
   control and chips in `components/segmented.ts`. A new page builds on these instead of its own classes.
+- **Dates**: every date field is a `DateField`, typed as dd/mm/yyyy whatever the browser's language
+  (the slashes go in by themselves; a button opens the browser's calendar). Its value is the API's
+  `YYYY-MM-DD`. In React Hook Form forms it's `FormDateField` (`useController`), which also passes
+  half-typed text on, so the schema (`lib/dateSchemas.ts`) rejects it instead of keeping the old date.
 - **Responsive**: from `lg` (1024 px) the navigation is a sidebar and pages use the width (grids with
-  `lg:`/`xl:` columns, forms capped at `max-w-2xl`); below it a top bar (language, logout, profile)
+  `lg:`/`xl:` columns, forms capped at `max-w-2xl`); below it a top bar (logout, profile)
   and a bottom bar with the sections. `useMediaQuery` picks between the two; for styles alone the
   Tailwind prefixes are enough. Icons are inline SVG (`components/Icon.tsx`), no icon library.
 
@@ -318,7 +343,8 @@ web/src/
 ├── fitness/               # Fitness hooks, schemas, training cards, progress chart, section layout
 ├── nutrition/             # Nutrition hooks, schemas, food search box, section layout
 ├── household/             # Household hooks (queries, mutations) and page sections
-├── layouts/               # AuthLayout (public pages), AppLayout (sidebar on desktop, top + bottom bar on a phone)
+├── landing/               # Sections of the public one-page website (below the login/sign up card)
+├── layouts/               # AuthLayout (public website), AppLayout (sidebar on desktop, top + bottom bar on a phone)
 ├── lib/                   # Plain helpers: local dates, useDebouncedValue, useMediaQuery, chart colours
 ├── pages/                 # One component per route
 ├── i18n/

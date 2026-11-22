@@ -21,7 +21,9 @@ RESET_LINK = "http://app.test/reset?uid={uid}&token={token}"
 class PasswordTestCase(APITestCase):
     def setUp(self):
         cache.clear()  # throttle counters live in the cache and would leak between tests
-        self.user = User.objects.create_user(email="ana@example.com", password=OLD)
+        self.user = User.objects.create_user(
+            email="ana@example.com", password=OLD, email_verified=True
+        )
 
     def login(self, password=OLD):
         return self.client.post(

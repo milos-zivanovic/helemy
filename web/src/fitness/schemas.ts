@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next'
 import { z } from 'zod'
 
+import { requiredDate } from '../lib/dateSchemas'
+
 // Weight in kg: empty (bodyweight, e.g. pull-ups) or 0-9999.99 with up to two decimals; "82,5" works.
 // The API gets a decimal string or null.
 export const weightField = (t: TFunction) =>
@@ -31,7 +33,7 @@ export type NewExerciseSetFormValues = z.input<ReturnType<typeof newExerciseSetS
 
 export const trainingSchema = (t: TFunction) =>
   z.object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t('validation.required')),
+    date: requiredDate(t),
     name: z
       .string()
       .trim()

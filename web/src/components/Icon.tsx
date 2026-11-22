@@ -53,6 +53,12 @@ const PATHS = {
   ),
   filter: <path d="M4 5h16l-6 7.5V19l-4 1.5v-8L4 5Z" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  calendar: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </>
+  ),
   chevronDown: <path d="m6 9 6 6 6-6" />,
   globe: (
     <>

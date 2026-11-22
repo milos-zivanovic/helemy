@@ -6,9 +6,11 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from common.images import ImageError, remove_image, replace_image
 from common.mixins import HouseholdModelViewSet, get_request_household
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsHouseholdMember
@@ -16,6 +18,7 @@ from fitness.models import Exercise, MuscleGroup, Training, TrainingItem, Traini
 from fitness.serializers import (
     AppendSetSerializer,
     ExerciseHistoryEntrySerializer,
+    ExerciseImageSerializer,
     ExerciseListSerializer,
     ExerciseSerializer,
     MuscleGroupDetailSerializer,
@@ -25,6 +28,8 @@ from fitness.serializers import (
     TrainingSetSerializer,
     TrainingUpdateSerializer,
 )
+
+EXERCISE_IMAGE_SIZE = 512  # px, square: a thumbnail on the training page, larger when opened
 
 
 @extend_schema_view(
@@ -127,6 +132,45 @@ class ExerciseViewSet(HouseholdModelViewSet):
                 }
             )
         return Response(ExerciseHistoryEntrySerializer(entries, many=True).data)
+
+    @extend_schema(
+        tags=["Fitness - Exercises"],
+        methods=["PUT"],
+        request=ExerciseImageSerializer,
+        responses={200: ExerciseSerializer},
+    )
+    @extend_schema(
+        tags=["Fitness - Exercises"],
+        methods=["DELETE"],
+        request=None,
+        responses={200: ExerciseSerializer},
+    )
+    @action(
+        detail=True,
+        methods=["put", "delete"],
+        url_path="image",
+        parser_classes=[MultiPartParser],
+        filter_backends=[],
+    )
+    def image(self, request, pk=None):
+        """
+        The exercise's picture. PUT (multipart, field `image`) stores a new one as a 512x512 WebP (the
+        web client lets the user choose the square first) and deletes the old file; DELETE removes it.
+        Both answer with the exercise.
+        """
+        exercise = self.get_object()  # only the household's exercises (404 otherwise)
+        if request.method == "DELETE":
+            remove_image(exercise, "image")
+        else:
+            serializer = ExerciseImageSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            try:
+                replace_image(
+                    exercise, "image", serializer.validated_data["image"], EXERCISE_IMAGE_SIZE
+                )
+            except ImageError as exc:
+                raise ValidationError({"image": [str(exc)]}) from exc
+        return Response(ExerciseSerializer(exercise, context={"request": request}).data)
 
 
 @extend_schema_view(

@@ -91,6 +91,7 @@ variables win over `.env`.
 | `EMAIL_URL` | `consolemail://` | How emails are sent; the default prints them to the server log. SMTP: `smtp+tls://user:password@host:587` |
 | `DEFAULT_FROM_EMAIL` | `Helemy <noreply@localhost>` | Sender of outgoing emails |
 | `PASSWORD_RESET_URL` | `http://localhost:3000/reset-password?uid={uid}&token={token}` | Link in the reset email (a client app page); `{uid}` and `{token}` are filled in |
+| `EMAIL_VERIFICATION_URL` | `http://localhost:3000/verify-email?token={token}` | Link in the sign up verification email (a client app page); `{token}` is filled in |
 | `CORS_ALLOWED_ORIGIN_REGEXES` | empty | Comma-separated regexes for allowed origins that can't be listed (e.g. Cloudflare Pages previews; not used in production) |
 | `CSRF_TRUSTED_ORIGINS` | empty | Extra origins the admin accepts POSTs from (rarely needed) |
 | `HTTPS` | `False` | `1` behind an HTTPS proxy that sets `X-Forwarded-Proto` (Cloud Run): trusts that header, secure cookies, HSTS |
@@ -115,8 +116,15 @@ Production values: [infrastructure/DEPLOYMENT.md](../infrastructure/DEPLOYMENT.m
 Authentication flow:
 
 1. Sign up: `POST /api/auth/register/` with `{"email", "password", "first_name"?, "last_name"?}` →
-   `user` + `access` + `refresh` (the personal household is created automatically)
-2. Log in: `POST /api/auth/token/` with `{"email": "...", "password": "..."}` → `access` + `refresh`
+   201 with `{"email"}` (the personal household is created automatically) and a verification email with an
+   `EMAIL_VERIFICATION_URL` link, valid 48 hours. No tokens yet: the account can't log in until the email
+   is confirmed (existing users and `createsuperuser` accounts count as confirmed; the admin has the flag)
+   - the client page from that link posts `{"token"}` to `POST /api/auth/email/verify/` → `access` +
+     `refresh`, i.e. logged in. The link is single-use: afterwards, expired or tampered it's 400 under `token`
+   - `POST /api/auth/email/verify/resend/` with `{"email"}` → always 204; emails a new link if the account
+     exists and isn't confirmed, limited to 5 requests/hour
+2. Log in: `POST /api/auth/token/` with `{"email": "...", "password": "..."}` → `access` + `refresh`.
+   The right password of an unconfirmed account → 401 with `"code": "email_not_verified"`
 3. Send `Authorization: Bearer <access>` on every request
 4. `POST /api/auth/token/refresh/` with `{"refresh": "..."}` when the access token expires
 5. Log out: `POST /api/auth/logout/` with `{"refresh": "..."}` → 204; the refresh token is blacklisted,
@@ -135,15 +143,21 @@ Django admin has users (with their household memberships), households and muscle
 
 Onboarding a new user (what a client does after sign up):
 
-1. `POST /api/auth/register/` → `user` + `access` + `refresh`, so the user is logged in right away. A personal
+1. `POST /api/auth/register/`, then the email's link (`POST /api/auth/email/verify/`) → `access` +
+   `refresh` (see Authentication flow). A personal
    household ("<first name or email>'s Household") is created with the user as owner and only member, and
    seeded with default finance category groups and categories (`finances.services.DEFAULT_CATEGORIES`)
    and one account, "Tekući račun", with balance 0 from today (`create_default_finances`).
    A user always belongs to exactly one household, and all domain data is stored there.
 2. `GET /api/auth/me/` → profile (`currency` default `RSD`, `timezone` default `Europe/Belgrade`, `language`:
    `en` or `sr-latn`, set at sign up from the request's `Accept-Language`), `role` (`owner`/`member`) and
-   `households`. `PATCH /api/auth/me/` with `{"language": "en" | "sr-latn"}` changes the language (the only
-   preference users can change for now) and answers with the same profile. The stored language is the one
+   `households`. `PATCH /api/auth/me/` changes any of `first_name`, `last_name`, `currency` (one of
+   `users.models.CURRENCIES`; only how amounts are shown, nothing is converted), `timezone` (an IANA name;
+   stored only, dates still use `TIME_ZONE`) and `language` (`en` | `sr-latn`), and answers with the same
+   profile. The email can't be changed there. Profile picture: `PUT /api/auth/me/avatar/` (multipart, field
+   `avatar`: JPEG, PNG or WebP up to 5 MB) stores it as a 256×256 WebP (`common.images.square_webp`, which
+   also drops the photo's metadata) and deletes the previous file; `DELETE` removes it. Both answer with the
+   profile, whose `avatar_url` (also in household members) is the full URL or `null`. The stored language is the one
    the web client shows the user after login, and the API uses it for what doesn't answer the user's own
    request (e.g. an email caused by another member); responses follow `Accept-Language` (see Languages).
 3. Initial data. Besides the seeded categories (rename, switch off or delete them as needed), the household
@@ -177,9 +191,9 @@ Endpoint groups:
 
 | Prefix | Content |
 |---|---|
-| `/api/auth/` | `register/`, `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/`, `households/` (members, invite, remove member, leave), `invitations/` (+ `accept/`, `decline/`) |
+| `/api/auth/` | `register/`, `email/verify/` (+ `resend/`), `token/`, `token/refresh/`, `logout/`, `password/change/`, `password/reset/` (+ `confirm/`), `me/` (+ `avatar/`), `households/` (members, invite, remove member, leave), `invitations/` (+ `accept/`, `decline/`) |
 | `/api/finances/` | `accounts/`, `transfers/`, `category-groups/`, `categories/`, `transactions/` (+ `suggestions/`, `breakdown/`, `balance-history/`), `budgets/`, `budgets/all/` |
-| `/api/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
+| `/api/fitness/` | `muscle-groups/` (read-only; the 8 defaults are seeded by migration, edit them in the admin), `exercises/`, `trainings/` (+ `exercises/{id}/image/`, `trainings/{id}/sets/`), `training-items/`, `training-sets/` |
 | `/api/nutrition/` | `foods/`, `consumptions/` (`?date=`, `?start_date=`, `?end_date=`, `?food=`, `?user=`), `consumptions/weekly-summary/` |
 
 ## Finance rules worth knowing
@@ -237,6 +251,10 @@ Endpoint groups:
 - `exercises/{id}/history/` lists every training with the exercise, oldest first: sets, `max_weight`,
   `total_reps`, `volume` (`?user=` for one member). An exercise used in a training can't be deleted
   (400): deleting would erase that history.
+- `exercises/{id}/image/`: `PUT` (multipart, field `image`: JPEG, PNG or WebP up to 5 MB) stores a
+  512×512 WebP and deletes the old file, `DELETE` removes it; both return the exercise. `image` isn't
+  writable through the exercise itself. `image_url` (full URL or `null`) is in the exercise detail, the
+  list and the training's items; images stored before this endpoint are shown as they are.
 
 ## Nutrition rules worth knowing
 
