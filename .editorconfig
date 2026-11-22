@@ -1,0 +1,6 @@
+# Read by PyCharm/VS Code (and Prettier): new and saved files get LF, like .gitattributes checks them out.
+# Only the line ending on purpose; indentation and line length stay with Prettier and ruff.
+root = true
+
+[*]
+end_of_line = lf

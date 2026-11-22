@@ -62,6 +62,7 @@ export function TransactionForm({
     setError,
     setValue,
     getValues,
+    setFocus,
     control,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues })
@@ -108,8 +109,10 @@ export function TransactionForm({
       setValue('account_id', String(suggestion.account_id))
     }
     setValue('is_fixed', suggestion.is_fixed)
-    setValue('amount', suggestion.last_amount)
+    // The amount is left alone (it's rarely the same twice); the last one is shown in the list only
+    // as a hint. The cursor jumps there, since it's the next thing to type.
     setSuggestionsOpen(false)
+    setFocus('amount')
   }
 
   const submit = handleSubmit(async (values) => {

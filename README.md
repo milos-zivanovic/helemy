@@ -19,7 +19,8 @@ helemy/
 ├── web/                    # React + TypeScript web client (Vite)
 ├── mobile/                 # Future Expo mobile app
 ├── branding/               # Master logo (logo.png); web and mobile icons are made from it
-├── .gitattributes          # Forces LF line endings for files that run inside Linux containers
+├── .editorconfig           # Editors save files with LF
+├── .gitattributes          # LF line endings for every text file (formatters write LF; scripts run in Linux)
 └── CLAUDE.md               # Instructions for Claude Code
 ```
 
