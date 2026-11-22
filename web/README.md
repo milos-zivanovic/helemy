@@ -279,7 +279,7 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   is downloaded only when it's shown. Its picture is set or removed there with the same crop editor
   as the profile picture (`ImageEditor`, square), `PUT /api/fitness/exercises/{id}/image/`. An exercise
   used in trainings can't be deleted. Its weight unit (a new one starts with the profile's) can be
-  changed; when it's already in trainings, the form warns that the sets will be converted.
+  changed; when it's already in trainings, the form says the sets keep their numbers (no conversion).
 
 ## Nutrition
 

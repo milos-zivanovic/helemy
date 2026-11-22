@@ -462,7 +462,7 @@
       "openImage": "Show the picture of {{name}}",
       "weightUnit": "Weight unit",
       "weightUnitHint": "As on the machine: this exercise's sets are entered and shown in this unit.",
-      "weightUnitChange": "This exercise's existing sets will be converted to {{unit}}."
+      "weightUnitChange": "Existing sets keep their numbers; they will just be shown in {{unit}}."
     },
     "progress": {
       "title": "Progress",

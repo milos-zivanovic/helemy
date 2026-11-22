@@ -143,7 +143,7 @@ function ExerciseForm({
   children,
 }: {
   defaultValues: ExerciseFormValues
-  hasSets?: boolean // already in trainings: a new unit converts its sets
+  hasSets?: boolean // already in trainings: a new unit relabels its sets (no conversion)
   onSubmit: (values: ExerciseInput) => Promise<void>
   children?: ReactNode
 }) {
@@ -159,7 +159,7 @@ function ExerciseForm({
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues })
   const unit = useWatch({ control, name: 'weight_unit' })
-  const converts = hasSets && unit !== defaultValues.weight_unit
+  const relabels = hasSets && unit !== defaultValues.weight_unit
 
   const submit = handleSubmit(async (values) => {
     try {
@@ -206,7 +206,7 @@ function ExerciseForm({
             </option>
           ))}
         </SelectField>
-        {converts ? (
+        {relabels ? (
           <Alert tone="info">
             {t('fitness.exercises.weightUnitChange', { unit: unitLabel(unit) })}
           </Alert>
