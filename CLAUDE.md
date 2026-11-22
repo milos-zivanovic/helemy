@@ -14,8 +14,8 @@ in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of d
 - Git workflow (Claude runs it, the user approves each step):
   - Every task gets its own branch from an up-to-date `origin/master` (`feature/...`, `fix/...`, `docs/...`),
     created locally and pushed to GitHub.
-  - Before EVERY commit, show the files and the commit message and wait for the user's yes. Before EVERY
-    push, ask again: an approved commit is not an approved push.
+  - Before EVERY commit, show the files and the commit message and ask once for both the commit and its push;
+    after the user's yes, commit and push together. Anything not covered by that yes needs a new one.
   - Opening the pull request and the merge are ALWAYS the user's, done by hand: never open, merge or approve
     a PR, never enable auto-merge, never merge or push into `master` (not even locally). When a piece is
     pushed, give the user the branch name and a suggested PR title and description (base `master`).
