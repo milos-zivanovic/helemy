@@ -13,8 +13,10 @@ in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of d
   4. **Predlozi**: optional, only when genuinely useful
 - Never commit, push or create a PR/MR: the user does all git writes (read-only git is fine). An explicit
   request to do one is a one-time approval for that action only; afterwards go back to this rule.
-- Work on `api/` and `web/` (and their Docker setup); mobile work and the data import from the old `wallet`
-  app need the user's explicit approval.
+- Work on `api/` and `web/` (and their Docker setup); mobile work needs the user's explicit approval.
+- The old `wallet` app is gone: its data was migrated to production by hand (SQL) on 2026-11-22, and its
+  Heroku app, Supabase project and GitHub repo are shut down or archived. Nothing left to import; comments
+  saying something was "taken from the old wallet app" are history only.
 - The user is a backend engineer learning frontend: for web work, write the code and explain each new
   concept (with Django analogies where they help), not just hand it over.
 - The user runs Docker commands themselves; don't build or start containers unless asked.
