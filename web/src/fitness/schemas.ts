@@ -54,5 +54,7 @@ export const exerciseSchema = (t: TFunction) =>
     // '' = no muscle group (null for the API)
     muscle_group_id: z.string().transform((value) => (value === '' ? null : Number(value))),
     description: z.string().trim(),
+    // The machine's unit: the exercise's sets are entered and shown in it.
+    weight_unit: z.enum(['kg', 'lb']),
   })
 export type ExerciseFormValues = z.input<ReturnType<typeof exerciseSchema>>

@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { lazy, type ReactNode, Suspense, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router'
 
 import { ApiError, errorMessage, showMutationError } from '../api/errors'
+import { useMe } from '../auth/useAuth'
 import { Alert } from '../components/Alert'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -24,6 +25,7 @@ import {
   useUpdateExercise,
 } from '../fitness/hooks'
 import { type ExerciseFormValues, exerciseSchema } from '../fitness/schemas'
+import { useFormatters, WEIGHT_UNITS } from '../i18n/format'
 
 const LIST = '/fitness/exercises'
 
@@ -36,11 +38,18 @@ export function NewExercisePage() {
   const { t } = useTranslation()
   const create = useCreateExercise()
   const navigate = useNavigate()
+  const { data: me } = useMe()
 
   return (
     <Card className="max-w-2xl" title={t('fitness.exercises.new')}>
       <ExerciseForm
-        defaultValues={{ name: '', muscle_group_id: '', description: '' }}
+        // A new exercise starts with the user's own unit; a machine in the other one changes it.
+        defaultValues={{
+          name: '',
+          muscle_group_id: '',
+          description: '',
+          weight_unit: me?.weight_unit ?? 'kg',
+        }}
         onSubmit={async (values) => {
           await create.mutateAsync(values)
           void navigate(LIST)
@@ -74,7 +83,7 @@ export function EditExercisePage() {
   return (
     <div className="flex flex-col gap-4">
       <Suspense fallback={<p className="text-sm text-slate-600">{t('common.loading')}</p>}>
-        <ExerciseProgress exerciseId={id} />
+        <ExerciseProgress exerciseId={id} unit={data.weight_unit ?? 'kg'} />
       </Suspense>
       <Card title={t('fitness.exercises.image')}>
         <ImageEditor
@@ -105,7 +114,9 @@ export function EditExercisePage() {
             name: data.name,
             muscle_group_id: data.muscle_group ? String(data.muscle_group.id) : '',
             description: data.description ?? '',
+            weight_unit: data.weight_unit ?? 'kg',
           }}
+          hasSets={data.trainings_count > 0}
           onSubmit={async (values) => {
             await update.mutateAsync(values)
             void navigate(LIST)
@@ -127,28 +138,39 @@ export function EditExercisePage() {
 
 function ExerciseForm({
   defaultValues,
+  hasSets = false,
   onSubmit,
   children,
 }: {
   defaultValues: ExerciseFormValues
+  hasSets?: boolean // already in trainings: a new unit converts its sets
   onSubmit: (values: ExerciseInput) => Promise<void>
   children?: ReactNode
 }) {
   const { t } = useTranslation()
+  const { unitLabel } = useFormatters()
   const muscleGroups = useMuscleGroups()
   const schema = useMemo(() => exerciseSchema(t), [t])
   const {
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(schema), defaultValues })
+  const unit = useWatch({ control, name: 'weight_unit' })
+  const converts = hasSets && unit !== defaultValues.weight_unit
 
   const submit = handleSubmit(async (values) => {
     try {
       await onSubmit(values)
     } catch (error) {
-      showMutationError(setError, error, ['name', 'muscle_group_id', 'description'], t)
+      showMutationError(
+        setError,
+        error,
+        ['name', 'muscle_group_id', 'description', 'weight_unit'],
+        t,
+      )
     }
   })
 
@@ -172,6 +194,26 @@ function ExerciseForm({
           </option>
         ))}
       </SelectField>
+      <div className="flex flex-col gap-1">
+        <SelectField
+          label={t('fitness.exercises.weightUnit')}
+          error={errors.weight_unit?.message}
+          {...register('weight_unit')}
+        >
+          {WEIGHT_UNITS.map((option) => (
+            <option key={option} value={option}>
+              {t(`units.${option}Name`)}
+            </option>
+          ))}
+        </SelectField>
+        {converts ? (
+          <Alert tone="info">
+            {t('fitness.exercises.weightUnitChange', { unit: unitLabel(unit) })}
+          </Alert>
+        ) : (
+          <p className="text-xs text-slate-500">{t('fitness.exercises.weightUnitHint')}</p>
+        )}
+      </div>
       <TextField
         label={t('fitness.fields.description')}
         error={errors.description?.message}

@@ -7,7 +7,7 @@ import type { components } from '../api/schema'
 
 // Same idea as the finances: every fitness key starts with 'fitness', and a write invalidates the
 // whole prefix (a new set changes the training, its totals, the list and the exercise's history).
-const FITNESS = 'fitness'
+export const FITNESS = 'fitness'
 
 export type MuscleGroup = components['schemas']['MuscleGroupDetail']
 export type ExerciseListItem = components['schemas']['ExerciseList']

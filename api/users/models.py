@@ -4,6 +4,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
+from common.units import WeightUnit
+
 # Currencies a user can pick for showing amounts (ISO 4217); not `choices` on the field, so a code
 # stored before (e.g. by the admin) stays valid. Extend the list when someone needs another one.
 CURRENCIES = ["RSD", "EUR", "USD", "CHF", "GBP", "BAM", "HUF"]
@@ -165,6 +167,10 @@ class User(AbstractUser):
     timezone = models.CharField(_("timezone"), max_length=50, default="Europe/Belgrade")
     language = models.CharField(_("language"), max_length=10, default="en")
     currency = models.CharField(_("currency"), max_length=3, default="RSD")
+    # The unit training totals are shown in (exercises have their own unit, converted into this one).
+    weight_unit = models.CharField(
+        _("weight unit"), max_length=2, choices=WeightUnit.choices, default=WeightUnit.KG
+    )
     # Profile picture: a 256x256 WebP made by users.services.save_avatar (R2 in production).
     avatar = models.ImageField(_("profile picture"), upload_to="avatars/", blank=True, null=True)
 

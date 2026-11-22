@@ -81,4 +81,5 @@ export const profileSchema = (t: TFunction) =>
     currency: z.enum(['RSD', 'EUR', 'USD', 'CHF', 'GBP', 'BAM', 'HUF']),
     timezone: z.string().min(1, t('validation.required')),
     language: z.enum(['en', 'sr-latn']),
+    weight_unit: z.enum(['kg', 'lb']),
   })

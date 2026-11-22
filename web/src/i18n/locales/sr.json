@@ -241,7 +241,9 @@
       "change": "Promeni sliku",
       "remove": "Ukloni sliku",
       "removeConfirm": "Ukloniti profilnu sliku?"
-    }
+    },
+    "weightUnit": "Jedinica za kilažu",
+    "weightUnitInfo": "Ukupna kilaža treninga prikazuje se u ovoj jedinici; vežbe u drugoj jedinici se preračunavaju. Nove vežbe je dobijaju unapred."
   },
   "finances": {
     "title": "Finansije",
@@ -417,11 +419,11 @@
       "date": "Datum",
       "notes": "Beleška",
       "exercise": "Vežba",
-      "weight": "Težina (kg)",
+      "weight": "Težina ({{unit}})",
       "reps": "Ponavljanja"
     },
     "validation": {
-      "weight": "Težina u kg, do dve decimale (npr. 82,5), ili prazno.",
+      "weight": "Težina do dve decimale (npr. 82,5), ili prazno.",
       "reps": "Ceo broj veći od nule."
     },
     "trainings": {
@@ -457,7 +459,10 @@
       "imageChange": "Promeni sliku",
       "imageRemove": "Ukloni sliku",
       "imageRemoveConfirm": "Ukloniti sliku vežbe?",
-      "openImage": "Prikaži sliku vežbe {{name}}"
+      "openImage": "Prikaži sliku vežbe {{name}}",
+      "weightUnit": "Jedinica težine",
+      "weightUnitHint": "Kao na spravi: serije ove vežbe unose se i prikazuju u ovoj jedinici.",
+      "weightUnitChange": "Postojeće serije ove vežbe biće preračunate u {{unit}}."
     },
     "progress": {
       "title": "Napredak",
@@ -466,7 +471,7 @@
       "bestReps": "Najviše ponavljanja",
       "lastTime": "Poslednji put",
       "trainings": "Treninga",
-      "chartWeight": "Najteža serija na svakom treningu (kg)",
+      "chartWeight": "Najteža serija na svakom treningu ({{unit}})",
       "chartReps": "Ukupno ponavljanja na svakom treningu",
       "showAll": "Svi treninzi sa ovom vežbom"
     }
@@ -534,5 +539,11 @@
     "placeholder": "dd/mm/gggg",
     "openCalendar": "Otvori kalendar: {{label}}",
     "invalid": "Unesite datum kao dd/mm/gggg."
+  },
+  "units": {
+    "kg": "kg",
+    "lb": "lbs",
+    "kgName": "Kilogrami (kg)",
+    "lbName": "Funte (lbs)"
   }
 }
