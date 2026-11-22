@@ -5,10 +5,7 @@ from django.db import models
 from django.db.models import Max
 from django.utils.translation import gettext_lazy as _
 
-from common.units import WeightUnit, convert_weight, unit_factor
-
-# A set's weight is DecimalField(max_digits=6, decimal_places=2).
-MAX_WEIGHT = Decimal("9999.99")
+from common.units import WeightUnit, unit_factor
 
 
 class MuscleGroup(models.Model):
@@ -41,6 +38,7 @@ class Exercise(models.Model):
     name = models.CharField(_("name"), max_length=100)
     description = models.TextField(_("description"), blank=True)
     # The unit of the machine (what the user reads on it): its sets are entered and shown in it.
+    # Changing it only relabels the sets (a mistake fixed): their numbers are never converted.
     weight_unit = models.CharField(
         _("weight unit"), max_length=2, choices=WeightUnit.choices, default=WeightUnit.KG
     )
@@ -58,25 +56,6 @@ class Exercise(models.Model):
 
     def __str__(self):
         return self.name
-
-    def heaviest_set_in(self, unit):
-        """The heaviest weight of any of its sets once converted to `unit` (None without weights)."""
-        heaviest = self.training_items.aggregate(heaviest=Max("sets__weight"))["heaviest"]
-        return None if heaviest is None else convert_weight(heaviest, self.weight_unit, unit)
-
-    def change_weight_unit(self, unit):
-        """
-        Switch to another unit (another machine, or a mistake). The weights of all its sets, in
-        every member's trainings, are converted so they stay true: 80 kg becomes 176.37 lb.
-        Not saved here: the caller saves the exercise, in the same transaction.
-        """
-        if unit == self.weight_unit:
-            return
-        sets = list(TrainingSet.objects.filter(training_item__exercise=self, weight__isnull=False))
-        for training_set in sets:
-            training_set.weight = convert_weight(training_set.weight, self.weight_unit, unit)
-        TrainingSet.objects.bulk_update(sets, ["weight"])
-        self.weight_unit = unit
 
 
 class Training(models.Model):

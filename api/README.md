@@ -258,8 +258,8 @@ Endpoint groups:
   list and the training's items; images stored before this endpoint are shown as they are.
 - Weight units (`common.units`): every exercise has a `weight_unit` (`kg` | `lb`), the machine's, and its
   sets are stored, entered and returned in it (`history/` too). Left out on create, it's the user's own
-  `weight_unit`. Changing it later converts the weights of all the exercise's sets in the household
-  (80 kg → 176.37 lb, 2 decimals), or is a 400 on `weight_unit` if a set would no longer fit 9999.99.
+  `weight_unit`. Changing it later only relabels the exercise's sets: their numbers stay as they are
+  (80 kg becomes 80 lb), for fixing a unit chosen by mistake.
   A training's `total_volume` (list and detail) is in the requesting user's unit, named by `volume_unit`:
   each exercise's volume is converted first, then added up (1 lb = 0.45359237 kg, rounded to 1 decimal).
   An item's `total_volume` and a set's `volume` stay in the exercise's unit.

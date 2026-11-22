@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema_field
@@ -9,7 +8,7 @@ from rest_framework import serializers
 from common.fields import HouseholdPrimaryKeyRelatedField
 from common.images import absolute_url
 from common.units import WeightUnit
-from fitness.models import MAX_WEIGHT, Exercise, MuscleGroup, Training, TrainingItem, TrainingSet
+from fitness.models import Exercise, MuscleGroup, Training, TrainingItem, TrainingSet
 from users.serializers import UserSerializer
 
 
@@ -68,27 +67,9 @@ class ExerciseSerializer(serializers.ModelSerializer):
     def get_trainings_count(self, obj) -> int:
         return obj.training_items.count()
 
-    def validate_weight_unit(self, value):
-        # A converted weight must still fit the field (9999.99): 9999 kg would be 22044 lb.
-        if self.instance is not None:
-            heaviest = self.instance.heaviest_set_in(value)
-            if heaviest is not None and heaviest > MAX_WEIGHT:
-                raise serializers.ValidationError(
-                    _("Converted to %(unit)s, a set would weigh more than %(max)s.")
-                    % {"unit": value, "max": MAX_WEIGHT}
-                )
-        return value
-
     def create(self, validated_data):
         validated_data.setdefault("weight_unit", self.context["request"].user.weight_unit)
         return super().create(validated_data)
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        unit = validated_data.pop("weight_unit", None)
-        if unit is not None:
-            instance.change_weight_unit(unit)  # converts the sets; saved with the rest below
-        return super().update(instance, validated_data)
 
 
 class ExerciseListSerializer(serializers.ModelSerializer):

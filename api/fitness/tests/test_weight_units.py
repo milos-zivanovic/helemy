@@ -4,7 +4,6 @@ from datetime import date
 from decimal import Decimal
 
 from common.testing import HouseholdAPITestCase
-from common.units import convert_weight
 from fitness.models import Exercise, Training, TrainingSet
 
 
@@ -29,57 +28,40 @@ class ExerciseUnitTests(HouseholdAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("weight_unit", response.data)
 
-    def test_changing_the_unit_converts_every_set_of_the_exercise(self):
+    def test_changing_the_unit_only_relabels_the_sets(self):
         exercise = Exercise.objects.create(household=self.alice_household, name="Bench press")
         training = Training.objects.create(
             household=self.alice_household, user=self.alice, date=date(2026, 11, 1)
         )
         heavy = training.add_set(exercise, weight=Decimal("80"), reps=5)
         bodyweight = training.add_set(exercise, weight=None, reps=10)
-        url = f"/api/fitness/exercises/{exercise.id}/"
-
-        response = self.client.patch(url, {"weight_unit": "lb"})
-
-        self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data["weight_unit"], "lb")
-        heavy.refresh_from_db()
-        bodyweight.refresh_from_db()
-        self.assertEqual(heavy.weight, Decimal("176.37"))
-        self.assertIsNone(bodyweight.weight)
-
-        # And back: the 2-decimal rounding doesn't drift.
-        self.client.patch(url, {"weight_unit": "kg"})
-        heavy.refresh_from_db()
-        self.assertEqual(heavy.weight, Decimal("80.00"))
-
-    def test_other_fields_leave_the_sets_alone(self):
-        exercise = Exercise.objects.create(household=self.alice_household, name="Squat")
-        training = Training.objects.create(
-            household=self.alice_household, user=self.alice, date=date(2026, 11, 1)
-        )
-        training_set = training.add_set(exercise, weight=Decimal("100"), reps=5)
-
-        self.client.patch(f"/api/fitness/exercises/{exercise.id}/", {"name": "Back squat"})
-        self.client.patch(f"/api/fitness/exercises/{exercise.id}/", {"weight_unit": "kg"})
-
-        training_set.refresh_from_db()
-        self.assertEqual(training_set.weight, Decimal("100.00"))
-
-    def test_a_change_that_would_not_fit_the_weight_field_is_refused(self):
-        exercise = Exercise.objects.create(household=self.alice_household, name="Sled")
-        training = Training.objects.create(
-            household=self.alice_household, user=self.alice, date=date(2026, 11, 1)
-        )
-        training.add_set(exercise, weight=Decimal("9000"), reps=1)  # 19841.6 lb: too big
 
         response = self.client.patch(
             f"/api/fitness/exercises/{exercise.id}/", {"weight_unit": "lb"}
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("weight_unit", response.data)
-        exercise.refresh_from_db()
-        self.assertEqual(exercise.weight_unit, "kg")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["weight_unit"], "lb")
+        heavy.refresh_from_db()
+        bodyweight.refresh_from_db()
+        self.assertEqual(heavy.weight, Decimal("80.00"))  # now 80 lb
+        self.assertIsNone(bodyweight.weight)
+        # The training total follows: 80 lb × 5 in a kg user's total is 181.4 kg.
+        detail = self.client.get(f"/api/fitness/trainings/{training.id}/")
+        self.assertEqual(detail.data["total_volume"], 181.4)
+
+    def test_a_heavy_set_does_not_block_a_unit_change(self):
+        exercise = Exercise.objects.create(household=self.alice_household, name="Sled")
+        training = Training.objects.create(
+            household=self.alice_household, user=self.alice, date=date(2026, 11, 1)
+        )
+        training.add_set(exercise, weight=Decimal("9000"), reps=1)
+
+        response = self.client.patch(
+            f"/api/fitness/exercises/{exercise.id}/", {"weight_unit": "lb"}
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(TrainingSet.objects.get().weight, Decimal("9000.00"))
 
     def test_another_household_cannot_change_the_unit(self):
@@ -135,10 +117,3 @@ class TrainingTotalTests(HouseholdAPITestCase):
         self.assertEqual(pulldown["exercise"]["weight_unit"], "lb")
         self.assertEqual(pulldown["sets"][0]["weight"], "100.00")
         self.assertEqual(pulldown["total_volume"], 1000.0)
-
-
-class ConvertWeightTests(HouseholdAPITestCase):
-    def test_conversions(self):
-        self.assertEqual(convert_weight(Decimal("80"), "kg", "lb"), Decimal("176.37"))
-        self.assertEqual(convert_weight(Decimal("45"), "lb", "kg"), Decimal("20.41"))
-        self.assertEqual(convert_weight(Decimal("12.5"), "kg", "kg"), Decimal("12.50"))

@@ -462,7 +462,7 @@
       "openImage": "Prikaži sliku vežbe {{name}}",
       "weightUnit": "Jedinica težine",
       "weightUnitHint": "Kao na spravi: serije ove vežbe unose se i prikazuju u ovoj jedinici.",
-      "weightUnitChange": "Postojeće serije ove vežbe biće preračunate u {{unit}}."
+      "weightUnitChange": "Postojeće serije zadržavaju iste brojeve, samo će se prikazivati u {{unit}}."
     },
     "progress": {
       "title": "Napredak",
