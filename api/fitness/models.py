@@ -1,7 +1,14 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from django.db.models import Max
 from django.utils.translation import gettext_lazy as _
+
+from common.units import WeightUnit, convert_weight, unit_factor
+
+# A set's weight is DecimalField(max_digits=6, decimal_places=2).
+MAX_WEIGHT = Decimal("9999.99")
 
 
 class MuscleGroup(models.Model):
@@ -33,6 +40,10 @@ class Exercise(models.Model):
     )
     name = models.CharField(_("name"), max_length=100)
     description = models.TextField(_("description"), blank=True)
+    # The unit of the machine (what the user reads on it): its sets are entered and shown in it.
+    weight_unit = models.CharField(
+        _("weight unit"), max_length=2, choices=WeightUnit.choices, default=WeightUnit.KG
+    )
     image = models.ImageField(
         _("image"),
         upload_to="exercises/",
@@ -47,6 +58,25 @@ class Exercise(models.Model):
 
     def __str__(self):
         return self.name
+
+    def heaviest_set_in(self, unit):
+        """The heaviest weight of any of its sets once converted to `unit` (None without weights)."""
+        heaviest = self.training_items.aggregate(heaviest=Max("sets__weight"))["heaviest"]
+        return None if heaviest is None else convert_weight(heaviest, self.weight_unit, unit)
+
+    def change_weight_unit(self, unit):
+        """
+        Switch to another unit (another machine, or a mistake). The weights of all its sets, in
+        every member's trainings, are converted so they stay true: 80 kg becomes 176.37 lb.
+        Not saved here: the caller saves the exercise, in the same transaction.
+        """
+        if unit == self.weight_unit:
+            return
+        sets = list(TrainingSet.objects.filter(training_item__exercise=self, weight__isnull=False))
+        for training_set in sets:
+            training_set.weight = convert_weight(training_set.weight, self.weight_unit, unit)
+        TrainingSet.objects.bulk_update(sets, ["weight"])
+        self.weight_unit = unit
 
 
 class Training(models.Model):
@@ -82,9 +112,16 @@ class Training(models.Model):
     def __str__(self):
         return self.name or f"Training {self.date}"
 
-    @property
-    def total_volume(self):
-        return sum(item.total_volume for item in self.items.all())
+    def total_volume(self, unit):
+        """
+        Weight x reps of every set, in `unit` (the user's): each exercise's volume is converted from
+        its own unit first, so kg and lb machines add up. Rounded to one decimal.
+        """
+        total = sum(
+            Decimal(str(item.total_volume)) * unit_factor(item.exercise.weight_unit, unit)
+            for item in self.items.all()
+        )
+        return round(float(total), 1)
 
     def add_set(self, exercise, weight=None, reps=1):
         """
@@ -157,6 +194,7 @@ class TrainingItem(models.Model):
 
     @property
     def total_volume(self):
+        """In the exercise's own unit."""
         return sum(set_obj.volume for set_obj in self.sets.all())
 
 
@@ -168,7 +206,7 @@ class TrainingSet(models.Model):
     )
     set_number = models.PositiveSmallIntegerField(_("set number"))
     weight = models.DecimalField(
-        _("weight (kg)"),
+        _("weight"),  # in the exercise's weight_unit
         max_digits=6,
         decimal_places=2,
         null=True,
@@ -192,7 +230,8 @@ class TrainingSet(models.Model):
         ]
 
     def __str__(self):
-        weight_str = f"{self.weight}kg " if self.weight else ""
+        unit = self.training_item.exercise.weight_unit
+        weight_str = f"{self.weight}{unit} " if self.weight else ""
         return (
             f"{self.training_item.exercise} - Set {self.set_number}: {weight_str}{self.reps} reps"
         )

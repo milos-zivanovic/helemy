@@ -1489,6 +1489,7 @@ export interface components {
             name: string;
             description?: string;
             readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
             readonly image_url: string | null;
             readonly trainings_count: number;
             /** Format: date-time */
@@ -1524,12 +1525,14 @@ export interface components {
             readonly id: number;
             name: string;
             readonly muscle_group: components["schemas"]["MuscleGroup"] | null;
+            readonly weight_unit: components["schemas"]["WeightUnitEnum"];
             readonly image_url: string | null;
         };
         ExerciseRequest: {
             name: string;
             description?: string;
             muscle_group_id?: number | null;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         Food: {
@@ -2028,6 +2031,7 @@ export interface components {
             name?: string;
             description?: string;
             muscle_group_id?: number | null;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
         };
         /** @description Food names are unique per household, case-insensitive (see the model constraint). */
         PatchedFoodRequest: {
@@ -2100,6 +2104,7 @@ export interface components {
             currency?: components["schemas"]["CurrencyEnum"];
             timezone?: string;
             language?: components["schemas"]["LanguageEnum"];
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
         };
         RegisterRequest: {
             /**
@@ -2162,6 +2167,7 @@ export interface components {
             readonly items: components["schemas"]["TrainingItem"][];
             /** Format: double */
             readonly total_volume: number;
+            readonly volume_unit: components["schemas"]["WeightUnitEnum"];
             readonly items_count: number;
             readonly total_sets: number;
             /** Format: date-time */
@@ -2377,6 +2383,7 @@ export interface components {
             timezone?: string;
             language?: string;
             currency?: string;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
             /** Format: date-time */
             readonly date_joined: string;
             /** Format: date-time */
@@ -2398,6 +2405,7 @@ export interface components {
             timezone?: string;
             language?: string;
             currency?: string;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
             /** Format: date-time */
             readonly date_joined: string;
             /** Format: date-time */
@@ -2416,6 +2424,7 @@ export interface components {
             timezone?: string;
             language?: string;
             currency?: string;
+            weight_unit?: components["schemas"]["WeightUnitEnum"];
         };
         WeeklyNutritionSummary: {
             /** Format: date */
@@ -2426,6 +2435,12 @@ export interface components {
             fat: number;
             by_user: components["schemas"]["MemberMacros"][];
         };
+        /**
+         * @description * `kg` - kilograms
+         *     * `lb` - pounds
+         * @enum {string}
+         */
+        WeightUnitEnum: "kg" | "lb";
     };
     responses: never;
     parameters: never;

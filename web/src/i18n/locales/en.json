@@ -241,7 +241,9 @@
       "change": "Change picture",
       "remove": "Remove picture",
       "removeConfirm": "Remove your profile picture?"
-    }
+    },
+    "weightUnit": "Weight unit",
+    "weightUnitInfo": "Training totals are shown in this unit; exercises in the other unit are converted. New exercises get it by default."
   },
   "finances": {
     "title": "Finances",
@@ -417,11 +419,11 @@
       "date": "Date",
       "notes": "Notes",
       "exercise": "Exercise",
-      "weight": "Weight (kg)",
+      "weight": "Weight ({{unit}})",
       "reps": "Reps"
     },
     "validation": {
-      "weight": "Weight in kg, up to two decimals (e.g. 82.5), or empty.",
+      "weight": "Weight with up to two decimals (e.g. 82.5), or empty.",
       "reps": "A whole number above zero."
     },
     "trainings": {
@@ -457,7 +459,10 @@
       "imageChange": "Change picture",
       "imageRemove": "Remove picture",
       "imageRemoveConfirm": "Remove the exercise's picture?",
-      "openImage": "Show the picture of {{name}}"
+      "openImage": "Show the picture of {{name}}",
+      "weightUnit": "Weight unit",
+      "weightUnitHint": "As on the machine: this exercise's sets are entered and shown in this unit.",
+      "weightUnitChange": "This exercise's existing sets will be converted to {{unit}}."
     },
     "progress": {
       "title": "Progress",
@@ -466,7 +471,7 @@
       "bestReps": "Most reps",
       "lastTime": "Last time",
       "trainings": "Trainings",
-      "chartWeight": "Heaviest set of each training (kg)",
+      "chartWeight": "Heaviest set of each training ({{unit}})",
       "chartReps": "Total reps of each training",
       "showAll": "All trainings with this exercise"
     }
@@ -534,5 +539,11 @@
     "placeholder": "dd/mm/yyyy",
     "openCalendar": "Open the calendar: {{label}}",
     "invalid": "Enter the date as dd/mm/yyyy."
+  },
+  "units": {
+    "kg": "kg",
+    "lb": "lbs",
+    "kgName": "Kilograms (kg)",
+    "lbName": "Pounds (lbs)"
   }
 }

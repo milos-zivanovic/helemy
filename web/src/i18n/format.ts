@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
+import type { components } from '../api/schema'
 import { useMe } from '../auth/useAuth'
 import { parseDate } from '../lib/dates'
 import type { Language } from '.'
@@ -7,12 +8,16 @@ import type { Language } from '.'
 // Intl locale per app language. Plain "sr" would format in Cyrillic; the app is in Latin script.
 const LOCALES: Record<Language, string> = { sr: 'sr-Latn-RS', en: 'en-GB' }
 
+export type WeightUnit = components['schemas']['WeightUnitEnum']
+/** The API's units, in the order selects offer them. */
+export const WEIGHT_UNITS: WeightUnit[] = ['kg', 'lb']
+
 /**
  * Formatting in the current language, like Django's localize / date filter. Intl is built into the
  * browser: it knows month names, date order, thousand separators and currency symbols per locale.
  */
 export function useFormatters() {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const { data: me } = useMe()
   const locale = LOCALES[(i18n.resolvedLanguage ?? 'en') as Language] ?? LOCALES.en
   const currency = me?.currency || 'RSD'
@@ -53,11 +58,16 @@ export function useFormatters() {
       new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(
         value,
       ),
-    /** A weight in kg ("82.50" from the API) without needless zeros: "82,5 kg"; null → "—". */
-    formatWeight: (value: string | number | null | undefined) =>
+    /** The unit's short label: "kg", "lbs". */
+    unitLabel: (unit: WeightUnit) => t(`units.${unit}`),
+    /** A weight ("82.50" from the API) without needless zeros, with its unit: "82,5 kg"; null → "—". */
+    formatWeight: (value: string | number | null | undefined, unit: WeightUnit) =>
       value === null || value === undefined || value === ''
         ? '—'
-        : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(value))} kg`,
+        : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(Number(value))} ${t(`units.${unit}`)}`,
+    /** A volume (weight × reps) with its unit: "12.450,5 kg" */
+    formatVolume: (value: number, unit: WeightUnit) =>
+      `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} ${t(`units.${unit}`)}`,
     /** A plain number (volumes, counts): "12.450" */
     formatNumber: (value: number) =>
       new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value),

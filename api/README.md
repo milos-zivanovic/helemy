@@ -153,7 +153,8 @@ Onboarding a new user (what a client does after sign up):
    `en` or `sr-latn`, set at sign up from the request's `Accept-Language`), `role` (`owner`/`member`) and
    `households`. `PATCH /api/auth/me/` changes any of `first_name`, `last_name`, `currency` (one of
    `users.models.CURRENCIES`; only how amounts are shown, nothing is converted), `timezone` (an IANA name;
-   stored only, dates still use `TIME_ZONE`) and `language` (`en` | `sr-latn`), and answers with the same
+   stored only, dates still use `TIME_ZONE`), `language` (`en` | `sr-latn`) and `weight_unit` (`kg` default |
+   `lb`: the unit training totals are converted into, see Fitness rules), and answers with the same
    profile. The email can't be changed there. Profile picture: `PUT /api/auth/me/avatar/` (multipart, field
    `avatar`: JPEG, PNG or WebP up to 5 MB) stores it as a 256×256 WebP (`common.images.square_webp`, which
    also drops the photo's metadata) and deletes the previous file; `DELETE` removes it. Both answer with the
@@ -255,6 +256,13 @@ Endpoint groups:
   512×512 WebP and deletes the old file, `DELETE` removes it; both return the exercise. `image` isn't
   writable through the exercise itself. `image_url` (full URL or `null`) is in the exercise detail, the
   list and the training's items; images stored before this endpoint are shown as they are.
+- Weight units (`common.units`): every exercise has a `weight_unit` (`kg` | `lb`), the machine's, and its
+  sets are stored, entered and returned in it (`history/` too). Left out on create, it's the user's own
+  `weight_unit`. Changing it later converts the weights of all the exercise's sets in the household
+  (80 kg → 176.37 lb, 2 decimals), or is a 400 on `weight_unit` if a set would no longer fit 9999.99.
+  A training's `total_volume` (list and detail) is in the requesting user's unit, named by `volume_unit`:
+  each exercise's volume is converted first, then added up (1 lb = 0.45359237 kg, rounded to 1 decimal).
+  An item's `total_volume` and a set's `volume` stay in the exercise's unit.
 
 ## Nutrition rules worth knowing
 
