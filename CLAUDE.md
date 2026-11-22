@@ -11,8 +11,16 @@ in the READMEs (root, `api/`, `infrastructure/`, `web/`); read them instead of d
   2. **Moje odluke**: decisions made without asking, for the user to review
   3. **Pitanja**: open questions the user needs to answer ("nema" if none)
   4. **Predlozi**: optional, only when genuinely useful
-- Never commit, push or create a PR/MR: the user does all git writes (read-only git is fine). An explicit
-  request to do one is a one-time approval for that action only; afterwards go back to this rule.
+- Git workflow (Claude runs it, the user approves each step):
+  - Every task gets its own branch from an up-to-date `origin/master` (`feature/...`, `fix/...`, `docs/...`),
+    created locally and pushed to GitHub.
+  - Before EVERY commit, show the files and the commit message and ask once for both the commit and its push;
+    after the user's yes, commit and push together. Anything not covered by that yes needs a new one.
+  - Opening the pull request and the merge are ALWAYS the user's, done by hand: never open, merge or approve
+    a PR, never enable auto-merge, never merge or push into `master` (not even locally). When a piece is
+    pushed, give the user the branch name and a suggested PR title and description (base `master`).
+  - After the user merges: update `master` locally and delete the merged local branch; delete the remote
+    branch only when asked.
 - Work on `api/` and `web/` (and their Docker setup); mobile work needs the user's explicit approval.
 - The old `wallet` app is gone: its data was migrated to production by hand (SQL) on 2026-11-22, and its
   Heroku app, Supabase project and GitHub repo are shut down or archived. Nothing left to import; comments
