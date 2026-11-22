@@ -1,3 +1,8 @@
+# Every text file is checked out with LF, on Windows too (whatever core.autocrlf says). Prettier and
+# ruff write LF, so a checkout with CRLF made `npm run format` mark dozens of unchanged files as
+# modified. Binary files (images, .mo) are detected by `text=auto` and left alone.
+* text=auto eol=lf
+
 # Shell scripts run inside Linux containers: never check them out with CRLF
 *.sh text eol=lf
 Dockerfile text eol=lf

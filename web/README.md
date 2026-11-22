@@ -238,8 +238,8 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   opens its categories, a category's bar opens its transactions in the list.
 - **Form**: the toggle on top picks expense, income or transfer; a transfer swaps the form for the
   transfer one (from, to, amount, date, description) and keeps what was typed in the shared fields.
-  Typing a title (2+ characters) suggests earlier transactions; picking one fills type, category, fixed
-  flag and the last amount. The category list shows only categories active on the chosen date (an edited
+  Typing a title (2+ characters) suggests earlier transactions; picking one fills type, category, account and
+  fixed flag, not the amount (the last one is shown in the list as a hint; the cursor moves to it). The category list shows only categories active on the chosen date (an edited
   transaction keeps its own category even if it's archived), never the transfer category. Amounts accept
   `1250,50` or `1250.50`.
 - **Categories** (`/finances/categories`): groups are created, renamed, switched off and deleted in place;

@@ -74,8 +74,9 @@ Node is installed with fnm and isn't on PATH in Claude Code's shells: prepend
   if prod uses it, into `infrastructure/README.md` and the `api-prod` `environment:` in compose.
   Don't edit the user's `api/.env`; say in the summary if a variable should be added there.
 - Never commit `api/.env`, `infrastructure/.env`, `api/data/`, `infrastructure/data/` (all gitignored).
-- Keep `.gitattributes`: it forces LF for `*.sh` and `Dockerfile` (`api/docker-entrypoint.sh` breaks in Linux
-  containers with CRLF).
+- Keep `.gitattributes`: it checks out every text file with LF, also on Windows (Prettier and ruff write LF, so
+  CRLF checkouts made `npm run format` mark dozens of unchanged files as modified), and `*.sh`/`Dockerfile`
+  must be LF anyway (`api/docker-entrypoint.sh` breaks in Linux containers with CRLF).
 - Dependencies only in `api/pyproject.toml` (hatchling, runtime deps pinned exactly); no requirements.txt.
 - When something documented changes (endpoints, env variables, commands), update the README that owns it.
 - Production: web on Cloudflare Pages, API on Cloud Run (`deploy.yml`), PostgreSQL on Supabase, media on R2;
