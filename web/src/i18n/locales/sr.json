@@ -536,7 +536,10 @@
   "date": {
     "placeholder": "dd/mm/gggg",
     "openCalendar": "Otvori kalendar: {{label}}",
-    "invalid": "Unesite datum kao dd/mm/gggg."
+    "invalid": "Unesite datum kao dd/mm/gggg.",
+    "previousMonth": "Prethodni mesec",
+    "nextMonth": "Sledeći mesec",
+    "today": "Danas"
   },
   "units": {
     "kg": "kg",

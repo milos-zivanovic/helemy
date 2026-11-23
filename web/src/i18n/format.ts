@@ -50,6 +50,12 @@ export function useFormatters() {
       new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' }).format(
         new Date(2024, month - 1, day), // 2024 is a leap year, so 29 February works
       ),
+    /** Short weekday names, Monday first: ["pon", "uto", …] / ["Mon", "Tue", …] */
+    weekdayNames: () =>
+      Array.from({ length: 7 }, (_, index) =>
+        // 1 January 2024 was a Monday
+        new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 1 + index)),
+      ),
     /** Month name for a number 1-12: "januar" */
     monthName: (month: number) =>
       new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, month - 1, 1)),

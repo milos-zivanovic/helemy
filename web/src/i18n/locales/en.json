@@ -536,7 +536,10 @@
   "date": {
     "placeholder": "dd/mm/yyyy",
     "openCalendar": "Open the calendar: {{label}}",
-    "invalid": "Enter the date as dd/mm/yyyy."
+    "invalid": "Enter the date as dd/mm/yyyy.",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today"
   },
   "units": {
     "kg": "kg",
