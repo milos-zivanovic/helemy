@@ -252,7 +252,8 @@ Tabs: **Transactions** (the main screen, where `/finances` opens), **Budgets**, 
   category's expenses in the period; the bar and the percentage are green under 80 %, yellow from 80 %
   to 100 % and red above (`progressTone`, also on the start page and for the total). A category can't
   have two budgets with overlapping periods.
-- **Reports** (`/finances/reports?start=&end=&type=&group=&account=`): one period scopes the whole
+- **Reports** (`/finances/reports?start=&end=&type=&group=&account=`): one period (from–to fields, this
+  month by default) scopes the whole
   page: the totals, the breakdown (ranked bars per group; a group opens its categories) and the account
   balance (all accounts or one; a line chart that stops at today, with a table view). The page and Recharts are a separate chunk
   (`lazy` route), downloaded only when the page is opened.

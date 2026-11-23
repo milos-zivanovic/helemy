@@ -19,7 +19,7 @@ import {
 } from '../finances/hooks'
 import { RankedBars } from '../finances/RankedBars'
 import { useFormatters } from '../i18n/format'
-import { currentMonth, monthRange, shiftMonth, today } from '../lib/dates'
+import { currentMonth, monthRange, today } from '../lib/dates'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -48,20 +48,6 @@ export default function ReportsPage() {
       return params
     })
 
-  const year = today().slice(0, 4)
-  const presets = [
-    { label: t('finances.budgets.thisMonth'), range: thisMonth },
-    { label: t('finances.reports.lastMonth'), range: monthRange(shiftMonth(currentMonth(), -1)) },
-    {
-      label: t('finances.reports.lastThreeMonths'),
-      range: { start: monthRange(shiftMonth(currentMonth(), -2)).start, end: thisMonth.end },
-    },
-    {
-      label: t('finances.budgets.thisYear'),
-      range: { start: `${year}-01-01`, end: `${year}-12-31` },
-    },
-  ]
-
   const period: ReportFilters = { start_date: start, end_date: end }
   const totals = usePeriodTotals(start, end)
   const breakdown = useBreakdown({
@@ -79,23 +65,8 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* One filter row above everything it scopes */}
-      <div className="surface flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap gap-2">
-          {presets.map((preset) => {
-            const selected = preset.range.start === start && preset.range.end === end
-            return (
-              <Button
-                key={preset.label}
-                variant={selected ? 'primary' : 'secondary'}
-                aria-pressed={selected}
-                onClick={() => update({ start: preset.range.start, end: preset.range.end })}
-              >
-                {preset.label}
-              </Button>
-            )
-          })}
-        </div>
+      {/* The period (from–to) above everything it scopes; this month by default */}
+      <div className="surface p-4">
         <div className="grid grid-cols-2 gap-3 sm:max-w-md">
           <DateField
             label={t('finances.categories.startDate')}

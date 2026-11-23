@@ -362,8 +362,6 @@
       "backToList": "Back to budgets"
     },
     "reports": {
-      "lastMonth": "Last month",
-      "lastThreeMonths": "Last 3 months",
       "expensesBy": "Expenses by group",
       "incomeBy": "Income by group",
       "allGroups": "All groups",
