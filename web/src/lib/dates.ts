@@ -69,6 +69,28 @@ export function fullMonth(start: string | null, end: string | null): string | nu
   return range.start === start && range.end === end ? start.slice(0, 7) : null
 }
 
+/**
+ * The days a month's calendar shows, Monday first: 6 weeks of 7 "YYYY-MM-DD" days, so the first
+ * row starts with the last days of the previous month and the last rows run into the next one.
+ * Always 6 rows, so the calendar keeps its height from month to month.
+ */
+export function calendarWeeks(month: string): string[][] {
+  const first = `${month}-01`
+  const offset = (parseDate(first).getDay() + 6) % 7 // getDay() counts from Sunday (0); Monday → 0
+  const start = shiftDay(first, -offset)
+  return Array.from({ length: 6 }, (_, week) =>
+    Array.from({ length: 7 }, (_, day) => shiftDay(start, week * 7 + day)),
+  )
+}
+
+/** "2026-01-31", 1 → "2026-02-28": the same day in another month, or that month's last day. */
+export function shiftDayByMonths(day: string, delta: number): string {
+  const month = shiftMonth(day.slice(0, 7), delta)
+  const last = monthRange(month).end
+  const moved = `${month}-${day.slice(8)}`
+  return moved > last ? last : moved
+}
+
 /** "2026-11-05" → "05/11/2026", the day/month/year form shown in date fields. */
 export function toDisplayDate(value: string): string {
   const [year, month, day] = value.split('-')

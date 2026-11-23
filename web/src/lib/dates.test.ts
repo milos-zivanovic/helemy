@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  calendarWeeks,
   currentMonth,
   fromDisplayDate,
   fullMonth,
@@ -10,6 +11,7 @@ import {
   monthRange,
   parseDate,
   shiftDay,
+  shiftDayByMonths,
   shiftMonth,
   toDateString,
   toDisplayDate,
@@ -161,5 +163,32 @@ describe('maskDisplayDate', () => {
     expect(maskDisplayDate('05.11.2026')).toBe('05/11/2026')
     expect(maskDisplayDate('05/11/20269')).toBe('05/11/2026')
     expect(maskDisplayDate('')).toBe('')
+  })
+})
+
+describe('calendarWeeks', () => {
+  it('starts on the Monday on or before the 1st and has 6 full weeks', () => {
+    // 1 November 2026 is a Sunday: the first row is 26 Oct (Monday) … 1 Nov
+    const weeks = calendarWeeks('2026-11')
+    expect(weeks).toHaveLength(6)
+    expect(weeks.every((week) => week.length === 7)).toBe(true)
+    expect(weeks[0][0]).toBe('2026-10-26')
+    expect(weeks[0][6]).toBe('2026-11-01')
+    expect(weeks[5][6]).toBe('2026-12-06')
+  })
+
+  it('starts with the 1st itself when the month begins on a Monday', () => {
+    expect(calendarWeeks('2026-06')[0][0]).toBe('2026-06-01')
+  })
+})
+
+describe('shiftDayByMonths', () => {
+  it('keeps the day of the month', () => {
+    expect(shiftDayByMonths('2026-11-15', 1)).toBe('2026-12-15')
+    expect(shiftDayByMonths('2026-01-15', -1)).toBe('2025-12-15')
+  })
+
+  it('falls back to the last day of a shorter month', () => {
+    expect(shiftDayByMonths('2026-01-31', 1)).toBe('2026-02-28')
   })
 })

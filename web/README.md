@@ -318,7 +318,8 @@ Optional; put it in `web/.env.local` (gitignored). Only variables starting with 
   `Button`/`LinkButton`, the fields, `SectionHeader` (title + tabs of a section) and the segmented
   control and chips in `components/segmented.ts`. A new page builds on these instead of its own classes.
 - **Dates**: every date field is a `DateField`, typed as dd/mm/yyyy whatever the browser's language
-  (the slashes go in by themselves; a button opens the browser's calendar). Its value is the API's
+  (the slashes go in by themselves; a button opens the app's own `Calendar`: weeks from Monday,
+  arrows/PageUp/PageDown/Escape on the keyboard, centred over the page on phones). Its value is the API's
   `YYYY-MM-DD`. In React Hook Form forms it's `FormDateField` (`useController`), which also passes
   half-typed text on, so the schema (`lib/dateSchemas.ts`) rejects it instead of keeping the old date.
 - **Responsive**: from `lg` (1024 px) the navigation is a sidebar and pages use the width (grids with
